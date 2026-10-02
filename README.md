@@ -30,3 +30,116 @@ finemp/
 ├── docs/
 ├── .github/
 └── compose.yaml
+```
+
+O projeto utiliza inicialmente uma arquitetura de monólito modular.
+
+## Requisitos locais
+
+- Java 21
+- Docker
+- Git
+
+Não é necessário instalar Maven globalmente, pois o projeto utiliza Maven Wrapper.
+
+## Banco de dados local
+
+Na raiz do repositório:
+
+```bash
+docker compose up -d
+```
+
+O PostgreSQL local fica disponível em:
+
+```text
+localhost:5433
+```
+
+A porta `5432` continua sendo utilizada internamente pelo container.
+
+Para verificar o ambiente:
+
+```bash
+docker compose ps
+```
+
+Para encerrar:
+
+```bash
+docker compose down
+```
+
+## Executando o backend
+
+No PowerShell:
+
+```powershell
+cd backend
+
+$env:SPRING_PROFILES_ACTIVE="local"
+.\mvnw.cmd spring-boot:run
+```
+
+A aplicação fica disponível em:
+
+```text
+http://localhost:8080
+```
+
+Health check:
+
+```text
+http://localhost:8080/actuator/health
+```
+
+Ao terminar:
+
+```powershell
+Remove-Item Env:SPRING_PROFILES_ACTIVE
+```
+
+## Testes
+
+No Windows:
+
+```powershell
+cd backend
+.\mvnw.cmd test
+```
+
+Verificação equivalente à utilizada no CI:
+
+```powershell
+.\mvnw.cmd verify
+```
+
+Os testes de integração utilizam PostgreSQL real por meio de Testcontainers.
+
+Eles não dependem do PostgreSQL iniciado pelo Docker Compose.
+
+## Banco e migrations
+
+O schema da aplicação é controlado pelo Flyway.
+
+As migrations ficam em:
+
+```text
+backend/src/main/resources/db/migration
+```
+
+O Hibernate está configurado com:
+
+```text
+ddl-auto=validate
+```
+
+Portanto, alterações de schema devem ser feitas por migrations e não geradas automaticamente pelo Hibernate.
+
+## Processo de desenvolvimento
+
+O fluxo padrão de engenharia está documentado em:
+
+```text
+docs/engineering-playbook.md
+```
