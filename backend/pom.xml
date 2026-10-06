@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.finemp</groupId>
-	<artifactId>finempapi</artifactId>
+	<artifactId>finemp-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Finemp API</name>
 	<description>Backend API for the Finemp accounting SaaS</description>
