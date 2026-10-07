@@ -1,9 +1,27 @@
 package com.finemp.accounting.movement;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public interface AccountingMovementRepository
         extends JpaRepository<AccountingMovement, UUID> {
+
+    @Query("""
+            select movement
+            from AccountingMovement movement
+            join fetch movement.account account
+            join account.accountingSource source
+            where source.company.id = :companyId
+              and movement.accountingDate between :startDate and :endDate
+            order by movement.accountingDate asc
+            """)
+    List<AccountingMovement> findAllByCompanyAndPeriod(
+            @Param("companyId") UUID companyId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }
