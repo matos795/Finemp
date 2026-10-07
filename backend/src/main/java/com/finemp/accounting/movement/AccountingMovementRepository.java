@@ -24,4 +24,18 @@ public interface AccountingMovementRepository
             @Param("companyId") UUID companyId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("""
+            select case when count(movement) > 0 then true else false end
+            from AccountingMovement movement
+            join movement.account account
+            where account.accountingSource.id = :accountingSourceId
+            and movement.sourceEntryKey = :sourceEntryKey
+            and movement.side = :side
+            """)
+    boolean existsBySourceEntryKeyAndSide(
+            @Param("accountingSourceId") UUID accountingSourceId,
+            @Param("sourceEntryKey") String sourceEntryKey,
+            @Param("side") AccountingMovementSide side
+    );
 }
