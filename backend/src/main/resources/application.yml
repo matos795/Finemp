@@ -10,4 +10,12 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+finemp:
+  integration:
+    questor:
+      enabled: ${FINEMP_QUESTOR_ENABLED:false}
+      jdbc-url: ${FINEMP_QUESTOR_JDBC_URL:}
+      username: ${FINEMP_QUESTOR_USERNAME:}
+      password: ${FINEMP_QUESTOR_PASSWORD:}
     
