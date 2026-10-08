@@ -1,6 +1,7 @@
 package com.finemp.integration.questor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.finemp.TestcontainersConfiguration;
@@ -110,5 +111,64 @@ class QuestorAccountingImportServiceIntegrationTest {
 
         assertThat(accountingMovementRepository.count())
                 .isEqualTo(2);
+    }
+
+    @Test
+    void shouldKeepPreviouslyImportedMovementsWhenQuestorReadFails() {
+        Company company = companyRepository.save(
+                new Company(
+                        "Empresa Exemplo Ltda",
+                        "12345678000190"));
+
+        AccountingSource source = accountingSourceRepository.save(
+                new AccountingSource(
+                        company,
+                        AccountingSourceType.QUESTOR,
+                        "external-company-001",
+                        true));
+
+        LocalDate startDate = LocalDate.of(2026, 7, 1);
+
+        LocalDate endDate = LocalDate.of(2026, 7, 31);
+
+        List<ImportedAccountingMovement> records = List.of(
+                new ImportedAccountingMovement(
+                        "entry-001",
+                        LocalDate.of(2026, 7, 15),
+                        "100",
+                        "1.1.01.001.100",
+                        "Conta de Débito",
+                        AccountingMovementSide.DEBIT,
+                        new BigDecimal("500.00"),
+                        "Histórico de exemplo"));
+
+        when(questorAccountingReader.readMovements(
+                "external-company-001",
+                startDate,
+                endDate)).thenReturn(records);
+
+        importService.importMovements(
+                source.getId(),
+                startDate,
+                endDate);
+
+        assertThat(accountingMovementRepository.count())
+                .isEqualTo(1);
+
+        when(questorAccountingReader.readMovements(
+                "external-company-001",
+                startDate,
+                endDate)).thenThrow(
+                        new QuestorReadException(
+                                "Questor unavailable",
+                                new RuntimeException("Connection failed")));
+
+        assertThatThrownBy(() -> importService.importMovements(
+                source.getId(),
+                startDate,
+                endDate)).isInstanceOf(QuestorReadException.class);
+
+        assertThat(accountingMovementRepository.count())
+                .isEqualTo(1);
     }
 }
