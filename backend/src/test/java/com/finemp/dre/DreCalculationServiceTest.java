@@ -100,4 +100,90 @@ class DreCalculationServiceTest {
 
         verifyNoInteractions(dreMovementRepository);
     }
+
+    @Test
+    void shouldPreserveSpecialClassificationMarkers() {
+
+        UUID companyId = UUID.randomUUID();
+        LocalDate startDate = LocalDate.of(2026, 7, 1);
+        LocalDate endDate = LocalDate.of(2026, 7, 31);
+
+        DreMovementRow movement = new DreMovementRow(
+                UUID.randomUUID(),
+                "3.1.01.100",
+                AccountingMovementSide.CREDIT,
+                new BigDecimal("100.00"),
+                "0",
+                "(-) Verificar",
+                "N/A");
+
+        when(dreMovementRepository.findAllByCompanyAndPeriod(
+                companyId,
+                startDate,
+                endDate))
+                .thenReturn(List.of(movement));
+
+        DreCalculationResult result = service.calculate(
+                companyId,
+                startDate,
+                endDate);
+
+        assertThat(result.lines())
+                .containsExactly(
+                        new DreLine(
+                                "0",
+                                "(-) Verificar",
+                                "N/A",
+                                new BigDecimal("100.00")));
+
+        assertThat(result.unclassifiedAccountCount())
+                .isZero();
+    }
+
+    @Test
+    void shouldReportIncompleteClassificationOnlyOncePerAccount() {
+
+        UUID companyId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+
+        LocalDate startDate = LocalDate.of(2026, 7, 1);
+        LocalDate endDate = LocalDate.of(2026, 7, 31);
+
+        DreMovementRow firstMovement = new DreMovementRow(
+                accountId,
+                "4.1.01.100",
+                AccountingMovementSide.DEBIT,
+                new BigDecimal("40.00"),
+                "RESULTADO",
+                null,
+                "OPERACIONAIS");
+
+        DreMovementRow secondMovement = new DreMovementRow(
+                accountId,
+                "4.1.01.100",
+                AccountingMovementSide.DEBIT,
+                new BigDecimal("25.00"),
+                "RESULTADO",
+                null,
+                "OPERACIONAIS");
+
+        when(dreMovementRepository.findAllByCompanyAndPeriod(
+                companyId,
+                startDate,
+                endDate))
+                .thenReturn(List.of(
+                        firstMovement,
+                        secondMovement));
+
+        DreCalculationResult result = service.calculate(
+                companyId,
+                startDate,
+                endDate);
+
+        assertThat(result.lines())
+                .isEmpty();
+
+        assertThat(result.unclassifiedAccountCount())
+                .isEqualTo(1);
+    }
 }
