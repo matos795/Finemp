@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class DreCalculationService {
 
     private final DreMovementRepository dreMovementRepository;

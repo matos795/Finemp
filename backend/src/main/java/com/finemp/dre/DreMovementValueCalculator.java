@@ -2,8 +2,11 @@ package com.finemp.dre;
 
 import com.finemp.accounting.movement.AccountingMovementSide;
 
+import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 
+@Component
 public class DreMovementValueCalculator {
 
     public BigDecimal calculate(
