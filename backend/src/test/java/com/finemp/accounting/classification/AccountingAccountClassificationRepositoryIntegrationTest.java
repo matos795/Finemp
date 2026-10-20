@@ -33,6 +33,9 @@ class AccountingAccountClassificationRepositoryIntegrationTest {
         @Autowired
         private AccountingAccountClassificationRepository classificationRepository;
 
+        @Autowired
+        private DreClassificationRepository dreClassificationRepository;
+
         @Test
         void shouldKeepClassificationScopedToItsAccountingAccount() {
 
@@ -260,5 +263,158 @@ class AccountingAccountClassificationRepositoryIntegrationTest {
                                 .extracting(AccountingAccount::getId)
                                 .containsExactly(unclassifiedAccountA.getId())
                                 .doesNotContain(unclassifiedAccountB.getId());
+        }
+
+        @Test
+        void shouldAllowAccountsFromDifferentCompaniesToReuseSameGlobalClassification() {
+
+                Company companyA = companyRepository.save(
+                                new Company(
+                                                "Empresa A Ltda",
+                                                "77777777000177"));
+
+                Company companyB = companyRepository.save(
+                                new Company(
+                                                "Empresa B Ltda",
+                                                "88888888000188"));
+
+                AccountingSource sourceA = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                companyA,
+                                                AccountingSourceType.QUESTOR,
+                                                "company-a-global-classification",
+                                                true));
+
+                AccountingSource sourceB = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                companyB,
+                                                AccountingSourceType.QUESTOR,
+                                                "company-b-global-classification",
+                                                true));
+
+                AccountingAccount accountA = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                sourceA,
+                                                "100",
+                                                "3.1.01.100",
+                                                "Receita A"));
+
+                AccountingAccount accountB = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                sourceB,
+                                                "200",
+                                                "3.1.01.200",
+                                                "Receita B"));
+
+                DreClassification globalClassification = dreClassificationRepository.save(
+                                new DreClassification(
+                                                "EBITDA",
+                                                "RECEITA BRUTA",
+                                                "SERVIÇOS"));
+
+                classificationRepository.save(
+                                new AccountingAccountClassification(
+                                                accountA,
+                                                globalClassification));
+
+                classificationRepository.save(
+                                new AccountingAccountClassification(
+                                                accountB,
+                                                globalClassification));
+
+                AccountingAccountClassification classificationA = classificationRepository
+                                .findByAccountingAccountId(accountA.getId())
+                                .orElseThrow();
+
+                AccountingAccountClassification classificationB = classificationRepository
+                                .findByAccountingAccountId(accountB.getId())
+                                .orElseThrow();
+
+                assertThat(classificationA.getClassification().getId())
+                                .isEqualTo(globalClassification.getId());
+
+                assertThat(classificationB.getClassification().getId())
+                                .isEqualTo(globalClassification.getId());
+        }
+
+        @Test
+        void shouldAllowSameAccountKeyInDifferentCompaniesToUseDifferentClassifications() {
+
+                Company companyA = companyRepository.save(
+                                new Company(
+                                                "Empresa A Ltda",
+                                                "99999999000199"));
+
+                Company companyB = companyRepository.save(
+                                new Company(
+                                                "Empresa B Ltda",
+                                                "10101010000110"));
+
+                AccountingSource sourceA = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                companyA,
+                                                AccountingSourceType.QUESTOR,
+                                                "company-a-exception",
+                                                true));
+
+                AccountingSource sourceB = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                companyB,
+                                                AccountingSourceType.QUESTOR,
+                                                "company-b-exception",
+                                                true));
+
+                AccountingAccount accountA = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                sourceA,
+                                                "100",
+                                                "3.1.01.100",
+                                                "Conta A"));
+
+                AccountingAccount accountB = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                sourceB,
+                                                "100",
+                                                "3.1.01.100",
+                                                "Conta B"));
+
+                DreClassification servicesClassification = dreClassificationRepository.save(
+                                new DreClassification(
+                                                "EBITDA",
+                                                "RECEITA BRUTA",
+                                                "SERVIÇOS"));
+
+                DreClassification otherRevenueClassification = dreClassificationRepository.save(
+                                new DreClassification(
+                                                "EBITDA",
+                                                "OUTRAS RECEITAS",
+                                                "OUTRAS RECEITAS"));
+
+                classificationRepository.save(
+                                new AccountingAccountClassification(
+                                                accountA,
+                                                servicesClassification));
+
+                classificationRepository.save(
+                                new AccountingAccountClassification(
+                                                accountB,
+                                                otherRevenueClassification));
+
+                AccountingAccountClassification classificationA = classificationRepository
+                                .findByAccountingAccountId(accountA.getId())
+                                .orElseThrow();
+
+                AccountingAccountClassification classificationB = classificationRepository
+                                .findByAccountingAccountId(accountB.getId())
+                                .orElseThrow();
+
+                assertThat(accountA.getAccountKey())
+                                .isEqualTo(accountB.getAccountKey());
+
+                assertThat(classificationA.getClassification().getId())
+                                .isEqualTo(servicesClassification.getId());
+
+                assertThat(classificationB.getClassification().getId())
+                                .isEqualTo(otherRevenueClassification.getId());
         }
 }

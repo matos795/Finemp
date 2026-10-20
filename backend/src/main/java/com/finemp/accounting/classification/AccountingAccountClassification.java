@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
@@ -34,6 +35,10 @@ public class AccountingAccountClassification {
     @Column(name = "ebitda_classification")
     private String ebitdaClassification;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dre_classification_id")
+    private DreClassification classification;
+
     protected AccountingAccountClassification() {
     }
 
@@ -46,6 +51,17 @@ public class AccountingAccountClassification {
         this.dreClassification = dreClassification;
         this.dreOpenClassification = dreOpenClassification;
         this.ebitdaClassification = ebitdaClassification;
+    }
+
+    public AccountingAccountClassification(
+            AccountingAccount accountingAccount,
+            DreClassification classification) {
+
+        this.accountingAccount = accountingAccount;
+        this.classification = classification;
+        this.dreClassification = classification.getDreClassification();
+        this.dreOpenClassification = classification.getDreOpenClassification();
+        this.ebitdaClassification = classification.getEbitdaClassification();
     }
 
     public UUID getId() {
@@ -66,5 +82,17 @@ public class AccountingAccountClassification {
 
     public String getEbitdaClassification() {
         return ebitdaClassification;
+    }
+
+    public DreClassification getClassification() {
+        return classification;
+    }
+
+    public void reclassify(DreClassification classification) {
+        this.classification = classification;
+
+        this.dreClassification = classification.getDreClassification();
+        this.dreOpenClassification = classification.getDreOpenClassification();
+        this.ebitdaClassification = classification.getEbitdaClassification();
     }
 }

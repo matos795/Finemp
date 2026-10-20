@@ -18,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,86 +26,102 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AccountingAccountClassificationServiceTest {
 
-    @Mock
-    private AccountingAccountRepository accountingAccountRepository;
+        @Mock
+        private AccountingAccountRepository accountingAccountRepository;
 
-    @Mock
-    private AccountingAccountClassificationRepository classificationRepository;
+        @Mock
+        private AccountingAccountClassificationRepository classificationRepository;
 
-    @Test
-    void shouldClassifyExistingAccountingAccount() {
+        @Mock
+        private DreClassificationRepository dreClassificationRepository;
 
-        UUID accountId = UUID.randomUUID();
+        @Test
+        void shouldLinkExistingAccountingAccountToGlobalClassification() {
 
-        Company company = new Company("Empresa Exemplo Ltda", "11111111000111");
+                UUID accountId = UUID.randomUUID();
+                UUID classificationId = UUID.randomUUID();
 
-        AccountingSource source = new AccountingSource(
-                company,
-                AccountingSourceType.QUESTOR,
-                "company-example",
-                true);
+                UUID companyId = UUID.randomUUID();
 
-        AccountingAccount account = new AccountingAccount(
-                source,
-                "100",
-                "1.1.01.100",
-                "Conta exemplo");
+                Company company = mock(Company.class);
 
-        when(accountingAccountRepository.findById(accountId))
-                .thenReturn(Optional.of(account));
+                when(company.getId()).thenReturn(companyId);
 
-        AccountingAccountClassificationService service = new AccountingAccountClassificationService(
-                accountingAccountRepository,
-                classificationRepository);
+                AccountingSource source = new AccountingSource(
+                                company,
+                                AccountingSourceType.QUESTOR,
+                                "company-example",
+                                true);
 
-        service.classifyAccount(
-                accountId,
-                "EBITDA",
-                "RECEITA BRUTA",
-                "LOCAÇÃO");
+                AccountingAccount account = new AccountingAccount(
+                                source,
+                                "100",
+                                "1.1.01.100",
+                                "Conta exemplo");
 
-        ArgumentCaptor<AccountingAccountClassification> captor = ArgumentCaptor.forClass(
-                AccountingAccountClassification.class);
+                DreClassification globalClassification = new DreClassification(
+                                "EBITDA",
+                                "RECEITA BRUTA",
+                                "LOCAÇÃO");
 
-        verify(classificationRepository)
-                .save(captor.capture());
+                when(accountingAccountRepository.findById(accountId))
+                                .thenReturn(Optional.of(account));
 
-        AccountingAccountClassification saved = captor.getValue();
+                when(dreClassificationRepository.findById(classificationId))
+                                .thenReturn(Optional.of(globalClassification));
 
-        assertThat(saved.getAccountingAccount())
-                .isSameAs(account);
+                AccountingAccountClassificationService service = new AccountingAccountClassificationService(
+                                accountingAccountRepository,
+                                classificationRepository,
+                                dreClassificationRepository);
 
-        assertThat(saved.getDreClassification())
-                .isEqualTo("EBITDA");
+                service.classifyAccount(
+                                companyId,
+                                accountId,
+                                classificationId);
 
-        assertThat(saved.getDreOpenClassification())
-                .isEqualTo("RECEITA BRUTA");
+                ArgumentCaptor<AccountingAccountClassification> captor = ArgumentCaptor.forClass(
+                                AccountingAccountClassification.class);
 
-        assertThat(saved.getEbitdaClassification())
-                .isEqualTo("LOCAÇÃO");
-    }
+                verify(classificationRepository)
+                                .save(captor.capture());
 
-    @Test
-    void shouldRejectClassificationWhenAccountingAccountDoesNotExist() {
+                AccountingAccountClassification saved = captor.getValue();
 
-        UUID accountId = UUID.randomUUID();
+                assertThat(saved.getAccountingAccount())
+                                .isSameAs(account);
 
-        when(accountingAccountRepository.findById(accountId))
-                .thenReturn(Optional.empty());
+                assertThat(saved.getClassification())
+                                .isSameAs(globalClassification);
+        }
 
-        AccountingAccountClassificationService service = new AccountingAccountClassificationService(
-                accountingAccountRepository,
-                classificationRepository);
+        @Test
+        void shouldRejectClassificationWhenAccountingAccountDoesNotExist() {
 
-        assertThatThrownBy(() -> service.classifyAccount(
-                accountId,
-                "EBITDA",
-                "RECEITA BRUTA",
-                "LOCAÇÃO"))
-                .isInstanceOf(AccountingAccountNotFoundException.class)
-                .hasMessageContaining(accountId.toString());
+                UUID accountId = UUID.randomUUID();
+                UUID classificationId = UUID.randomUUID();
+                UUID companyId = UUID.randomUUID();
 
-        verify(classificationRepository, never())
-                .save(any());
-    }
+                when(accountingAccountRepository.findById(accountId))
+                                .thenReturn(Optional.empty());
+
+                AccountingAccountClassificationService service = new AccountingAccountClassificationService(
+                                accountingAccountRepository,
+                                classificationRepository,
+                                dreClassificationRepository);
+
+                assertThatThrownBy(() -> service.classifyAccount(
+                                companyId,
+                                accountId,
+                                classificationId))
+                                .isInstanceOf(
+                                                AccountingAccountNotFoundException.class)
+                                .hasMessageContaining(accountId.toString());
+
+                verify(dreClassificationRepository, never())
+                                .findById(any());
+
+                verify(classificationRepository, never())
+                                .save(any());
+        }
 }

@@ -13,32 +13,53 @@ public class AccountingAccountClassificationService {
 
     private final AccountingAccountRepository accountingAccountRepository;
     private final AccountingAccountClassificationRepository classificationRepository;
+    private final DreClassificationRepository dreClassificationRepository;
 
     public AccountingAccountClassificationService(
             AccountingAccountRepository accountingAccountRepository,
-            AccountingAccountClassificationRepository classificationRepository) {
+            AccountingAccountClassificationRepository classificationRepository,
+            DreClassificationRepository dreClassificationRepository) {
+
         this.accountingAccountRepository = accountingAccountRepository;
         this.classificationRepository = classificationRepository;
+        this.dreClassificationRepository = dreClassificationRepository;
     }
 
     @Transactional
     public void classifyAccount(
+            UUID companyId,
             UUID accountingAccountId,
-            String dreClassification,
-            String dreOpenClassification,
-            String ebitdaClassification) {
+            UUID dreClassificationId) {
 
         AccountingAccount accountingAccount = accountingAccountRepository
                 .findById(accountingAccountId)
                 .orElseThrow(() -> new AccountingAccountNotFoundException(
                         accountingAccountId));
 
-        AccountingAccountClassification classification = new AccountingAccountClassification(
-                accountingAccount,
-                dreClassification,
-                dreOpenClassification,
-                ebitdaClassification);
+        UUID accountCompanyId = accountingAccount
+                .getAccountingSource()
+                .getCompany()
+                .getId();
 
-        classificationRepository.save(classification);
+        if (!companyId.equals(accountCompanyId)) {
+            throw new AccountingAccountDoesNotBelongToCompanyException(
+                    accountingAccountId,
+                    companyId);
+        }
+
+        DreClassification dreClassification = dreClassificationRepository
+                .findById(dreClassificationId)
+                .orElseThrow(() -> new DreClassificationNotFoundException(
+                        dreClassificationId));
+
+        classificationRepository
+                .findByAccountingAccountId(accountingAccountId)
+                .ifPresentOrElse(
+                        classification -> classification.reclassify(
+                                dreClassification),
+                        () -> classificationRepository.save(
+                                new AccountingAccountClassification(
+                                        accountingAccount,
+                                        dreClassification)));
     }
 }
