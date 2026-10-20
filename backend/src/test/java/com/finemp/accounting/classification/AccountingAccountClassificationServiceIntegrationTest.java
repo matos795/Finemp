@@ -21,63 +21,132 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class AccountingAccountClassificationServiceIntegrationTest {
 
-    @Autowired
-    private CompanyRepository companyRepository;
+        @Autowired
+        private CompanyRepository companyRepository;
 
-    @Autowired
-    private AccountingSourceRepository accountingSourceRepository;
+        @Autowired
+        private AccountingSourceRepository accountingSourceRepository;
 
-    @Autowired
-    private AccountingAccountRepository accountingAccountRepository;
+        @Autowired
+        private AccountingAccountRepository accountingAccountRepository;
 
-    @Autowired
-    private AccountingAccountClassificationRepository classificationRepository;
+        @Autowired
+        private AccountingAccountClassificationRepository classificationRepository;
 
-    @Autowired
-    private AccountingAccountClassificationService classificationService;
+        @Autowired
+        private AccountingAccountClassificationService classificationService;
 
-    @Test
-    void shouldPersistClassificationForExistingAccountingAccount() {
+        @Autowired
+        private DreClassificationRepository dreClassificationRepository;
 
-        Company company = companyRepository.save(
-                new Company(
-                        "Empresa Exemplo Ltda",
-                        "77777777000177"));
+        @Test
+        void shouldLinkAccountingAccountToExistingGlobalClassification() {
 
-        AccountingSource source = accountingSourceRepository.save(
-                new AccountingSource(
-                        company,
-                        AccountingSourceType.QUESTOR,
-                        "company-example",
-                        true));
+                Company company = companyRepository.save(
+                                new Company(
+                                                "Empresa Exemplo Ltda",
+                                                "77777777000177"));
 
-        AccountingAccount account = accountingAccountRepository.save(
-                new AccountingAccount(
-                        source,
-                        "100",
-                        "1.1.01.100",
-                        "Conta exemplo"));
+                AccountingSource source = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                company,
+                                                AccountingSourceType.QUESTOR,
+                                                "company-example",
+                                                true));
 
-        classificationService.classifyAccount(
-                account.getId(),
-                "EBITDA",
-                "RECEITA BRUTA",
-                "LOCAÇÃO");
+                AccountingAccount account = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                source,
+                                                "100",
+                                                "1.1.01.100",
+                                                "Conta exemplo"));
 
-        AccountingAccountClassification classification = classificationRepository
-                .findByAccountingAccountId(account.getId())
-                .orElseThrow();
+                DreClassification globalClassification = dreClassificationRepository.save(
+                                new DreClassification(
+                                                "EBITDA",
+                                                "RECEITA BRUTA",
+                                                "LOCAÇÃO"));
 
-        assertThat(classification.getAccountingAccount().getId())
-                .isEqualTo(account.getId());
+                classificationService.classifyAccount(
+                                company.getId(),
+                                account.getId(),
+                                globalClassification.getId());
 
-        assertThat(classification.getDreClassification())
-                .isEqualTo("EBITDA");
+                AccountingAccountClassification accountClassification = classificationRepository
+                                .findByAccountingAccountId(account.getId())
+                                .orElseThrow();
 
-        assertThat(classification.getDreOpenClassification())
-                .isEqualTo("RECEITA BRUTA");
+                assertThat(accountClassification.getAccountingAccount().getId())
+                                .isEqualTo(account.getId());
 
-        assertThat(classification.getEbitdaClassification())
-                .isEqualTo("LOCAÇÃO");
-    }
+                assertThat(accountClassification.getClassification().getId())
+                                .isEqualTo(globalClassification.getId());
+
+                assertThat(accountClassification.getClassification()
+                                .getDreClassification())
+                                .isEqualTo("EBITDA");
+
+                assertThat(accountClassification.getClassification()
+                                .getDreOpenClassification())
+                                .isEqualTo("RECEITA BRUTA");
+
+                assertThat(accountClassification.getClassification()
+                                .getEbitdaClassification())
+                                .isEqualTo("LOCAÇÃO");
+        }
+
+        @Test
+        void shouldReclassifyExistingAccountingAccountWithoutCreatingDuplicate() {
+
+                Company company = companyRepository.save(
+                                new Company(
+                                                "Empresa Reclassificação Ltda",
+                                                "12121212000112"));
+
+                AccountingSource source = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                company,
+                                                AccountingSourceType.QUESTOR,
+                                                "company-reclassification",
+                                                true));
+
+                AccountingAccount account = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                source,
+                                                "100",
+                                                "3.1.01.100",
+                                                "Conta exemplo"));
+
+                DreClassification services = dreClassificationRepository.save(
+                                new DreClassification(
+                                                "EBITDA",
+                                                "RECEITA BRUTA",
+                                                "SERVIÇOS"));
+
+                DreClassification rental = dreClassificationRepository.save(
+                                new DreClassification(
+                                                "EBITDA",
+                                                "RECEITA BRUTA",
+                                                "LOCAÇÃO"));
+
+                classificationService.classifyAccount(
+                                company.getId(),
+                                account.getId(),
+                                services.getId());
+
+                classificationService.classifyAccount(
+                                company.getId(),
+                                account.getId(),
+                                rental.getId());
+
+                AccountingAccountClassification classification = classificationRepository
+                                .findByAccountingAccountId(account.getId())
+                                .orElseThrow();
+
+                assertThat(classification.getClassification().getId())
+                                .isEqualTo(rental.getId());
+
+                assertThat(classificationRepository.count())
+                                .isEqualTo(1);
+        }
 }
