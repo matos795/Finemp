@@ -6,11 +6,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,22 +22,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityConfiguration.class)
 class SecurityHttpTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @MockitoBean
-    private DreCalculationService dreCalculationService;
+        @MockitoBean
+        private DreCalculationService dreCalculationService;
 
-    @Test
-    void shouldReturnUnauthorizedWhenRequestIsNotAuthenticated()
-            throws Exception {
+        @MockitoBean
+        private CompanyRequestAuthorizationManager companyRequestAuthorizationManager;
 
-        UUID companyId = UUID.randomUUID();
+        @MockitoBean
+        private UserDetailsService userDetailsService;
 
-        mockMvc.perform(
-                get("/api/companies/{companyId}/dre", companyId)
-                        .param("startDate", "2026-07-01")
-                        .param("endDate", "2026-07-31"))
-                .andExpect(status().isUnauthorized());
-    }
+        @Test
+        void shouldReturnUnauthorizedWhenRequestIsNotAuthenticated()
+                        throws Exception {
+
+                when(companyRequestAuthorizationManager.authorize(
+                                any(),
+                                any()))
+                                .thenReturn(new AuthorizationDecision(false));
+
+                UUID companyId = UUID.randomUUID();
+
+                mockMvc.perform(
+                                get("/api/companies/{companyId}/dre", companyId)
+                                                .param("startDate", "2026-07-01")
+                                                .param("endDate", "2026-07-31"))
+                                .andExpect(status().isUnauthorized());
+        }
 }

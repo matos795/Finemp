@@ -1,8 +1,12 @@
 package com.finemp.security;
 
 import com.finemp.TestcontainersConfiguration;
+import com.finemp.access.CompanyAccessGrant;
+import com.finemp.access.CompanyAccessGrantRepository;
 import com.finemp.access.UserAccount;
 import com.finemp.access.UserAccountRepository;
+import com.finemp.company.Company;
+import com.finemp.company.CompanyRepository;
 import com.finemp.dre.DreCalculationResult;
 import com.finemp.dre.DreCalculationService;
 import org.junit.jupiter.api.Test;
@@ -46,15 +50,31 @@ class AuthenticationSessionIntegrationTest {
     @MockitoBean
     private DreCalculationService dreCalculationService;
 
+    @Autowired
+    private CompanyRepository companyRepository;
+
+    @Autowired
+    private CompanyAccessGrantRepository companyAccessGrantRepository;
+
     @Test
     void shouldCreateAuthenticatedSessionWhenCredentialsAreValid()
             throws Exception {
 
-        userAccountRepository.saveAndFlush(
+        UserAccount userAccount = userAccountRepository.saveAndFlush(
                 new UserAccount(
                         "Usuário Exemplo",
                         "usuario@example.com",
                         passwordEncoder.encode("senha-segura")));
+
+        Company company = companyRepository.saveAndFlush(
+                new Company(
+                        "Empresa Exemplo Ltda",
+                        "11111111000111"));
+
+        companyAccessGrantRepository.saveAndFlush(
+                new CompanyAccessGrant(
+                        userAccount,
+                        company));
 
         var loginResult = mockMvc.perform(
                 post("/api/auth/login")
@@ -74,7 +94,7 @@ class AuthenticationSessionIntegrationTest {
 
         assertThat(session).isNotNull();
 
-        UUID companyId = UUID.randomUUID();
+        UUID companyId = company.getId();
 
         when(dreCalculationService.calculate(
                 companyId,

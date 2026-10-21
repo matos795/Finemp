@@ -24,7 +24,8 @@ public class SecurityConfiguration {
         @Bean
         SecurityFilterChain securityFilterChain(
                         HttpSecurity http,
-                        SecurityContextRepository securityContextRepository)
+                        SecurityContextRepository securityContextRepository,
+                        CompanyRequestAuthorizationManager companyAuthorizationManager)
                         throws Exception {
 
                 http
@@ -33,6 +34,10 @@ public class SecurityConfiguration {
                                                                 "/api/auth/login",
                                                                 "/actuator/health")
                                                 .permitAll()
+
+                                                .requestMatchers("/api/companies/{companyId}/**")
+                                                .access(companyAuthorizationManager)
+
                                                 .anyRequest()
                                                 .authenticated())
                                 .securityContext(context -> context
