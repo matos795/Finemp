@@ -6,4 +6,8 @@ import java.util.UUID;
 
 public interface CompanyAccessGrantRepository
         extends JpaRepository<CompanyAccessGrant, UUID> {
+
+    boolean existsByUserAccountIdAndCompanyId(
+            UUID userAccountId,
+            UUID companyId);
 }
