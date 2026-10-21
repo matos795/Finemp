@@ -71,4 +71,8 @@ public class UserAccount {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public void deactivate() {
+        this.active = false;
+    }
 }
