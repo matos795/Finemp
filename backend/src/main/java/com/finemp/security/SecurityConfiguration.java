@@ -17,6 +17,8 @@ import org.springframework.security.web.authentication.logout.HttpStatusReturnin
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
+import com.finemp.access.CompanyPermission;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
@@ -25,17 +27,27 @@ public class SecurityConfiguration {
         SecurityFilterChain securityFilterChain(
                         HttpSecurity http,
                         SecurityContextRepository securityContextRepository,
-                        CompanyRequestAuthorizationManager companyAuthorizationManager)
+                        CompanyRequestAuthorizationManager companyAuthorizationManager,
+                        CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
 
                 http
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers(
                                                                 "/api/auth/login",
+                                                                "/api/auth/csrf",
                                                                 "/actuator/health")
                                                 .permitAll()
 
-                                                .requestMatchers("/api/companies/{companyId}/**")
+                                                .requestMatchers(
+                                                                "/api/companies/{companyId}/dre/**")
+                                                .access(
+                                                                permissionAuthorizationManagerFactory
+                                                                                .forPermission(
+                                                                                                CompanyPermission.DRE_VIEW))
+
+                                                .requestMatchers(
+                                                                "/api/companies/{companyId}/**")
                                                 .access(companyAuthorizationManager)
 
                                                 .anyRequest()
