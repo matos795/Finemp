@@ -9,6 +9,7 @@ import { AppLayout } from "../../components/layout/app-layout"
 import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
 import { RequirePermission } from "../../features/auth/components/require-permission"
 import { DrePage } from "../../features/dre/pages/dre-page"
+import { ClassificationPage } from "../../features/classification/pages/classification-page"
 
 export function AppRouter() {
     return (
@@ -35,6 +36,15 @@ export function AppRouter() {
                         element={
                             <RequirePermission permission="DRE_VIEW">
                                 <DrePage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/classification"
+                        element={
+                            <RequirePermission permission="ACCOUNT_CLASSIFICATION_MANAGE">
+                                <ClassificationPage />
                             </RequirePermission>
                         }
                     />

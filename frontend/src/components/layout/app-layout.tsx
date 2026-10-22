@@ -4,10 +4,10 @@ import { AppHeader } from "./app-header"
 
 export function AppLayout() {
     return (
-        <div className="flex min-h-screen bg-[#f6f7f9]">
+        <div className="min-h-screen bg-[#f6f7f9]">
             <AppSidebar />
 
-            <div className="min-w-0 flex-1">
+            <div className="min-h-screen lg:pl-[260px]">
                 <AppHeader />
 
                 <main className="p-6 lg:p-8">
@@ -16,4 +16,4 @@ export function AppLayout() {
             </div>
         </div>
     )
-} 
+}

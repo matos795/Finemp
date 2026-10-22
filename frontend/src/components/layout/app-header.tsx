@@ -36,7 +36,7 @@ export function AppHeader() {
     }
 
     return (
-        <header className="flex h-20 items-center justify-between border-b bg-white px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b bg-white/95 px-6 backdrop-blur lg:px-8">
             <CompanySwitcher />
 
             <DropdownMenu>

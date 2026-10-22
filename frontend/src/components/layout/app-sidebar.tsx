@@ -82,7 +82,7 @@ export function AppSidebar() {
         )
 
     return (
-        <aside className="hidden h-screen w-[260px] shrink-0 flex-col bg-[#102238] text-white lg:flex">
+        <aside className="fixed inset-y-0 left-0 z-40 hidden h-screen w-[260px] flex-col bg-[#102238] text-white lg:flex">
             <div className="flex h-20 items-center px-6">
                 <div>
                     <p className="text-lg font-semibold tracking-wide">
