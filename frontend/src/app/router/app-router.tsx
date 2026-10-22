@@ -7,6 +7,8 @@ import { LoginPage } from "../../features/auth/pages/login-page"
 import { ProtectedApp } from "../../features/auth/components/protected-app"
 import { AppLayout } from "../../components/layout/app-layout"
 import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
+import { RequirePermission } from "../../features/auth/components/require-permission"
+import { DrePage } from "../../features/dre/pages/dre-page"
 
 export function AppRouter() {
     return (
@@ -26,6 +28,15 @@ export function AppRouter() {
                     <Route
                         path="/dashboard"
                         element={<DashboardPage />}
+                    />
+
+                    <Route
+                        path="/dre"
+                        element={
+                            <RequirePermission permission="DRE_VIEW">
+                                <DrePage />
+                            </RequirePermission>
+                        }
                     />
                 </Route>
             </Route>

@@ -1,5 +1,6 @@
 package com.finemp.security;
 
+import com.finemp.access.CompanyPermissionAuthorizationService;
 import com.finemp.dre.DreCalculationService;
 import com.finemp.dre.DreController;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DreController.class)
-@Import(SecurityConfiguration.class)
+@Import({
+                SecurityConfiguration.class,
+                CompanyPermissionAuthorizationManagerFactory.class
+})
 class SecurityHttpTest {
 
         @Autowired
@@ -30,6 +34,9 @@ class SecurityHttpTest {
 
         @MockitoBean
         private CompanyRequestAuthorizationManager companyRequestAuthorizationManager;
+
+        @MockitoBean
+        private CompanyPermissionAuthorizationService companyPermissionAuthorizationService;
 
         @MockitoBean
         private UserDetailsService userDetailsService;
