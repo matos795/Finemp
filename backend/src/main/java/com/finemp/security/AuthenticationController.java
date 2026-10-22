@@ -5,9 +5,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,13 +21,16 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
     private final SecurityContextRepository securityContextRepository;
+    private final CurrentUserQueryService currentUserQueryService;
 
     public AuthenticationController(
             AuthenticationService authenticationService,
-            SecurityContextRepository securityContextRepository) {
+            SecurityContextRepository securityContextRepository,
+            CurrentUserQueryService currentUserQueryService) {
 
         this.authenticationService = authenticationService;
         this.securityContextRepository = securityContextRepository;
+        this.currentUserQueryService = currentUserQueryService;
     }
 
     @PostMapping("/login")
@@ -50,5 +55,13 @@ public class AuthenticationController {
                 response);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public CurrentUserResponse me(
+            @AuthenticationPrincipal UserAccountPrincipal principal) {
+
+        return currentUserQueryService.findCurrentUser(
+                principal.getUserAccountId());
     }
 }
