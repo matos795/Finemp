@@ -11,55 +11,82 @@ import java.util.UUID;
 @Service
 public class AccountingAccountClassificationService {
 
-    private final AccountingAccountRepository accountingAccountRepository;
-    private final AccountingAccountClassificationRepository classificationRepository;
-    private final DreClassificationRepository dreClassificationRepository;
+        private final AccountingAccountRepository accountingAccountRepository;
+        private final AccountingAccountClassificationRepository classificationRepository;
+        private final DreClassificationRepository dreClassificationRepository;
 
-    public AccountingAccountClassificationService(
-            AccountingAccountRepository accountingAccountRepository,
-            AccountingAccountClassificationRepository classificationRepository,
-            DreClassificationRepository dreClassificationRepository) {
+        public AccountingAccountClassificationService(
+                        AccountingAccountRepository accountingAccountRepository,
+                        AccountingAccountClassificationRepository classificationRepository,
+                        DreClassificationRepository dreClassificationRepository) {
 
-        this.accountingAccountRepository = accountingAccountRepository;
-        this.classificationRepository = classificationRepository;
-        this.dreClassificationRepository = dreClassificationRepository;
-    }
-
-    @Transactional
-    public void classifyAccount(
-            UUID companyId,
-            UUID accountingAccountId,
-            UUID dreClassificationId) {
-
-        AccountingAccount accountingAccount = accountingAccountRepository
-                .findById(accountingAccountId)
-                .orElseThrow(() -> new AccountingAccountNotFoundException(
-                        accountingAccountId));
-
-        UUID accountCompanyId = accountingAccount
-                .getAccountingSource()
-                .getCompany()
-                .getId();
-
-        if (!companyId.equals(accountCompanyId)) {
-            throw new AccountingAccountDoesNotBelongToCompanyException(
-                    accountingAccountId,
-                    companyId);
+                this.accountingAccountRepository = accountingAccountRepository;
+                this.classificationRepository = classificationRepository;
+                this.dreClassificationRepository = dreClassificationRepository;
         }
 
-        DreClassification dreClassification = dreClassificationRepository
-                .findById(dreClassificationId)
-                .orElseThrow(() -> new DreClassificationNotFoundException(
-                        dreClassificationId));
+        @Transactional
+        public void classifyAccount(
+                        UUID companyId,
+                        UUID accountingAccountId,
+                        UUID dreClassificationId) {
 
-        classificationRepository
-                .findByAccountingAccountId(accountingAccountId)
-                .ifPresentOrElse(
-                        classification -> classification.reclassify(
-                                dreClassification),
-                        () -> classificationRepository.save(
-                                new AccountingAccountClassification(
-                                        accountingAccount,
-                                        dreClassification)));
-    }
+                AccountingAccount accountingAccount = findAccountForCompany(
+                                companyId,
+                                accountingAccountId);
+
+                DreClassification dreClassification = dreClassificationRepository
+                                .findById(dreClassificationId)
+                                .orElseThrow(() -> new DreClassificationNotFoundException(
+                                                dreClassificationId));
+
+                classificationRepository
+                                .findByAccountingAccountId(accountingAccountId)
+                                .ifPresentOrElse(
+                                                classification -> classification.reclassify(
+                                                                dreClassification),
+                                                () -> classificationRepository.save(
+                                                                new AccountingAccountClassification(
+                                                                                accountingAccount,
+                                                                                dreClassification)));
+        }
+
+        @Transactional
+        public void unclassifyAccount(
+                        UUID companyId,
+                        UUID accountingAccountId) {
+
+                findAccountForCompany(
+                                companyId,
+                                accountingAccountId);
+
+                classificationRepository
+                                .findByAccountingAccountId(
+                                                accountingAccountId)
+                                .ifPresent(
+                                                classificationRepository::delete);
+        }
+
+        private AccountingAccount findAccountForCompany(
+                        UUID companyId,
+                        UUID accountingAccountId) {
+
+                AccountingAccount accountingAccount = accountingAccountRepository
+                                .findById(accountingAccountId)
+                                .orElseThrow(() -> new AccountingAccountNotFoundException(
+                                                accountingAccountId));
+
+                UUID accountCompanyId = accountingAccount
+                                .getAccountingSource()
+                                .getCompany()
+                                .getId();
+
+                if (!companyId.equals(accountCompanyId)) {
+                        throw new AccountingAccountDoesNotBelongToCompanyException(
+                                        accountingAccountId,
+                                        companyId);
+                }
+
+                return accountingAccount;
+        }
 }

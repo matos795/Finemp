@@ -1,6 +1,7 @@
 package com.finemp.accounting.classification;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -47,5 +48,16 @@ public class AccountingAccountClassificationController {
                 companyId,
                 accountId,
                 request.classificationId());
+    }
+
+    @DeleteMapping("/{accountId}/classification")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unclassifyAccount(
+            @PathVariable UUID companyId,
+            @PathVariable UUID accountId) {
+
+        classificationService.unclassifyAccount(
+                companyId,
+                accountId);
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -148,5 +149,87 @@ class AccountingAccountClassificationServiceIntegrationTest {
 
                 assertThat(classificationRepository.count())
                                 .isEqualTo(1);
+        }
+
+        @Test
+        void shouldUnclassifyExistingAccountingAccount() {
+
+                Company company = companyRepository.save(
+                                new Company(
+                                                "Empresa Desclassificação Ltda",
+                                                "34343434000134"));
+
+                AccountingSource source = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                company,
+                                                AccountingSourceType.QUESTOR,
+                                                "company-unclassification",
+                                                true));
+
+                AccountingAccount account = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                source,
+                                                "100",
+                                                "4.1.01.100",
+                                                "Conta para desclassificar"));
+
+                DreClassification dreClassification = dreClassificationRepository.save(
+                                new DreClassification(
+                                                "EBITDA",
+                                                "DESPESAS OPERACIONAIS",
+                                                "ADMINISTRATIVAS"));
+
+                classificationService.classifyAccount(
+                                company.getId(),
+                                account.getId(),
+                                dreClassification.getId());
+
+                assertThat(
+                                classificationRepository.findByAccountingAccountId(
+                                                account.getId()))
+                                .isPresent();
+
+                classificationService.unclassifyAccount(
+                                company.getId(),
+                                account.getId());
+
+                assertThat(
+                                classificationRepository.findByAccountingAccountId(
+                                                account.getId()))
+                                .isEmpty();
+        }
+
+        @Test
+        void shouldRejectUnclassificationWhenAccountBelongsToAnotherCompany() {
+
+                Company allowedCompany = companyRepository.save(
+                                new Company(
+                                                "Empresa Permitida Ltda",
+                                                "45454545000145"));
+
+                Company anotherCompany = companyRepository.save(
+                                new Company(
+                                                "Outra Empresa Ltda",
+                                                "56565656000156"));
+
+                AccountingSource source = accountingSourceRepository.save(
+                                new AccountingSource(
+                                                anotherCompany,
+                                                AccountingSourceType.QUESTOR,
+                                                "another-company-source",
+                                                true));
+
+                AccountingAccount account = accountingAccountRepository.save(
+                                new AccountingAccount(
+                                                source,
+                                                "200",
+                                                "4.2.01.200",
+                                                "Conta outra empresa"));
+
+                assertThatThrownBy(() -> classificationService.unclassifyAccount(
+                                allowedCompany.getId(),
+                                account.getId()))
+                                .isInstanceOf(
+                                                AccountingAccountDoesNotBelongToCompanyException.class);
         }
 }
