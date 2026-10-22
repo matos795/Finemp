@@ -32,6 +32,7 @@ public class SecurityConfiguration {
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers(
                                                                 "/api/auth/login",
+                                                                "/api/auth/csrf",
                                                                 "/actuator/health")
                                                 .permitAll()
 

@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -63,5 +64,14 @@ public class AuthenticationController {
 
         return currentUserQueryService.findCurrentUser(
                 principal.getUserAccountId());
+    }
+
+    @GetMapping("/csrf")
+    public CsrfTokenResponse csrf(
+            CsrfToken csrfToken) {
+
+        return new CsrfTokenResponse(
+                csrfToken.getHeaderName(),
+                csrfToken.getToken());
     }
 }

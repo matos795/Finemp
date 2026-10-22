@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpSession;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -145,5 +146,18 @@ class CompanyAccessHttpIntegrationTest {
         return (MockHttpSession) result
                 .getRequest()
                 .getSession(false);
+    }
+
+    @Test
+    void shouldExposeCsrfToken()
+            throws Exception {
+
+        mockMvc.perform(
+                get("/api/auth/csrf"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.headerName")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.token")
+                        .isNotEmpty());
     }
 }
