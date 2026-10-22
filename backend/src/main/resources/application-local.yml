@@ -4,3 +4,10 @@ spring:
     username: finemp
     password: finemp_local
     
+finemp:
+  local-user:
+    enabled: ${FINEMP_LOCAL_USER_ENABLED:false}
+    name: ${FINEMP_LOCAL_USER_NAME:Usuário Local}
+    email: ${FINEMP_LOCAL_USER_EMAIL:}
+    password: ${FINEMP_LOCAL_USER_PASSWORD:}
+    company-id: ${FINEMP_LOCAL_COMPANY_ID:}
