@@ -17,7 +17,9 @@ class FirebirdQuestorAccountingReaderSmokeTest {
         QuestorConnectionProperties properties = new QuestorConnectionProperties(
                 requiredEnvironmentVariable("FINEMP_QUESTOR_JDBC_URL"),
                 requiredEnvironmentVariable("FINEMP_QUESTOR_USERNAME"),
-                requiredEnvironmentVariable("FINEMP_QUESTOR_PASSWORD"));
+                requiredEnvironmentVariable("FINEMP_QUESTOR_PASSWORD"),
+                requiredEnvironmentVariable("FINEMP_QUESTOR_ENCODING"),
+                requiredEnvironmentVariable("FINEMP_QUESTOR_CHARSET"));
 
         QuestorConnectionProvider connectionProvider = new QuestorConnectionProvider(properties);
 

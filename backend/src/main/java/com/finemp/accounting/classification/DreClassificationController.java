@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/dre-classifications")
+@RequestMapping("/api/companies/{companyId}/dre-classifications")
 public class DreClassificationController {
 
     private final DreClassificationRepository dreClassificationRepository;

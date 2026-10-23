@@ -6,6 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record QuestorConnectionProperties(
         String jdbcUrl,
         String username,
-        String password
+        String password,
+        String encoding,
+        String charSet
 ) {
 }

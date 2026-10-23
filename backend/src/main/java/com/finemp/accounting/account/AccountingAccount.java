@@ -67,4 +67,12 @@ public class AccountingAccount {
     public String getDescription() {
         return description;
     }
+
+    public void synchronizeMetadata(
+            String accountKey,
+            String description) {
+
+        this.accountKey = accountKey;
+        this.description = description;
+    }
 }

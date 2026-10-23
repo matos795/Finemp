@@ -47,6 +47,15 @@ public class SecurityConfiguration {
                                                                                                 CompanyPermission.DRE_VIEW))
 
                                                 .requestMatchers(
+                                                                "/api/companies/{companyId}/accounting-accounts/classifications",
+                                                                "/api/companies/{companyId}/accounting-accounts/{accountId}/classification",
+                                                                "/api/companies/{companyId}/dre-classifications")
+                                                .access(
+                                                                permissionAuthorizationManagerFactory
+                                                                                .forPermission(
+                                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE))
+
+                                                .requestMatchers(
                                                                 "/api/companies/{companyId}/**")
                                                 .access(companyAuthorizationManager)
 

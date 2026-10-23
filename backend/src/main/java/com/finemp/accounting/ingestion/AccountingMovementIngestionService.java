@@ -15,72 +15,80 @@ import java.util.UUID;
 @Service
 public class AccountingMovementIngestionService {
 
-    private final AccountingSourceRepository accountingSourceRepository;
-    private final AccountingAccountRepository accountingAccountRepository;
-    private final AccountingMovementRepository accountingMovementRepository;
+        private final AccountingSourceRepository accountingSourceRepository;
+        private final AccountingAccountRepository accountingAccountRepository;
+        private final AccountingMovementRepository accountingMovementRepository;
 
-    public AccountingMovementIngestionService(
-            AccountingSourceRepository accountingSourceRepository,
-            AccountingAccountRepository accountingAccountRepository,
-            AccountingMovementRepository accountingMovementRepository) {
-        this.accountingSourceRepository = accountingSourceRepository;
-        this.accountingAccountRepository = accountingAccountRepository;
-        this.accountingMovementRepository = accountingMovementRepository;
-    }
-
-    @Transactional
-    public void ingest(
-            UUID accountingSourceId,
-            List<ImportedAccountingMovement> movements) {
-        AccountingSource accountingSource = accountingSourceRepository
-                .findById(accountingSourceId)
-                .orElseThrow();
-
-        for (ImportedAccountingMovement movement : movements) {
-
-            if (movementAlreadyExists(
-                    accountingSourceId,
-                    movement)) {
-                continue;
-            }
-
-            AccountingAccount account = findOrCreateAccount(
-                    accountingSource,
-                    movement);
-
-            accountingMovementRepository.save(
-                    new AccountingMovement(
-                            account,
-                            movement.sourceEntryKey(),
-                            movement.side(),
-                            movement.accountingDate(),
-                            movement.amount(),
-                            movement.history()));
+        public AccountingMovementIngestionService(
+                        AccountingSourceRepository accountingSourceRepository,
+                        AccountingAccountRepository accountingAccountRepository,
+                        AccountingMovementRepository accountingMovementRepository) {
+                this.accountingSourceRepository = accountingSourceRepository;
+                this.accountingAccountRepository = accountingAccountRepository;
+                this.accountingMovementRepository = accountingMovementRepository;
         }
-    }
 
-    private boolean movementAlreadyExists(
-            UUID accountingSourceId,
-            ImportedAccountingMovement movement) {
-        return accountingMovementRepository
-                .existsBySourceEntryKeyAndSide(
-                        accountingSourceId,
-                        movement.sourceEntryKey(),
-                        movement.side());
-    }
+        @Transactional
+        public void ingest(
+                        UUID accountingSourceId,
+                        List<ImportedAccountingMovement> movements) {
+                AccountingSource accountingSource = accountingSourceRepository
+                                .findById(accountingSourceId)
+                                .orElseThrow();
 
-    private AccountingAccount findOrCreateAccount(
-            AccountingSource accountingSource,
-            ImportedAccountingMovement movement) {
-        return accountingAccountRepository
-                .findByAccountingSourceIdAndExternalAccountId(
-                        accountingSource.getId(),
-                        movement.externalAccountId())
-                .orElseGet(() -> accountingAccountRepository.save(
-                        new AccountingAccount(
-                                accountingSource,
-                                movement.externalAccountId(),
-                                movement.accountKey(),
-                                movement.accountDescription())));
-    }
+                for (ImportedAccountingMovement movement : movements) {
+
+                        AccountingAccount account = findOrCreateAccount(
+                                        accountingSource,
+                                        movement);
+
+                        if (movementAlreadyExists(
+                                        accountingSourceId,
+                                        movement)) {
+                                continue;
+                        }
+
+                        accountingMovementRepository.save(
+                                        new AccountingMovement(
+                                                        account,
+                                                        movement.sourceEntryKey(),
+                                                        movement.side(),
+                                                        movement.accountingDate(),
+                                                        movement.amount(),
+                                                        movement.history()));
+                }
+        }
+
+        private boolean movementAlreadyExists(
+                        UUID accountingSourceId,
+                        ImportedAccountingMovement movement) {
+                return accountingMovementRepository
+                                .existsBySourceEntryKeyAndSide(
+                                                accountingSourceId,
+                                                movement.sourceEntryKey(),
+                                                movement.side());
+        }
+
+        private AccountingAccount findOrCreateAccount(
+                        AccountingSource accountingSource,
+                        ImportedAccountingMovement movement) {
+
+                return accountingAccountRepository
+                                .findByAccountingSourceIdAndExternalAccountId(
+                                                accountingSource.getId(),
+                                                movement.externalAccountId())
+                                .map(account -> {
+                                        account.synchronizeMetadata(
+                                                        movement.accountKey(),
+                                                        movement.accountDescription());
+
+                                        return account;
+                                })
+                                .orElseGet(() -> accountingAccountRepository.save(
+                                                new AccountingAccount(
+                                                                accountingSource,
+                                                                movement.externalAccountId(),
+                                                                movement.accountKey(),
+                                                                movement.accountDescription())));
+        }
 }

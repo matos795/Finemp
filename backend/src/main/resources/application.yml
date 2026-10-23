@@ -18,4 +18,5 @@ finemp:
       jdbc-url: ${FINEMP_QUESTOR_JDBC_URL:}
       username: ${FINEMP_QUESTOR_USERNAME:}
       password: ${FINEMP_QUESTOR_PASSWORD:}
-    
+      encoding: ${FINEMP_QUESTOR_ENCODING:NONE}
+      char-set: ${FINEMP_QUESTOR_CHARSET:windows-1252}

@@ -225,4 +225,76 @@ class CompanyAccessHttpIntegrationTest {
                                                 any(),
                                                 any());
         }
+
+        @Test
+        void shouldRejectAccountClassificationWhenUserDoesNotHavePermission()
+                        throws Exception {
+
+                UserAccount userAccount = userAccountRepository.saveAndFlush(
+                                new UserAccount(
+                                                "Usuário Sem Classificação",
+                                                "sem-classificacao@example.com",
+                                                passwordEncoder.encode("senha-segura")));
+
+                Company company = companyRepository.saveAndFlush(
+                                new Company(
+                                                "Empresa Classificação Ltda",
+                                                "67676767000167"));
+
+                companyAccessGrantRepository.saveAndFlush(
+                                new CompanyAccessGrant(
+                                                userAccount,
+                                                company,
+                                                CompanyAccessRole.CLIENT,
+                                                CostCenterScope.ALL,
+                                                Set.of(
+                                                                CompanyPermission.DRE_VIEW)));
+
+                MockHttpSession session = login(
+                                "sem-classificacao@example.com",
+                                "senha-segura");
+
+                mockMvc.perform(
+                                get(
+                                                "/api/companies/{companyId}/accounting-accounts/classifications",
+                                                company.getId())
+                                                .session(session))
+                                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void shouldAllowAccountClassificationWhenUserHasPermission()
+                        throws Exception {
+
+                UserAccount userAccount = userAccountRepository.saveAndFlush(
+                                new UserAccount(
+                                                "Usuário Classificador",
+                                                "classificador@example.com",
+                                                passwordEncoder.encode("senha-segura")));
+
+                Company company = companyRepository.saveAndFlush(
+                                new Company(
+                                                "Empresa Classificável Ltda",
+                                                "78787878000178"));
+
+                companyAccessGrantRepository.saveAndFlush(
+                                new CompanyAccessGrant(
+                                                userAccount,
+                                                company,
+                                                CompanyAccessRole.ACCOUNTANT,
+                                                CostCenterScope.ALL,
+                                                Set.of(
+                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)));
+
+                MockHttpSession session = login(
+                                "classificador@example.com",
+                                "senha-segura");
+
+                mockMvc.perform(
+                                get(
+                                                "/api/companies/{companyId}/accounting-accounts/classifications",
+                                                company.getId())
+                                                .session(session))
+                                .andExpect(status().isOk());
+        }
 }
