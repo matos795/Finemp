@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Component;
+
+@Component 
 public class ClassificationImportPreviewCalculator {
 
     public List<ClassificationImportPreviewItem> calculate(
