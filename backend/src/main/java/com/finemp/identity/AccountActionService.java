@@ -48,9 +48,10 @@ public class AccountActionService {
     @Transactional
     public void inviteNewUser(String name, String email) {
         String normalizedEmail = normalizeEmail(email);
+        userAccountRepository.insertInvitedIfAbsent(
+                java.util.UUID.randomUUID(), name.trim(), normalizedEmail, clock.instant());
         java.util.UUID userAccountId = userAccountRepository.findIdByEmailIgnoreCase(normalizedEmail)
-                .orElseGet(() -> userAccountRepository.saveAndFlush(
-                        UserAccount.invited(name.trim(), normalizedEmail)).getId());
+                .orElseThrow();
 
         UserAccount locked = userAccountRepository.findLockedById(userAccountId).orElseThrow();
         if (!locked.isInvitationPending()) {

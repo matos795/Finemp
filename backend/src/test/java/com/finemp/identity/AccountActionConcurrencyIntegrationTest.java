@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +33,11 @@ class AccountActionConcurrencyIntegrationTest {
     private Capture capture;
 
     private String email;
+
+    @BeforeEach
+    void clearCapturedDeliveries() {
+        capture.events.clear();
+    }
 
     @AfterEach
     void cleanOwnSyntheticAccount() {
@@ -75,6 +81,38 @@ class AccountActionConcurrencyIntegrationTest {
 
         assertThat(userAccountRepository.findByEmailIgnoreCase(email).orElseThrow().getCredentialsVersion())
                 .isEqualTo(1);
+    }
+
+    @Test
+    void shouldCreateOnePendingAccountForConcurrentInvitations() throws Exception {
+        email = "new-concurrent-" + UUID.randomUUID() + "@example.invalid";
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var task = (java.util.concurrent.Callable<Boolean>) () -> {
+                ready.countDown();
+                if (!start.await(10, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Concurrent test did not start.");
+                }
+                service.inviteNewUser("Synthetic Concurrent", email);
+                return true;
+            };
+            var first = executor.submit(task);
+            var second = executor.submit(task);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            assertThat(first.get(15, TimeUnit.SECONDS)).isTrue();
+            assertThat(second.get(15, TimeUnit.SECONDS)).isTrue();
+        }
+
+        assertThat(userAccountRepository.findByEmailIgnoreCase(email).orElseThrow().isInvitationPending())
+                .isTrue();
+        assertThat(capture.events).hasSize(2);
+        capture.events.poll();
+        AccountActionRequested last = capture.events.poll();
+        service.complete(last.token().rawValue(), AccountActionPurpose.INVITATION, "syntheticPassword123");
+        assertThat(userAccountRepository.findByEmailIgnoreCase(email).orElseThrow().isActive()).isTrue();
     }
 
     @TestConfiguration(proxyBeanMethods = false)

@@ -17,7 +17,7 @@ O primeiro incremento da Issue #36 implementa o núcleo transacional de tokens e
 - token bruto existe apenas no evento transitório de entrega e nunca no schema ou em logs;
 - representações de diagnóstico do token/evento são redigidas.
 
-O hash simples é apropriado para um segredo aleatório de256bits. Senhas continuam passando pelo `PasswordEncoder` forte existente, com política diferente.
+O hash simples é apropriado para um segredo aleatório de 256 bits. Senhas continuam passando pelo `PasswordEncoder` forte existente, com política diferente.
 
 ## Estados da conta
 
@@ -37,11 +37,13 @@ Uma conta inativa por bloqueio não recebe reset e não é reativada por convite
 
 Emissão e consumo adquirem lock de escrita na linha do usuário antes de alterar tokens. O lookup inicial do link retorna apenas IDs, para que uma entidade de token antiga não fique no contexto JPA enquanto outra transação o consome. O lookup inicial de e-mail também retorna apenas o ID.
 
+A criação de uma identidade convidada usa `INSERT ... ON CONFLICT (LOWER(email)) DO NOTHING`, apoiado no índice único de e-mail já existente. Assim, dois convites simultâneos para um e-mail novo convergem para a mesma conta pendente antes de adquirir o lock; o nome e a senha de identidades existentes não são sobrescritos. Esse caminho é coberto por teste concorrente PostgreSQL.
+
 Depois do lock, o serviço lê o token, valida finalidade/estado/expiração, altera o hash da senha e invalida links na mesma transação. Duas transações concorrentes não podem aceitar o mesmo convite. O teste de concorrência usa PostgreSQL real e duas threads.
 
 ## Política de senha e configuração
 
-O comportamento de referência exige pelo menos8caracteres, uma letra ASCII e um dígito. O backend acrescenta o limite técnico de72bytes UTF-8 do encoder BCrypt para rejeitar entradas incompatíveis antes de codificá-las.
+O comportamento de referência exige pelo menos 8 caracteres, uma letra ASCII e um dígito. O backend acrescenta o limite técnico de 72 bytes UTF-8 do encoder BCrypt para rejeitar entradas incompatíveis antes de codificá-las.
 
 Validades configuráveis:
 
@@ -59,4 +61,4 @@ O relógio é injetado por `Clock`, usando UTC em execução e instantes control
 - e-mail via port/adapter, enviado somente após commit, sem retornar o token em respostas HTTP;
 - revogação efetiva de sessão pela versão de credenciais;
 - limitação de tentativas de login/recuperação;
-- DTOs/OpenAPI e testes HTTP401/403/400 e de replay.
+- DTOs/OpenAPI e testes HTTP 401/403/400 e de replay.
