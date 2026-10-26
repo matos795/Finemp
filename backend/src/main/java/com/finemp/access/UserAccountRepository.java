@@ -16,6 +16,8 @@ public interface UserAccountRepository
 
     Optional<UserAccount> findByEmailIgnoreCase(String email);
 
+    boolean existsByIdAndActiveTrueAndCredentialsVersion(UUID id, long credentialsVersion);
+
     @Query("select userAccount.id from UserAccount userAccount where lower(userAccount.email) = lower(:email)")
     Optional<UUID> findIdByEmailIgnoreCase(@Param("email") String email);
 

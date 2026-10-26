@@ -16,6 +16,7 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 
 import com.finemp.access.CompanyPermission;
 
@@ -28,10 +29,13 @@ public class SecurityConfiguration {
                         HttpSecurity http,
                         SecurityContextRepository securityContextRepository,
                         CompanyRequestAuthorizationManager companyAuthorizationManager,
+                        SessionAccountStateValidator sessionAccountStateValidator,
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
 
                 http
+                                .addFilterAfter(new SessionCredentialsFilter(sessionAccountStateValidator),
+                                                SecurityContextHolderFilter.class)
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .requestMatchers(
                                                                 "/api/auth/login",
