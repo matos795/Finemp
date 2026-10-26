@@ -55,6 +55,82 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           description: Limite temporário de tentativas de login excedido; não desativa a conta.
+  /api/auth/password-reset/request:
+    post:
+      tags: [Authentication]
+      operationId: requestPasswordReset
+      summary: Solicita um link de recuperação sem revelar existência da conta.
+      description: Disponível somente com finemp.identity.mail.enabled=true e transporte configurado.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '202':
+          description: Resposta vazia e neutra, inclusive para endereço desconhecido, inativo ou limitado.
+        '400':
+          description: Formato de requisição inválido.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Funcionalidade de entrega desabilitada.
+  /api/auth/password-reset/complete:
+    post:
+      tags: [Authentication]
+      operationId: completePasswordReset
+      summary: Redefine a senha usando link de recuperação de uso único.
+      description: Requer entrega habilitada. Não inicia sessão; invalida sessões anteriores.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteAccountActionRequest'
+      responses:
+        '204':
+          description: Senha alterada. Obter novo CSRF e fazer login novamente.
+        '400':
+          description: Link inválido, expirado, consumido ou senha incompatível; sem detalhes sobre o token.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Funcionalidade de entrega desabilitada.
+        '429':
+          description: Limite temporário de tentativas excedido.
+  /api/auth/activate:
+    post:
+      tags: [Authentication]
+      operationId: activateInvitedAccount
+      summary: Ativa uma identidade convidada e define sua senha.
+      description: Requer entrega habilitada. O link não concede permissões financeiras nem inicia sessão.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteAccountActionRequest'
+      responses:
+        '204':
+          description: Identidade ativada; obter novo CSRF e iniciar sessão.
+        '400':
+          description: Convite inválido, expirado, consumido ou senha incompatível.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Funcionalidade de entrega desabilitada.
+        '429':
+          description: Limite temporário de tentativas excedido.
   /api/auth/me:
     get:
       tags: [Authentication]
@@ -300,6 +376,30 @@ components:
           type: string
           format: password
           writeOnly: true
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+    CompleteAccountActionRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{43}$'
+          writeOnly: true
+          description: Segredo do fragmento do link; nunca registrar em logs ou telemetria.
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          writeOnly: true
+          description: Exige letra ASCII, dígito e no máximo 72 bytes UTF-8.
     CurrentUser:
       type: object
       required: [id, name, email, companies]
