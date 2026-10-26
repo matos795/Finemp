@@ -21,6 +21,7 @@ Todos os limites são técnicos, configuráveis e não alteram regras financeira
 | `reset-ip` | 20 |
 | `reset-email` | 3 |
 | `completion-ip` | 30 |
+| `invitation-actor` | 30 |
 
 Janela fixa iniciada na primeira tentativa; limites contam tentativas bem-sucedidas e malsucedidas. Rejeita excesso até a expiração. A capacidade é limitada; entradas ativas não são removidas para permitir evasão por novas chaves. Ao atingir a capacidade, novas chaves são rejeitadas até haver expiração.
 

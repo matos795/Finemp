@@ -47,6 +47,8 @@ Com entrega de e-mail configurada, a API também oferece `POST /api/auth/passwor
 
 ### 3.3 Autorização
 
+Convites administrativos usam `POST /api/admin/accounting-firms/{firmId}/invitations`, com entrega habilitada, sessão, CSRF e `USER_ACCESS_MANAGE` explícita nessa contabilidade. Corpo: `name`, `email`, `permissions` administrativas. Operação aditiva; resposta 204 vazia e sem segredo. Não concede grant de empresa nem acesso financeiro. Ver [convites por contabilidade](architecture/firm-invitations.md).
+
 O frontend pode ocultar ações indisponíveis para melhorar a experiência, mas isso não substitui a autorização do backend.
 
 Fluxo aplicado pelo servidor:

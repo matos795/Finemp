@@ -76,8 +76,11 @@ public class AccountingFirmAccessGrant {
         return Set.copyOf(permissions);
     }
 
+    public void addPermissions(Set<AccountingFirmPermission> permissions) {
+        this.permissions.addAll(permissions);
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
 }
-

@@ -21,5 +21,7 @@ public interface AccountingFirmAccessGrantRepository
             @Param("userAccountId") UUID userAccountId,
             @Param("accountingFirmId") UUID accountingFirmId,
             @Param("permission") AccountingFirmPermission permission);
-}
 
+    java.util.Optional<AccountingFirmAccessGrant> findByUserAccountIdAndAccountingFirmId(
+            UUID userAccountId, UUID accountingFirmId);
+}
