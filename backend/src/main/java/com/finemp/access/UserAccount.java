@@ -49,6 +49,12 @@ public class UserAccount {
     @Column(name = "permission", nullable = false, length = 80)
     private Set<PlatformPermission> platformPermissions = new HashSet<>();
 
+    @Column(name = "invitation_pending", nullable = false)
+    private boolean invitationPending;
+
+    @Column(name = "credentials_version", nullable = false)
+    private long credentialsVersion;
+
     protected UserAccount() {
     }
 
@@ -104,6 +110,34 @@ public class UserAccount {
 
     public void deactivate() {
         this.active = false;
+        this.invitationPending = false;
+        this.credentialsVersion++;
+    }
+
+    public static UserAccount invited(String name, String email) {
+        UserAccount userAccount = new UserAccount(name, email, "!pending-invitation");
+        userAccount.active = false;
+        userAccount.invitationPending = true;
+        return userAccount;
+    }
+
+    public boolean isInvitationPending() {
+        return invitationPending;
+    }
+
+    public long getCredentialsVersion() {
+        return credentialsVersion;
+    }
+
+    public void completeInvitation(String passwordHash) {
+        this.passwordHash = passwordHash;
+        this.invitationPending = false;
+        this.active = true;
+        this.credentialsVersion++;
+    }
+
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+        this.credentialsVersion++;
     }
 }
-
