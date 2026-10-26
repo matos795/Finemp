@@ -1,5 +1,6 @@
 package com.finemp.security;
 
+import com.finemp.identity.IdentityAttemptGuard;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -23,15 +24,18 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final SecurityContextRepository securityContextRepository;
     private final CurrentUserQueryService currentUserQueryService;
+    private final IdentityAttemptGuard attemptGuard;
 
     public AuthenticationController(
             AuthenticationService authenticationService,
             SecurityContextRepository securityContextRepository,
-            CurrentUserQueryService currentUserQueryService) {
+            CurrentUserQueryService currentUserQueryService,
+            IdentityAttemptGuard attemptGuard) {
 
         this.authenticationService = authenticationService;
         this.securityContextRepository = securityContextRepository;
         this.currentUserQueryService = currentUserQueryService;
+        this.attemptGuard = attemptGuard;
     }
 
     @PostMapping("/login")
@@ -40,6 +44,7 @@ public class AuthenticationController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
+        attemptGuard.requireLogin(request.getRemoteAddr(), loginRequest.email());
         Authentication authentication = authenticationService.authenticate(
                 loginRequest.email(),
                 loginRequest.password());
