@@ -8,4 +8,9 @@ public record LoginRequest(
         @NotBlank @Email String email,
 
         @NotBlank String password) {
+
+    @Override
+    public String toString() {
+        return "LoginRequest[email=redacted, password=redacted]";
+    }
 }
