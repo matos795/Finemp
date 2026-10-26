@@ -51,6 +51,55 @@ class AuthenticationSessionIntegrationTest {
         private CompanyAccessGrantRepository companyAccessGrantRepository;
 
         @Test
+        void shouldRotateAnExistingAnonymousSessionAfterLogin() throws Exception {
+                userAccountRepository.saveAndFlush(new UserAccount(
+                                "Synthetic Rotation", "rotation@example.invalid", passwordEncoder.encode("synthetic123")));
+                MockHttpSession anonymous = new MockHttpSession();
+                String previousId = anonymous.getId();
+
+                mockMvc.perform(post("/api/auth/login").session(anonymous).with(csrf())
+                                .contentType(APPLICATION_JSON)
+                                .content("{\"email\":\"rotation@example.invalid\",\"password\":\"synthetic123\"}"))
+                                .andExpect(status().isNoContent());
+
+                assertThat(anonymous.getId()).isNotEqualTo(previousId);
+        }
+
+        @Test
+        void shouldRevokeAnExistingSessionAfterPasswordChange() throws Exception {
+                UserAccount user = userAccountRepository.saveAndFlush(new UserAccount(
+                                "Synthetic Revocation", "revoke@example.invalid", passwordEncoder.encode("synthetic123")));
+                MockHttpSession session = loginSyntheticUser("revoke@example.invalid");
+                user.changePassword(passwordEncoder.encode("replacement123"));
+                userAccountRepository.saveAndFlush(user);
+
+                mockMvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
+
+                assertThat(session.isInvalid()).isTrue();
+        }
+
+        @Test
+        void shouldRevokeAnExistingSessionAfterDeactivation() throws Exception {
+                UserAccount user = userAccountRepository.saveAndFlush(new UserAccount(
+                                "Synthetic Disabled", "disabled@example.invalid", passwordEncoder.encode("synthetic123")));
+                MockHttpSession session = loginSyntheticUser("disabled@example.invalid");
+                user.deactivate();
+                userAccountRepository.saveAndFlush(user);
+
+                mockMvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
+
+                assertThat(session.isInvalid()).isTrue();
+        }
+
+        private MockHttpSession loginSyntheticUser(String email) throws Exception {
+                var result = mockMvc.perform(post("/api/auth/login").with(csrf())
+                                .contentType(APPLICATION_JSON)
+                                .content("{\"email\":\"" + email + "\",\"password\":\"synthetic123\"}"))
+                                .andExpect(status().isNoContent()).andReturn();
+                return (MockHttpSession) result.getRequest().getSession(false);
+        }
+
+        @Test
         void shouldCreateAuthenticatedSessionWhenCredentialsAreValid()
                         throws Exception {
 

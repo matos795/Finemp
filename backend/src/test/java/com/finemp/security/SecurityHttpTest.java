@@ -41,6 +41,9 @@ class SecurityHttpTest {
         @MockitoBean
         private UserDetailsService userDetailsService;
 
+        @MockitoBean
+        private SessionAccountStateValidator sessionAccountStateValidator;
+
         @Test
         void shouldReturnUnauthorizedWhenRequestIsNotAuthenticated()
                         throws Exception {
