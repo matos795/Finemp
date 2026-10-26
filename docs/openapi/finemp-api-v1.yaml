@@ -1,0 +1,483 @@
+openapi: 3.1.0
+info:
+  title: FINEMP API
+  version: 0.1.0
+  summary: Contrato headless inicial das operações implementadas no FINEMP.
+  description: |
+    Contrato da API já disponível. Cálculos e persistência de negócio pertencem
+    ao backend. Os endpoints de reporting ainda não implementados não fazem
+    parte deste documento.
+servers:
+  - url: http://localhost:8080
+    description: Ambiente local
+tags:
+  - name: Authentication
+  - name: Accounting movements
+  - name: Account classification
+  - name: DRE
+  - name: Accounting synchronization
+paths:
+  /api/auth/csrf:
+    get:
+      tags: [Authentication]
+      operationId: getCsrfToken
+      summary: Obtém o token CSRF para operações mutáveis.
+      security: []
+      responses:
+        '200':
+          description: Token CSRF atual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      summary: Inicia uma sessão autenticada.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '204':
+          description: Sessão iniciada. O cookie de sessão é enviado pelo servidor.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/auth/me:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentUser
+      summary: Retorna o usuário autenticado e seus acessos por empresa.
+      responses:
+        '200':
+          description: Usuário e grants acessíveis.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      summary: Encerra e invalida a sessão atual.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Sessão encerrada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/companies/{companyId}/accounting-movements:
+    get:
+      tags: [Accounting movements]
+      operationId: listAccountingMovements
+      summary: Lista movimentos contábeis de uma empresa em um período.
+      description: A resposta atual ainda não possui paginação server-side.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: Movimentos no período inclusivo.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountingMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/companies/{companyId}/accounting-accounts/classifications:
+    get:
+      tags: [Account classification]
+      operationId: listAccountingAccountClassifications
+      summary: Lista contas da empresa e o estado da classificação gerencial.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+      responses:
+        '200':
+          description: Contas pendentes e classificadas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountingAccountClassification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/companies/{companyId}/accounting-accounts/{accountId}/classification:
+    put:
+      tags: [Account classification]
+      operationId: classifyAccountingAccount
+      summary: Classifica ou reclassifica uma conta da empresa.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingAccountClassificationRequest'
+      responses:
+        '204':
+          description: Classificação aplicada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/dre-classifications:
+    get:
+      tags: [Account classification]
+      operationId: listDreClassifications
+      summary: Lista o catálogo gerencial global de classificações DRE.
+      responses:
+        '200':
+          description: Catálogo FINEMP.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DreClassification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/companies/{companyId}/dre:
+    get:
+      tags: [DRE]
+      operationId: calculateDre
+      summary: Calcula a DRE inicial para a empresa e o período.
+      description: Requer a permissão DRE_VIEW para a empresa solicitada.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: Linhas agregadas e quantidade de contas pendentes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DreCalculation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/accounting-sources/{accountingSourceId}/questor-import:
+    post:
+      tags: [Accounting synchronization]
+      operationId: importQuestorAccountingMovements
+      summary: Importa movimentos da fonte Questor para o FINEMP.
+      description: |
+        Operação administrativa disponível somente quando a integração Questor
+        está habilitada. Não deve ser chamada durante uma leitura de tela.
+      parameters:
+        - name: accountingSourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Importação concluída.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: Sessão HTTP mantida em cookie HttpOnly.
+  parameters:
+    CompanyId:
+      name: companyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    StartDate:
+      name: startDate
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    EndDate:
+      name: endDate
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    CsrfHeader:
+      name: X-CSRF-TOKEN
+      in: header
+      required: true
+      description: Valor obtido em `GET /api/auth/csrf`; o nome efetivo também é retornado pela API.
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Requisição inválida.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Unauthorized:
+      description: Sessão ausente, expirada ou credenciais inválidas.
+    Forbidden:
+      description: Usuário autenticado sem grant, permission, data scope ou token CSRF válido.
+    NotFound:
+      description: Recurso não encontrado dentro do escopo autorizado.
+  schemas:
+    CsrfToken:
+      type: object
+      required: [headerName, token]
+      properties:
+        headerName:
+          type: string
+          examples: [X-CSRF-TOKEN]
+        token:
+          type: string
+          description: Valor opaco.
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          examples: [usuario@exemplo.invalid]
+        password:
+          type: string
+          format: password
+          writeOnly: true
+    CurrentUser:
+      type: object
+      required: [id, name, email, companies]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        companies:
+          type: array
+          items:
+            $ref: '#/components/schemas/CurrentUserCompanyAccess'
+    CurrentUserCompanyAccess:
+      type: object
+      required: [id, name, role, permissions, costCenterScope]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/CompanyAccessRole'
+        permissions:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/CompanyPermission'
+        costCenterScope:
+          $ref: '#/components/schemas/CostCenterScope'
+    AccountingMovement:
+      type: object
+      required:
+        - id
+        - accountingDate
+        - accountDescription
+        - accountKey
+        - side
+        - amount
+        - history
+        - sourceEntryKey
+      properties:
+        id:
+          type: string
+          format: uuid
+        accountingDate:
+          type: string
+          format: date
+        accountDescription:
+          type: string
+        accountKey:
+          type: string
+          description: Código da conta dentro da respectiva fonte/empresa; não é global.
+        side:
+          type: string
+          enum: [DEBIT, CREDIT]
+        amount:
+          $ref: '#/components/schemas/DecimalAmount'
+        history:
+          type: [string, 'null']
+        sourceEntryKey:
+          type: string
+    AccountingAccountClassification:
+      type: object
+      required:
+        - accountId
+        - accountingSourceId
+        - accountKey
+        - description
+        - status
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        accountingSourceId:
+          type: string
+          format: uuid
+        accountKey:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, CLASSIFIED]
+        classificationId:
+          type: [string, 'null']
+          format: uuid
+        dreClassification:
+          type: [string, 'null']
+        dreOpenClassification:
+          type: [string, 'null']
+        ebitdaClassification:
+          type: [string, 'null']
+    AccountingAccountClassificationRequest:
+      type: object
+      additionalProperties: false
+      required: [classificationId]
+      properties:
+        classificationId:
+          type: string
+          format: uuid
+    DreClassification:
+      type: object
+      required: [id, dreClassification, dreOpenClassification, ebitdaClassification]
+      properties:
+        id:
+          type: string
+          format: uuid
+        dreClassification:
+          type: string
+        dreOpenClassification:
+          type: string
+        ebitdaClassification:
+          type: string
+    DreCalculation:
+      type: object
+      required: [lines, unclassifiedAccountCount]
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/DreLine'
+        unclassifiedAccountCount:
+          type: integer
+          format: int32
+          minimum: 0
+    DreLine:
+      type: object
+      required: [dreClassification, dreOpenClassification, ebitdaClassification, total]
+      properties:
+        dreClassification:
+          type: string
+        dreOpenClassification:
+          type: string
+        ebitdaClassification:
+          type: string
+        total:
+          $ref: '#/components/schemas/DecimalAmount'
+    DecimalAmount:
+      type: number
+      description: Decimal calculado em BigDecimal no backend. O consumidor apenas formata.
+      examples: [1250.50]
+    CompanyAccessRole:
+      type: string
+      enum: [CUSTOM, ADMIN, ACCOUNTANT, CLIENT, VIEWER]
+    CompanyPermission:
+      type: string
+      enum:
+        - DASHBOARD_VIEW
+        - DRE_VIEW
+        - BALANCE_SHEET_VIEW
+        - CASH_FLOW_VIEW
+        - INDICATORS_VIEW
+        - ACCOUNT_CLASSIFICATION_MANAGE
+        - MANUAL_ENTRY_MANAGE
+        - QUESTOR_SYNC
+    CostCenterScope:
+      type: string
+      enum: [ALL, RESTRICTED]
+    ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+security:
+  - SessionCookie: []
+
+
