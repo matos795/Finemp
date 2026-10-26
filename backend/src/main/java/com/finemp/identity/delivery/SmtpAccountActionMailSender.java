@@ -19,6 +19,9 @@ public class SmtpAccountActionMailSender implements AccountActionMailSender {
         if (sender instanceof JavaMailSenderImpl implementation) {
             var properties = implementation.getJavaMailProperties();
             String protocol = implementation.getProtocol();
+            if (protocol == null || protocol.isBlank()) {
+                protocol = "smtp";
+            }
             properties.putIfAbsent("mail." + protocol + ".connectiontimeout", "5000");
             properties.putIfAbsent("mail." + protocol + ".timeout", "5000");
             properties.putIfAbsent("mail." + protocol + ".writetimeout", "5000");
