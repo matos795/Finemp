@@ -154,4 +154,18 @@ class AccountActionServiceIntegrationTest {
     private AccountActionRequested lastDelivery() {
         return events.stream(AccountActionRequested.class).reduce((first, last) -> last).orElseThrow();
     }
+
+    @Test
+    void shouldRejectResetIssuedBeforeAnotherCredentialChange() {
+        UserAccount userAccount = userAccountRepository.saveAndFlush(new UserAccount(
+                "Synthetic", "version@example.invalid", passwordEncoder.encode("oldPassword123")));
+        service.requestPasswordReset(userAccount.getEmail());
+        String token = lastDelivery().token().rawValue();
+
+        userAccount.changePassword(passwordEncoder.encode("otherPassword123"));
+        userAccountRepository.saveAndFlush(userAccount);
+
+        assertThatThrownBy(() -> service.complete(token, AccountActionPurpose.PASSWORD_RESET, "replayedPassword123"))
+                .isInstanceOf(InvalidAccountActionException.class);
+    }
 }

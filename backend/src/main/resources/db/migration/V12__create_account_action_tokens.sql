@@ -12,6 +12,7 @@ CREATE TABLE account_action_tokens (
     issued_at TIMESTAMP WITH TIME ZONE NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     consumed_at TIMESTAMP WITH TIME ZONE,
+    credentials_version BIGINT NOT NULL,
 
     CONSTRAINT pk_account_action_tokens PRIMARY KEY (id),
     CONSTRAINT uk_account_action_tokens_hash UNIQUE (token_hash),

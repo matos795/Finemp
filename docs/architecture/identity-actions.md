@@ -13,6 +13,7 @@ O primeiro incremento da Issue #36 implementa o núcleo transacional de tokens e
 - expira no instante exato de `expires_at`;
 - uma nova emissão invalida os links anteriores do usuário;
 - uma alteração de senha invalida todos os links ainda pendentes;
+- cada token também guarda a versão das credenciais no momento da emissão; alterações posteriores de senha ou desativação invalidam o link, mesmo se a conta voltar a ser ativada;
 - token bruto existe apenas no evento transitório de entrega e nunca no schema ou em logs;
 - representações de diagnóstico do token/evento são redigidas.
 

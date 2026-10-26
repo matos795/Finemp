@@ -95,7 +95,8 @@ public class AccountActionService {
         boolean allowedState = purpose == AccountActionPurpose.INVITATION
                 ? userAccount.isInvitationPending()
                 : userAccount.isActive();
-        if (!allowedState || !token.isUsable(purpose, now)) {
+        if (!allowedState || !token.isUsable(purpose, now)
+                || !token.matchesCredentialsVersion(userAccount.getCredentialsVersion())) {
             throw new InvalidAccountActionException();
         }
 

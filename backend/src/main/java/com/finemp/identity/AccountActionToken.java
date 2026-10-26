@@ -44,6 +44,9 @@ public class AccountActionToken {
     @Column(name = "consumed_at")
     private Instant consumedAt;
 
+    @Column(name = "credentials_version", nullable = false, updatable = false)
+    private long credentialsVersion;
+
     protected AccountActionToken() {
     }
 
@@ -58,6 +61,7 @@ public class AccountActionToken {
         this.tokenHash = tokenHash;
         this.issuedAt = issuedAt;
         this.expiresAt = expiresAt;
+        this.credentialsVersion = userAccount.getCredentialsVersion();
     }
 
     public UUID getId() {
@@ -70,6 +74,10 @@ public class AccountActionToken {
 
     public Instant getExpiresAt() {
         return expiresAt;
+    }
+
+    public boolean matchesCredentialsVersion(long version) {
+        return credentialsVersion == version;
     }
 
     public boolean isUsable(AccountActionPurpose expectedPurpose, Instant now) {
