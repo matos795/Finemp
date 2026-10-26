@@ -49,6 +49,7 @@ public class SecurityConfiguration {
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/accounting-accounts/classifications",
                                                                 "/api/companies/{companyId}/accounting-accounts/{accountId}/classification",
+                                                                "/api/companies/{companyId}/accounting-accounts/classification-import/**",
                                                                 "/api/companies/{companyId}/dre-classifications")
                                                 .access(
                                                                 permissionAuthorizationManagerFactory

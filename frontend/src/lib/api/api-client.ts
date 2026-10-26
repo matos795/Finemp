@@ -40,8 +40,18 @@ export async function apiRequest<T>(
 
   const headers = new Headers(options.headers)
 
-  if (options.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json")
+  const isFormData =
+    options.body instanceof FormData
+
+  if (
+    options.body
+    && !isFormData
+    && !headers.has("Content-Type")
+  ) {
+    headers.set(
+      "Content-Type",
+      "application/json",
+    )
   }
 
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
@@ -56,11 +66,35 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
-    throw new ApiError(
-      response.status,
+    let message =
       response.status === 401
         ? "E-mail ou senha inválidos."
-        : "Não foi possível concluir a operação.",
+        : "Não foi possível concluir a operação."
+
+    const contentType =
+      response.headers.get("content-type")
+
+    if (contentType?.includes("application/json")) {
+      try {
+        const body =
+          await response.json() as {
+            title?: string
+            detail?: string
+          }
+
+        if (body.detail) {
+          message = body.detail
+        } else if (body.title) {
+          message = body.title
+        }
+      } catch {
+        // Mantém a mensagem padrão.
+      }
+    }
+
+    throw new ApiError(
+      response.status,
+      message,
     )
   }
 

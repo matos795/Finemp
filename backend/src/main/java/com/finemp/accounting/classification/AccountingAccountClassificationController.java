@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -31,10 +31,19 @@ public class AccountingAccountClassificationController {
     }
 
     @GetMapping("/classifications")
-    public List<AccountingAccountClassificationResponse> findAll(
-            @PathVariable UUID companyId) {
+    public AccountingAccountClassificationPageResponse findAll(
+            @PathVariable UUID companyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) AccountingAccountClassificationStatus status,
+            @RequestParam(required = false) String search) {
 
-        return queryService.findAllByCompanyId(companyId);
+        return queryService.findPageByCompanyId(
+                companyId,
+                page,
+                size,
+                status,
+                search);
     }
 
     @PutMapping("/{accountId}/classification")

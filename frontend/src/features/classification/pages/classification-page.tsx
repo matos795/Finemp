@@ -1,5 +1,6 @@
 import {
     useMemo,
+    useRef,
     useState,
 } from "react"
 
@@ -7,6 +8,7 @@ import {
     Search,
     Tags,
     Undo2,
+    Upload,
 } from "lucide-react"
 
 import { Badge } from "../../../components/ui/badge"
@@ -30,10 +32,13 @@ import { useCompanyAccess } from "../../companies/company-access-context"
 
 import {
     useAccountClassifications,
+    useApplyClassificationImport,
+    useClassificationImportPreview,
     useClassifyAccount,
     useDreClassifications,
     useUnclassifyAccount,
 } from "../hooks/use-classification"
+import { ClassificationImportPreviewSheet } from "../components/classification-import-preview-sheet"
 
 type StatusFilter =
     | "ALL"
@@ -67,6 +72,28 @@ export function ClassificationPage() {
 
     const unclassifyMutation =
         useUnclassifyAccount(companyId ?? "")
+
+    const fileInputRef =
+        useRef<HTMLInputElement>(null)
+
+    const importPreview =
+        useClassificationImportPreview(
+            companyId ?? "",
+        )
+
+    const [importFile, setImportFile] =
+        useState<File | null>(null)
+
+    const applyImport =
+        useApplyClassificationImport(
+            companyId ?? "",
+        )
+
+    const [previewOpen, setPreviewOpen] =
+        useState(false)
+
+    const [page, setPage] =
+        useState(0)
 
     const accounts = useMemo(
         () => accountsQuery.data ?? [],
@@ -143,21 +170,105 @@ export function ClassificationPage() {
     const classifiedCount =
         accounts.length - pendingCount
 
+    function handleFileChange(
+        event: React.ChangeEvent<HTMLInputElement>,
+    ) {
+        const file =
+            event.target.files?.[0]
+
+        if (!file) {
+            return
+        }
+
+        setImportFile(file)
+
+        importPreview.mutate(
+            file,
+            {
+                onSuccess: () => {
+                    setPreviewOpen(true)
+                },
+            },
+        )
+
+        event.target.value = ""
+    }
+
+    function handleApplyImport() {
+        if (!importFile) {
+            return
+        }
+
+        applyImport.mutate(
+            importFile,
+            {
+                onSuccess: () => {
+                    setPreviewOpen(false)
+                    setImportFile(null)
+                    importPreview.reset()
+                    setSelectedClassifications({})
+                },
+            },
+        )
+    }
+
+    function handlePreviewOpenChange(
+        open: boolean,
+    ) {
+        if (applyImport.isPending) {
+            return
+        }
+
+        setPreviewOpen(open)
+
+        if (!open) {
+            setImportFile(null)
+            importPreview.reset()
+        }
+    }
+
     return (
         <div className="space-y-6">
-            <div>
-                <p className="text-sm text-muted-foreground">
-                    Contabilidade
-                </p>
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
 
-                <h1 className="text-2xl font-semibold tracking-tight">
-                    Classificação de contas
-                </h1>
+                <div>
+                    <p className="text-sm text-muted-foreground">
+                        Contabilidade
+                    </p>
 
-                <p className="mt-1 text-sm text-muted-foreground">
-                    Vincule as contas contábeis do Questor
-                    à estrutura gerencial da FINEMP.
-                </p>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        Classificação de contas
+                    </h1>
+
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Vincule as contas contábeis do Questor
+                        à estrutura gerencial da FINEMP.
+                    </p>
+                </div>
+
+                <div>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xlsm"
+                        className="hidden"
+                        onChange={handleFileChange}
+                    />
+
+                    <Button
+                        variant="outline"
+                        disabled={importPreview.isPending}
+                        onClick={() =>
+                            fileInputRef.current?.click()
+                        }
+                    >
+                        <Upload className="size-4" />
+
+                        {importPreview.isPending
+                            ? "Analisando..."
+                            : "Importar PlanoQ"}
+                    </Button>
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -204,6 +315,52 @@ export function ClassificationPage() {
                 </Card>
             </div>
 
+            {importPreview.isError && (
+                <Card className="border-destructive/30 bg-destructive/5">
+                    <CardContent className="p-5 text-sm text-destructive">
+                        <p className="font-medium">
+                            Não foi possível analisar o arquivo.
+                        </p>
+
+                        <p className="mt-1">
+                            {importPreview.error.message}
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+
+            <ClassificationImportPreviewSheet
+                open={previewOpen}
+                preview={importPreview.data}
+                isApplying={applyImport.isPending}
+                onOpenChange={handlePreviewOpenChange}
+                onConfirm={handleApplyImport}
+            />
+
+            {applyImport.data && (
+                <Card className="border-emerald-200 bg-emerald-50">
+                    <CardContent className="p-5">
+                        <p className="font-medium text-emerald-900">
+                            Importação concluída
+                        </p>
+
+                        <p className="mt-2 text-sm text-emerald-800">
+                            {applyImport.data.classifiedAccounts}
+                            {" "}contas classificadas e{" "}
+                            {applyImport.data.createdCatalogClassifications}
+                            {" "}categorias adicionadas ao catálogo global.
+                        </p>
+
+                        {applyImport.data.conflicts > 0 && (
+                            <p className="mt-1 text-sm text-emerald-800">
+                                {applyImport.data.conflicts}
+                                {" "}conflitos permaneceram inalterados para revisão manual.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             <Card>
                 <CardContent className="space-y-5 pt-6">
                     <div className="flex flex-col gap-3 lg:flex-row">
@@ -212,10 +369,12 @@ export function ClassificationPage() {
 
                             <Input
                                 value={search}
-                                onChange={(event) =>
+                                onChange={(event) => {
                                     setSearch(
                                         event.target.value,
                                     )
+                                    setPage(0);
+                                }
                                 }
                                 placeholder="Buscar por código ou descrição..."
                                 className="pl-9"
@@ -224,10 +383,12 @@ export function ClassificationPage() {
 
                         <Select
                             value={statusFilter}
-                            onValueChange={(value) =>
+                            onValueChange={(value) => {
                                 setStatusFilter(
                                     value as StatusFilter,
-                                )
+                                );
+                                setPage(0);
+                            }
                             }
                         >
                             <SelectTrigger className="w-full lg:w-48">
@@ -409,6 +570,44 @@ export function ClassificationPage() {
                                 )}
                             </tbody>
                         </table>
+
+                        <div className="flex items-center justify-between border-t pt-4">
+                            <p className="text-sm text-muted-foreground">
+                                {accountsQuery.data?.totalElements ?? 0} contas encontradas
+                            </p>
+
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={page === 0}
+                                    onClick={() =>
+                                        setPage((current) => current - 1)
+                                    }
+                                >
+                                    Anterior
+                                </Button>
+
+                                <span className="text-sm text-muted-foreground">
+                                    Página {page + 1} de{" "}
+                                    {accountsQuery.data?.totalPages ?? 1}
+                                </span>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={
+                                        page + 1
+                                        >= (accountsQuery.data?.totalPages ?? 1)
+                                    }
+                                    onClick={() =>
+                                        setPage((current) => current + 1)
+                                    }
+                                >
+                                    Próxima
+                                </Button>
+                            </div>
+                        </div>
                     </div>
 
                     {filteredAccounts.length === 0 && (

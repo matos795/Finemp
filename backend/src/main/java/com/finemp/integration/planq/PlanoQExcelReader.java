@@ -3,6 +3,8 @@ package com.finemp.integration.planq;
 import com.finemp.accounting.classification.importing.PlanoQMapping;
 import com.finemp.accounting.classification.importing.PlanoQMappingReader;
 import com.finemp.accounting.classification.importing.PlanoQReadException;
+
+import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
@@ -51,7 +53,14 @@ public class PlanoQExcelReader
 
             return readMappings(header);
 
+        } catch (EncryptedDocumentException exception) {
+
+            throw new PlanoQReadException(
+                    "Arquivos Excel protegidos por senha não são aceitos.",
+                    exception);
+
         } catch (IOException exception) {
+
             throw new PlanoQReadException(
                     "Não foi possível ler o arquivo PlanoQ.",
                     exception);

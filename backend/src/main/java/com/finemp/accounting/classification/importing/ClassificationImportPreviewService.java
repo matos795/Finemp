@@ -35,7 +35,17 @@ public class ClassificationImportPreviewService {
             UUID companyId,
             InputStream inputStream) {
 
-        var mappings = mappingReader.read(inputStream);
+        List<PlanoQMapping> mappings = mappingReader.read(inputStream);
+
+        return preview(
+                companyId,
+                mappings);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClassificationImportPreviewItem> preview(
+            UUID companyId,
+            List<PlanoQMapping> mappings) {
 
         var accounts = accountQueryService.findAllByCompanyId(
                 companyId);

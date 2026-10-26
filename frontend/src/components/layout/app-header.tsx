@@ -1,4 +1,4 @@
-import { LogOut, UserRound } from "lucide-react"
+import { LogOut } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router"
 import { useCompanyAccess } from "../../features/companies/company-access-context"
@@ -36,59 +36,71 @@ export function AppHeader() {
     }
 
     return (
-        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b bg-white/95 px-6 backdrop-blur lg:px-8">
-            <CompanySwitcher />
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+            <div className="flex h-[72px] items-center justify-between gap-6 px-6 lg:px-8">
 
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        className="h-11 gap-3 px-2"
+                <div className="flex min-w-0 items-center gap-4">
+                    <div className="hidden sm:block">
+                        <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            Empresa ativa
+                        </p>
+
+                        <CompanySwitcher />
+                    </div>
+                </div>
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className="h-12 rounded-xl px-2 hover:bg-slate-100"
+                        >
+                            <div className="hidden min-w-0 text-right md:block">
+                                <p className="truncate text-sm font-medium text-[#102238]">
+                                    {user.name}
+                                </p>
+
+                                <p className="truncate text-xs text-muted-foreground">
+                                    {user.email}
+                                </p>
+                            </div>
+
+                            <Avatar className="ml-2 size-9">
+                                <AvatarFallback className="bg-[#102238] text-xs font-medium text-white">
+                                    {initials}
+                                </AvatarFallback>
+                            </Avatar>
+                        </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent
+                        align="end"
+                        className="w-64"
                     >
-                        <div className="hidden text-right md:block">
-                            <p className="text-sm font-medium">
-                                {user.name}
-                            </p>
+                        <DropdownMenuLabel>
+                            <div>
+                                <p className="font-medium">
+                                    {user.name}
+                                </p>
 
-                            <p className="text-xs text-muted-foreground">
-                                {user.email}
-                            </p>
-                        </div>
+                                <p className="text-xs font-normal text-muted-foreground">
+                                    {user.email}
+                                </p>
+                            </div>
+                        </DropdownMenuLabel>
 
-                        <Avatar className="size-9">
-                            <AvatarFallback className="bg-[#102238] text-xs text-white">
-                                {initials}
-                            </AvatarFallback>
-                        </Avatar>
-                    </Button>
-                </DropdownMenuTrigger>
+                        <DropdownMenuSeparator />
 
-                <DropdownMenuContent
-                    align="end"
-                    className="w-56"
-                >
-                    <DropdownMenuLabel>
-                        Minha conta
-                    </DropdownMenuLabel>
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem disabled>
-                        <UserRound />
-                        {user.email}
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                        onClick={handleLogout}
-                        className="text-destructive"
-                    >
-                        <LogOut />
-                        Sair
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                        <DropdownMenuItem
+                            onClick={handleLogout}
+                            className="text-destructive"
+                        >
+                            <LogOut />
+                            Sair
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </header>
     )
 }

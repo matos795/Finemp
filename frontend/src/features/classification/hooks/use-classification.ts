@@ -5,9 +5,11 @@ import {
 } from "@tanstack/react-query"
 
 import {
+    applyClassificationImport,
     classifyAccount,
     getAccountClassifications,
     getDreClassifications,
+    previewClassificationImport,
     unclassifyAccount,
 } from "../api/classification-api"
 
@@ -101,6 +103,58 @@ export function useUnclassifyAccount(
                 queryClient.invalidateQueries({
                     queryKey: [
                         "account-classifications",
+                        companyId,
+                    ],
+                }),
+
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        "dre",
+                        companyId,
+                    ],
+                }),
+            ])
+        },
+    })
+}
+
+export function useClassificationImportPreview(
+    companyId: string,
+) {
+    return useMutation({
+        mutationFn: (file: File) =>
+            previewClassificationImport(
+                companyId,
+                file,
+            ),
+    })
+}
+
+export function useApplyClassificationImport(
+    companyId: string,
+) {
+    const queryClient =
+        useQueryClient()
+
+    return useMutation({
+        mutationFn: (file: File) =>
+            applyClassificationImport(
+                companyId,
+                file,
+            ),
+
+        onSuccess: async () => {
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        "account-classifications",
+                        companyId,
+                    ],
+                }),
+
+                queryClient.invalidateQueries({
+                    queryKey: [
+                        "dre-classifications",
                         companyId,
                     ],
                 }),
