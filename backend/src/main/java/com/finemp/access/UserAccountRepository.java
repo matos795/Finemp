@@ -3,6 +3,10 @@ package com.finemp.access;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import jakarta.persistence.LockModeType;
+import java.time.Instant;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -11,6 +15,26 @@ public interface UserAccountRepository
         extends JpaRepository<UserAccount, UUID> {
 
     Optional<UserAccount> findByEmailIgnoreCase(String email);
+
+    @Query("select userAccount.id from UserAccount userAccount where lower(userAccount.email) = lower(:email)")
+    Optional<UUID> findIdByEmailIgnoreCase(@Param("email") String email);
+
+    @Modifying
+    @Query(value = """
+            INSERT INTO user_accounts
+                (id, name, email, password_hash, active, invitation_pending, credentials_version, created_at)
+            VALUES (:id, :name, :email, '!pending-invitation', FALSE, TRUE, 0, :createdAt)
+            ON CONFLICT (LOWER(email)) DO NOTHING
+            """, nativeQuery = true)
+    int insertInvitedIfAbsent(
+            @Param("id") UUID id,
+            @Param("name") String name,
+            @Param("email") String email,
+            @Param("createdAt") Instant createdAt);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select userAccount from UserAccount userAccount where userAccount.id = :id")
+    Optional<UserAccount> findLockedById(@Param("id") UUID id);
 
     @Query("""
             select case when count(userAccount) > 0 then true else false end
@@ -23,4 +47,3 @@ public interface UserAccountRepository
             @Param("userAccountId") UUID userAccountId,
             @Param("permission") PlatformPermission permission);
 }
-
