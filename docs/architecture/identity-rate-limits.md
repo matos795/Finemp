@@ -31,3 +31,5 @@ Este adapter é local a uma instância e reinicia com o processo. Antes de múlt
 ## Testes
 
 Janela/limite exatos, capacidade, concorrência, normalização, separação por endereço e HTTP 429. A senha do DTO de login é redigida no `toString()`.
+
+A verificação de backend roda em PRs de qualquer base, inclusive branches empilhadas, mantendo o gatilho de push restrito ao `main`.
