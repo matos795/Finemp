@@ -361,7 +361,7 @@ components:
         amount:
           $ref: '#/components/schemas/DecimalAmount'
         history:
-          type: string
+          type: [string, 'null']
         sourceEntryKey:
           type: string
     AccountingAccountClassification:
