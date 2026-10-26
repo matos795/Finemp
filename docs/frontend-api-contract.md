@@ -43,6 +43,8 @@ O arquivo [`openapi/finemp-api-v1.yaml`](openapi/finemp-api-v1.yaml) descreve so
 
 Senha nunca é salva em `localStorage`, log, URL ou payload de telemetria.
 
+Com entrega de e-mail configurada, a API também oferece `POST /api/auth/password-reset/request`, `POST /api/auth/password-reset/complete` e `POST /api/auth/activate`. Essas operações exigem CSRF mesmo sem login. A solicitação retorna 202 vazio para e-mail conhecido, desconhecido, inativo ou limitado; nunca retorna o token. O frontend lê o segredo do fragmento do link, remove-o do histórico e envia `token`/`newPassword` no corpo da conclusão. Sucesso 204 não inicia sessão: obter novo CSRF e fazer login. Link inválido/consumido/expirado recebe 400; excesso de tentativas de conclusão recebe 429. Sem entrega habilitada, as rotas não existem (404). Detalhes em [identidade HTTP](architecture/identity-http.md).
+
 ### 3.3 Autorização
 
 O frontend pode ocultar ações indisponíveis para melhorar a experiência, mas isso não substitui a autorização do backend.

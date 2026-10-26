@@ -40,6 +40,9 @@ public class SecurityConfiguration {
                                                 .requestMatchers(
                                                                 "/api/auth/login",
                                                                 "/api/auth/csrf",
+                                                                "/api/auth/activate",
+                                                                "/api/auth/password-reset/request",
+                                                                "/api/auth/password-reset/complete",
                                                                 "/actuator/health")
                                                 .permitAll()
 
