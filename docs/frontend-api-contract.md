@@ -1,5 +1,7 @@
 # Contrato de integração frontend ↔ API FINEMP
 
+> Checkpoint 26/10/2026: o comportamento funcional do `FINEMP_web_1.zip` foi homologado. A [matriz integral de paridade](reference/frontend-backend-parity.md) registra os requisitos e o estado real de implementação. Contratos planejados continuam indisponíveis até a respectiva entrega; a DRE operacional será exposta separadamente da DRE contábil existente.
+
 > Contrato headless inicial. A API é a autoridade de segurança, persistência e cálculos financeiros. O frontend Claude é apenas um consumidor substituível.
 
 ## 1. Status do contrato
@@ -364,5 +366,4 @@ O cliente a ser gerado a partir do OpenAPI deve:
 ## 9. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
-
 

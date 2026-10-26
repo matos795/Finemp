@@ -1,0 +1,313 @@
+{
+  "referenceSha256": "7f8342a08bcc77fbdc76f6160dd7fcec766f83f2c89f4d5b2dd919040bfc7d51",
+  "namedFunctionDeclarations": 562,
+  "baseScreenCount": 58,
+  "adminScreenCount": 3,
+  "screens": [
+    {
+      "id": "painel",
+      "label": "Painel",
+      "group": "fluxo"
+    },
+    {
+      "id": "lanc",
+      "label": "Lançamentos",
+      "group": "fluxo"
+    },
+    {
+      "id": "agenda",
+      "label": "Pagar e receber",
+      "group": "fluxo"
+    },
+    {
+      "id": "ext",
+      "label": "Extratos e conciliação",
+      "group": "fluxo"
+    },
+    {
+      "id": "mensal",
+      "label": "Fluxo mensal",
+      "group": "fluxo"
+    },
+    {
+      "id": "diario",
+      "label": "Fluxo diário",
+      "group": "fluxo"
+    },
+    {
+      "id": "bancos",
+      "label": "Contas e saldos",
+      "group": "fluxo"
+    },
+    {
+      "id": "empresas",
+      "label": "Empresas",
+      "group": "cad"
+    },
+    {
+      "id": "cadEmp",
+      "label": "Dados da empresa",
+      "group": "cad"
+    },
+    {
+      "id": "parc",
+      "label": "Clientes e fornecedores",
+      "group": "cad"
+    },
+    {
+      "id": "func",
+      "label": "Funcionários",
+      "group": "rel"
+    },
+    {
+      "id": "bens",
+      "label": "Controle de bens",
+      "group": "pat"
+    },
+    {
+      "id": "faq",
+      "label": "Perguntas frequentes",
+      "group": "ajuda"
+    },
+    {
+      "id": "tutor",
+      "label": "Tutoriais guiados",
+      "group": "ajuda"
+    },
+    {
+      "id": "cadContas",
+      "label": "Contas bancárias",
+      "group": "cad"
+    },
+    {
+      "id": "cadPlano",
+      "label": "Plano de contas",
+      "group": "cad"
+    },
+    {
+      "id": "cr",
+      "label": "Centros de resultado",
+      "group": "cad"
+    },
+    {
+      "id": "ctr",
+      "label": "Contratos e reajustes",
+      "group": "ctr"
+    },
+    {
+      "id": "fatMes",
+      "label": "Faturamento do mês",
+      "group": "ctr"
+    },
+    {
+      "id": "nf",
+      "label": "Notas fiscais",
+      "group": "ctr"
+    },
+    {
+      "id": "plnCron",
+      "label": "Cronograma de encontros",
+      "group": "pln"
+    },
+    {
+      "id": "plnMetas",
+      "label": "Metas e indicadores",
+      "group": "pln"
+    },
+    {
+      "id": "plnAcoes",
+      "label": "Plano de ação",
+      "group": "pln"
+    },
+    {
+      "id": "orc",
+      "label": "Painel do orçamento",
+      "group": "orc"
+    },
+    {
+      "id": "orcPlano",
+      "label": "Plano orçamentário",
+      "group": "orc"
+    },
+    {
+      "id": "orcPes",
+      "label": "Planejamento de pessoal",
+      "group": "orc"
+    },
+    {
+      "id": "orcFix",
+      "label": "Gastos fixos",
+      "group": "orc"
+    },
+    {
+      "id": "orcVar",
+      "label": "Gastos variáveis",
+      "group": "orc"
+    },
+    {
+      "id": "orcDre",
+      "label": "DRE orçada × realizada",
+      "group": "orc"
+    },
+    {
+      "id": "orcFat",
+      "label": "Faturamento",
+      "group": "orc"
+    },
+    {
+      "id": "orcRank",
+      "label": "Ranking de gastos",
+      "group": "orc"
+    },
+    {
+      "id": "orcPe",
+      "label": "Ponto de equilíbrio",
+      "group": "orc"
+    },
+    {
+      "id": "orcCen",
+      "label": "Cenários",
+      "group": "orc"
+    },
+    {
+      "id": "relRec",
+      "label": "Contas a receber em aberto",
+      "group": "rel"
+    },
+    {
+      "id": "relPag",
+      "label": "Contas a pagar em aberto",
+      "group": "rel"
+    },
+    {
+      "id": "dre",
+      "label": "DRE (competência)",
+      "group": "rel"
+    },
+    {
+      "id": "conc",
+      "label": "Conciliação caixa × DRE",
+      "group": "rel"
+    },
+    {
+      "id": "ciclo",
+      "label": "Ciclo financeiro e prazos",
+      "group": "rel"
+    },
+    {
+      "id": "ncg",
+      "label": "Capital de giro (NCG)",
+      "group": "rel"
+    },
+    {
+      "id": "bal",
+      "label": "Balanço patrimonial",
+      "group": "rel"
+    },
+    {
+      "id": "crmFunil",
+      "label": "Funil de vendas",
+      "group": "crm"
+    },
+    {
+      "id": "crmAtiv",
+      "label": "Agenda de follow-ups",
+      "group": "crm"
+    },
+    {
+      "id": "crmCli",
+      "label": "Carteira e ficha do cliente",
+      "group": "crm"
+    },
+    {
+      "id": "crmInd",
+      "label": "Indicadores comerciais",
+      "group": "crm"
+    },
+    {
+      "id": "estProd",
+      "label": "Produtos e saldos",
+      "group": "est"
+    },
+    {
+      "id": "estMov",
+      "label": "Movimentações (kardex)",
+      "group": "est"
+    },
+    {
+      "id": "estNfe",
+      "label": "Notas fiscais (XML)",
+      "group": "est"
+    },
+    {
+      "id": "estPreco",
+      "label": "Formação de preço",
+      "group": "est"
+    },
+    {
+      "id": "consist",
+      "label": "Verificação de consistência",
+      "group": "rel"
+    },
+    {
+      "id": "divPainel",
+      "label": "Visão geral",
+      "group": "div"
+    },
+    {
+      "id": "divBanco",
+      "label": "Bancos",
+      "group": "div"
+    },
+    {
+      "id": "divForn",
+      "label": "Fornecedores",
+      "group": "div"
+    },
+    {
+      "id": "divImp",
+      "label": "Impostos",
+      "group": "div"
+    },
+    {
+      "id": "divTerc",
+      "label": "Terceiros",
+      "group": "div"
+    },
+    {
+      "id": "divCron",
+      "label": "Cronograma de pagamentos",
+      "group": "div"
+    },
+    {
+      "id": "ctb",
+      "label": "Contabilidade",
+      "group": "dem"
+    },
+    {
+      "id": "impexp",
+      "label": "Importação e exportação",
+      "group": "dem"
+    },
+    {
+      "id": "backup",
+      "label": "Backup",
+      "group": "dem"
+    },
+    {
+      "id": "admUsers",
+      "label": "Usuários e acessos",
+      "group": "admin"
+    },
+    {
+      "id": "admLog",
+      "label": "Registro de atividades",
+      "group": "admin"
+    },
+    {
+      "id": "admClientes",
+      "label": "Clientes FINEMP",
+      "group": "admin"
+    }
+  ]
+}

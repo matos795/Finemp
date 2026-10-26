@@ -1,5 +1,7 @@
 # Inventário do protótipo Claude para a API FINEMP
 
+> Histórico da referência contábil anterior. Em 26/10/2026, o negócio homologou o comportamento executável do novo `FINEMP_web_1.zip`; a matriz vigente desse produto está em [frontend-backend-parity.md](reference/frontend-backend-parity.md). As marcações de proposta deste inventário não rebaixam as regras já homologadas na nova referência.
+
 > Documento de descoberta técnica. O HTML analisado é uma referência funcional/visual e não é fonte de persistência, autorização ou regra contábil.
 
 ## 1. Objetivo e limites
@@ -134,5 +136,4 @@ Este inventário não decide:
 - forma final de consolidação além da decisão de selecionar explicitamente as empresas participantes.
 
 Esses itens permanecem desacoplados para que o roadmap avance sem antecipar regra de negócio.
-
 
