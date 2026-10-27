@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.util.UUID;
+import java.util.Objects;
 
 @Entity
 @Table(name = "companies")
@@ -55,6 +56,13 @@ public class Company {
         return client;
     }
 
+    public void assignToClient(Client client) {
+        if (this.client != null) {
+            throw new IllegalStateException("Company is already assigned to a client.");
+        }
+        this.client = Objects.requireNonNull(client);
+    }
+
     public String getLegalName() {
         return legalName;
     }
@@ -63,4 +71,3 @@ public class Company {
         return cnpj;
     }
 }
-

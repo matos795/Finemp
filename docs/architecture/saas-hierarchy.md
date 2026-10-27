@@ -6,7 +6,7 @@
 - **DECISÃO:** um Cliente pode possuir várias Empresas/CNPJs.
 - **DECISÃO:** uma Empresa pode possuir várias fontes contábeis.
 - **DECISÃO:** uma futura visão consolidada pertence ao Cliente e recebe uma seleção explícita de empresas.
-- **PONTO ABERTO:** empresas já existentes ainda precisam ser associadas ao Cliente correto por uma operação administrativa controlada.
+- **DECISÃO:** a API de [administração SaaS](saas-administration.md) associa controladamente empresas legadas ao Cliente, com autorização dupla, lock e auditoria. A escolha do Cliente correto para cada empresa real ainda exige validação; não há saneamento automático.
 
 ## Modelo
 
@@ -35,5 +35,4 @@ Consequências:
 - relatórios consolidados não serão implementados enquanto a seleção e o acesso às empresas participantes não estiverem definidos.
 
 Essa transição é explícita e reversível; não altera CNPJ, movimentos, contas, classificações, fontes ou grants existentes.
-
 

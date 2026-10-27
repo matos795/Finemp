@@ -73,6 +73,8 @@ Permissões existentes:
 
 ## 4. Operações implementadas
 
+A [administração SaaS](architecture/saas-administration.md) disponibiliza cadastro/consulta paginada de Contabilidades, Clientes, Empresas e Fontes, além de associação explícita de empresa legada. Essas operações exigem permissões administrativas nos escopos corretos e não concedem acesso financeiro automaticamente. Os DTOs de fonte não incluem configuração de conexão nem secrets.
+
 ### 4.1 Autenticação
 
 #### `GET /api/auth/csrf`
