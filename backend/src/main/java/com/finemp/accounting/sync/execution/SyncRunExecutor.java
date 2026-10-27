@@ -28,7 +28,11 @@ public class SyncRunExecutor {
     public SyncExecutionOutcome execute(UUID runId) {
         var claimed = lifecycle.claim(runId);
         if (claimed.isEmpty()) return SyncExecutionOutcome.NOT_CLAIMED;
-        var claim = claimed.get();
+        return executeClaim(claimed.get());
+    }
+    /** Internal worker entry point. Publication rechecks this claim; this is never a browser endpoint. */
+    @Transactional(propagation = Propagation.NEVER)
+    public SyncExecutionOutcome executeClaim(ClaimedSyncRun claim) {
         ExternalCompanyIdentity identity;
         try { identity = identities.readIdentity(claim.request()); }
         catch (RuntimeException readFailure) { return fail(claim, SyncFailureCode.READ_FAILED); }
