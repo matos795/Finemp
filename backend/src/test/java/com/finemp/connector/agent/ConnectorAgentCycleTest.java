@@ -50,7 +50,7 @@ class ConnectorAgentCycleTest {
         prepare(work);when(reader.readSnapshot(work.context())).thenReturn(snapshot);when(client.complete(work,snapshot)).thenReturn(receipt(SyncAttemptStatus.RUNNING));
         when(client.result(work)).thenReturn(receipt(SyncAttemptStatus.SUCCEEDED));
         try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2))) {
-            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);assertThat(afterWorkerCleanup(agent)).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
         }
         verify(client,times(1)).claim();verify(reader,times(1)).readSnapshot(any());verify(client,times(1)).complete(any(),any());verify(client).result(work);
     }
@@ -84,7 +84,7 @@ class ConnectorAgentCycleTest {
         try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2),nanos::get)) {
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);verify(client,times(1)).claim();
-            nanos.set(Duration.ofSeconds(12).toNanos());assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.IDLE);
+            nanos.set(Duration.ofSeconds(12).toNanos());assertThat(afterWorkerCleanup(agent)).isEqualTo(ConnectorAgentCycle.Outcome.IDLE);
         }
         verify(client,times(2)).claim();verify(client,never()).complete(any(),any());verify(client,never()).fail(any(),any());
     }
@@ -131,9 +131,17 @@ class ConnectorAgentCycleTest {
         try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2),nanos::get)) {
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);verify(client,never()).result(any());
-            nanos.set(Duration.ofSeconds(12).toNanos());assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
+            nanos.set(Duration.ofSeconds(12).toNanos());assertThat(afterWorkerCleanup(agent)).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
         }
         verify(client,times(1)).claim();verify(client,times(1)).complete(any(),any());verify(client,never()).fail(any(),any());
+    }
+    private ConnectorAgentCycle.Outcome afterWorkerCleanup(ConnectorAgentCycle agent){
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
+        var result=agent.runOnce();
+        while(result==ConnectorAgentCycle.Outcome.BUSY&&System.nanoTime()<deadline){
+            java.util.concurrent.locks.LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1));result=agent.runOnce();
+        }
+        return result;
     }
     private void prepare(ConnectorWorkResponse item){when(client.claim()).thenReturn(Optional.of(item));when(reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);}
     private ConnectorWorkResponse work(long leaseMillis){return new ConnectorWorkResponse(UUID.randomUUID(),UUID.randomUUID(),1,SyncRunMode.INITIAL,server.plusMillis(leaseMillis),server,
