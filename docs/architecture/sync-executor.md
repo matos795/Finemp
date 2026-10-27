@@ -32,8 +32,9 @@ contadores e SUCCEEDED na mesma transação: implementação concreta é o próx
   e adiciona restrições; não descarta eventos inconsistentes silenciosamente.
 - Com execução controlada habilitada, controller/serviço da importação síncrona
   legada ficam desativados para não contornar a exclusão mútua. O reader/SQL
-  Questor continua disponível ao adapter. Com executor desligado, o contrato
-  legado é preservado.
+  Questor continua disponível ao adapter. O perfil prod também bloqueia o caminho
+  legado não verificado, mesmo com executor desligado. Fora de prod e com executor
+  desligado, o contrato legado de estudo é preservado.
 
 ## Configuração e gates
 

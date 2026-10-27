@@ -900,6 +900,7 @@ paths:
         está habilitada. Não deve ser chamada durante uma leitura de tela.
         É desativada quando FINEMP_SYNC_EXECUTOR_ENABLED está habilitado;
         nesse modo, usar o controle SyncRun.
+        O caminho legado de estudo não é publicado no perfil prod.
         Exige QUESTOR_SYNC na empresa proprietária da fonte, resolvida pelo servidor,
         e escopo ALL enquanto não houver segmentação de centro de custo.
         Valida fonte ativa, referência e período antes do adapter.

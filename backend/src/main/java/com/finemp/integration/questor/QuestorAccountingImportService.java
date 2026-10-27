@@ -10,12 +10,14 @@ import com.finemp.accounting.source.AccountingSourceType;
 import com.finemp.administration.SaasResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.context.annotation.Profile;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@Profile("!prod")
 @ConditionalOnExpression("${finemp.integration.questor.enabled:false} && !${finemp.sync.executor.enabled:false}")
 public class QuestorAccountingImportService {
 
