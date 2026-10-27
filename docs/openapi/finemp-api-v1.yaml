@@ -449,6 +449,7 @@ paths:
       tags: [Account classification]
       operationId: classifyAccountingAccount
       summary: Classifica ou reclassifica uma conta da empresa.
+      description: Exige ACCOUNT_CLASSIFICATION_MANAGE na empresa e escopo de dados suportado; grant genérico não autoriza escrita.
       parameters:
         - $ref: '#/components/parameters/CompanyId'
         - name: accountId
@@ -522,6 +523,8 @@ paths:
       description: |
         Operação administrativa disponível somente quando a integração Questor
         está habilitada. Não deve ser chamada durante uma leitura de tela.
+        Exige QUESTOR_SYNC na empresa proprietária da fonte, resolvida pelo servidor,
+        e escopo ALL enquanto não houver segmentação de centro de custo.
       parameters:
         - name: accountingSourceId
           in: path

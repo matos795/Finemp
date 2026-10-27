@@ -11,6 +11,9 @@ import java.util.UUID;
 public interface AccountingSourceRepository
         extends JpaRepository<AccountingSource, UUID> {
 
+    @Query("select source.company.id from AccountingSource source where source.id = :sourceId")
+    java.util.Optional<UUID> findCompanyIdById(@Param("sourceId") UUID sourceId);
+
     @Query("""
             select source from AccountingSource source
             where source.company.id = :companyId
