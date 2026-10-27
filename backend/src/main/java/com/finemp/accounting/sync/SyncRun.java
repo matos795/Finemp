@@ -27,6 +27,7 @@ public class SyncRun {
     @Column(name = "imported_count") private Long importedCount;
     @Column(name = "skipped_count") private Long skippedCount;
     @Enumerated(EnumType.STRING) @Column(name = "failure_code", length = 40) private SyncFailureCode failureCode;
+    @Column(name = "attempt_number", nullable = false) private int attemptNumber;
     @Version private long version;
 
     protected SyncRun() { }
@@ -43,6 +44,11 @@ public class SyncRun {
         requireStatus(SyncRunStatus.REQUESTED);
         requireAtOrAfter(now, requestedAt);
         startedAt = now; status = SyncRunStatus.RUNNING;
+    }
+    public int beginAttempt() {
+        requireStatus(SyncRunStatus.RUNNING);
+        if (attemptNumber >= 10) throw new IllegalStateException("Sync attempt limit reached.");
+        return ++attemptNumber; // Forces a new optimistic fence even when the overall status stays RUNNING.
     }
     public void succeed(long read, long imported, long skipped, Instant now) {
         requireStatus(SyncRunStatus.RUNNING);
@@ -75,6 +81,7 @@ public class SyncRun {
     }
     public UUID getId() { return id; }
     public long getVersion() { return version; }
+    public int getAttemptNumber() { return attemptNumber; }
     public AccountingSource getAccountingSource() { return accountingSource; }
     public UUID getRequestedByUserId() { return requestedByUserId; }
     public UUID getIdempotencyKey() { return idempotencyKey; }
