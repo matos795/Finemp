@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 public class QuestorIntegrationConfiguration {
 
     @Bean
+    @ConditionalOnProperty(prefix = "finemp.integration.questor.identity", name = "enabled", havingValue = "false", matchIfMissing = true)
     com.finemp.accounting.reading.AccountingSourceReader questorSourceReader(QuestorAccountingReader delegate) {
         return new QuestorSourceReader(delegate);
     }
@@ -22,10 +23,26 @@ public class QuestorIntegrationConfiguration {
     }
 
     @Bean
-    QuestorAccountingReader questorAccountingReader(
+    FirebirdQuestorAccountingReader questorAccountingReader(
             QuestorConnectionProvider connectionProvider,
-            @org.springframework.beans.factory.annotation.Value("${finemp.sync.publication.max-records:25000}") int maxRecords) {
+            @org.springframework.beans.factory.annotation.Value("${finemp.sync.publication.max-records:25000}") int maxRecords,
+            @org.springframework.beans.factory.annotation.Value("${finemp.integration.questor.query-timeout-seconds:30}") int timeoutSeconds) {
         return new FirebirdQuestorAccountingReader(
-                connectionProvider, maxRecords);
+                connectionProvider, maxRecords, timeoutSeconds);
+    }
+    @Bean
+    @ConditionalOnProperty(prefix = "finemp.integration.questor.identity", name = "enabled", havingValue = "true")
+    FirebirdQuestorCompanyIdentityReader questorCompanyIdentityReader(QuestorConnectionProvider provider,
+            @org.springframework.beans.factory.annotation.Value("${finemp.integration.questor.identity.table:}") String table,
+            @org.springframework.beans.factory.annotation.Value("${finemp.integration.questor.identity.code-column:}") String codeColumn,
+            @org.springframework.beans.factory.annotation.Value("${finemp.integration.questor.identity.cnpj-column:}") String cnpjColumn,
+            @org.springframework.beans.factory.annotation.Value("${finemp.integration.questor.query-timeout-seconds:30}") int timeoutSeconds) {
+        return new FirebirdQuestorCompanyIdentityReader(provider, new QuestorIdentityMapping(table, codeColumn, cnpjColumn), timeoutSeconds);
+    }
+    @Bean
+    @ConditionalOnProperty(prefix = "finemp.integration.questor.identity", name = "enabled", havingValue = "true")
+    VerifiedQuestorSnapshotReader verifiedQuestorSnapshotReader(QuestorConnectionProvider provider,
+            FirebirdQuestorCompanyIdentityReader identities, FirebirdQuestorAccountingReader movements) {
+        return new VerifiedQuestorSnapshotReader(provider, identities, movements);
     }
 }

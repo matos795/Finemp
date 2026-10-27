@@ -45,6 +45,12 @@ finemp:
   integration:
     questor:
       enabled: ${FINEMP_QUESTOR_ENABLED:false}
+      query-timeout-seconds: ${FINEMP_QUESTOR_QUERY_TIMEOUT_SECONDS:30}
+      identity:
+        enabled: ${FINEMP_QUESTOR_IDENTITY_ENABLED:false}
+        table: ${FINEMP_QUESTOR_IDENTITY_TABLE:}
+        code-column: ${FINEMP_QUESTOR_IDENTITY_CODE_COLUMN:}
+        cnpj-column: ${FINEMP_QUESTOR_IDENTITY_CNPJ_COLUMN:}
       jdbc-url: ${FINEMP_QUESTOR_JDBC_URL:}
       username: ${FINEMP_QUESTOR_USERNAME:}
       password: ${FINEMP_QUESTOR_PASSWORD:}
