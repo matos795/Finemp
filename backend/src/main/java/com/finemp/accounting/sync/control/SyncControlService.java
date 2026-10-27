@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.PageRequest;
@@ -30,7 +29,7 @@ public class SyncControlService {
     private final int maxWindowDays;
     private final SyncControlTransactionGuard transactionGuard;
     public SyncControlService(AccountingSourceRepository sources, SyncRunRepository runs, SyncRunEventRepository events,
-            CompanyPermissionAuthorizationService permissions, @Qualifier("syncControlClock") Clock clock,
+            CompanyPermissionAuthorizationService permissions, Clock clock,
             @Value("${finemp.sync.control.max-window-days:366}") int maxWindowDays,
             SyncControlTransactionGuard transactionGuard) {
         if (maxWindowDays < 1) throw new IllegalArgumentException("Invalid sync window configuration.");

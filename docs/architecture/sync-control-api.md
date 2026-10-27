@@ -28,6 +28,8 @@ terão provisionamento e capabilities explícitos, não um bypass genérico.
 - A mutação exige READ_COMMITTED na conexão real, recusando uma transação externa
   incompatível. `lock_timeout` local de 5 segundos limita espera sem mudar a
   configuração global do PostgreSQL. Conflitos retornam 409 sanitizado.
+- O controle reutiliza o Clock UTC da aplicação, evitando um segundo bean que
+  tornaria ambígua a configuração dos serviços existentes de auditoria/identidade.
 - A janela padrão de 366 dias é limite de recursos configurável por solicitação,
   não regra contábil. Um replay válido é preservado mesmo se a política mudar.
 - Solicitante, status, contadores, fonte e ator não são aceitos do corpo JSON.
