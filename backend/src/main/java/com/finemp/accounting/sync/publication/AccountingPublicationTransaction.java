@@ -30,15 +30,16 @@ public class AccountingPublicationTransaction {
     private final SyncControlTransactionGuard transactions;
     private final Clock clock;
     private final int maxRecords;
+    private final SyncAttemptRepository attempts;
 
     public AccountingPublicationTransaction(SyncRunRepository runs, AccountingSourceRepository sources,
             AccountingAccountRepository accounts, AccountingMovementRepository movements, SyncRunEventRepository events,
             CompanyPermissionAuthorizationService permissions, SyncControlTransactionGuard transactions,
-            Clock clock, @Value("${finemp.sync.publication.max-records:25000}") int maxRecords) {
+            Clock clock, @Value("${finemp.sync.publication.max-records:25000}") int maxRecords, SyncAttemptRepository attempts) {
         if (maxRecords < 1) throw new IllegalArgumentException("Invalid publication resource limit.");
         this.runs = runs; this.sources = sources; this.accounts = accounts; this.movements = movements;
         this.events = events; this.permissions = permissions; this.transactions = transactions;
-        this.clock = clock; this.maxRecords = maxRecords;
+        this.clock = clock; this.maxRecords = maxRecords; this.attempts = attempts;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -52,6 +53,8 @@ public class AccountingPublicationTransaction {
                 || !run.getStartDate().equals(claim.request().startDate()) || !run.getEndDate().equals(claim.request().endDate()))
             throw new StaleSyncClaimException();
         if (run.getMode() != SyncRunMode.INITIAL) throw rejected(SyncFailureCode.UNSUPPORTED_MODE);
+        var attempt = attempts.findBySyncRunIdAndFenceVersion(run.getId(), claim.version())
+                .filter(value -> value.isLive(clock.instant())).orElseThrow(StaleSyncClaimException::new);
         if (!source.isActive()) throw rejected(SyncFailureCode.SOURCE_NOT_AVAILABLE);
         if (!source.getCompany().getId().equals(claim.request().companyId()) || source.getType() != claim.request().sourceType()
                 || !Objects.equals(source.getExternalReference(), claim.request().externalCompanyReference())
@@ -84,7 +87,10 @@ public class AccountingPublicationTransaction {
         var inserts = toInsert.stream().map(row -> new AccountingMovement(knownAccounts.get(row.externalAccountId()),
                 row.sourceEntryKey(), row.side(), row.accountingDate(), row.amount(), row.history())).toList();
         movements.saveAll(inserts);
-        run.succeed(batch.readCount(), inserts.size(), batch.readCount() - inserts.size(), clock.instant());
+        var completedAt = clock.instant();
+        if (!attempt.isLive(completedAt)) throw new StaleSyncClaimException();
+        attempt.succeed(completedAt);
+        run.succeed(batch.readCount(), inserts.size(), batch.readCount() - inserts.size(), completedAt);
         events.save(new SyncRunEvent(run, SyncRunActorType.SYSTEM, null, clock.instant()));
         runs.flush(); // Includes movements, ownership FKs, measured counters and terminal audit.
     }

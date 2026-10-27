@@ -44,7 +44,11 @@ public class SyncRunExecutor {
         return SyncExecutionOutcome.PUBLISHED;
     }
     private SyncExecutionOutcome fail(ClaimedSyncRun claim, SyncFailureCode code) {
-        return lifecycle.failIfCurrent(claim, code) ? SyncExecutionOutcome.FAILED : SyncExecutionOutcome.STALE;
+        return switch (lifecycle.failIfCurrent(claim, code)) {
+            case STALE -> SyncExecutionOutcome.STALE;
+            case RETRY_SCHEDULED -> SyncExecutionOutcome.RETRY_SCHEDULED;
+            case TERMINAL_FAILURE -> SyncExecutionOutcome.FAILED;
+        };
     }
 }
 

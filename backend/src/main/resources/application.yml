@@ -13,6 +13,11 @@ spring:
 
 finemp:
   sync:
+    retry:
+      max-attempts: ${FINEMP_SYNC_MAX_ATTEMPTS:3}
+      lease-seconds: ${FINEMP_SYNC_LEASE_SECONDS:300}
+      initial-delay-seconds: ${FINEMP_SYNC_RETRY_INITIAL_DELAY_SECONDS:30}
+      max-delay-seconds: ${FINEMP_SYNC_RETRY_MAX_DELAY_SECONDS:300}
     publication:
       max-records: ${FINEMP_SYNC_MAX_RECORDS:25000}
     executor:
