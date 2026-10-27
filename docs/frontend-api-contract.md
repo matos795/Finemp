@@ -267,6 +267,10 @@ Parâmetros obrigatórios: `startDate`, `endDate`. Resposta: `204`.
 
 Este endpoint:
 
+- usa a [porta canônica de leitura](architecture/accounting-source-reader.md),
+  valida contexto/fonte ativa e retorna 400/409/502 neutros quando necessário;
+- mantém a validação da identidade externa da empresa como gate de produção
+  separado: CNPJ esperado não é comprovação da empresa no ERP;
 - só existe quando a integração Questor está habilitada;
 - é uma operação administrativa, nunca uma leitura de tela;
 - não expõe credenciais;
