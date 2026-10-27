@@ -40,6 +40,7 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
         var locked = lock(runId, null);
         if (locked.isEmpty()) return Optional.empty();
         var run = locked.get().run(); var source = locked.get().source(); Instant now = clock.instant();
+        if (source.getConnectionMode() != AccountingConnectionMode.DIRECT) return Optional.empty();
         if (run.getStatus() == SyncRunStatus.REQUESTED) {
             run.start(now);
             events.save(new SyncRunEvent(run, SyncRunActorType.SYSTEM, null, now));

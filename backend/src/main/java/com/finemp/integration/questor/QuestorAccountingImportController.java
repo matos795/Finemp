@@ -17,7 +17,7 @@ import java.util.UUID;
 @RestController
 @Profile("!prod")
 @RequestMapping("/api/accounting-sources")
-@ConditionalOnExpression("${finemp.integration.questor.enabled:false} && !${finemp.sync.executor.enabled:false}")
+@ConditionalOnExpression("${finemp.integration.questor.enabled:false} && !${finemp.sync.executor.enabled:false} && !${finemp.connector.enabled:false}")
 public class QuestorAccountingImportController {
 
     private final QuestorAccountingImportService importService;

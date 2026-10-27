@@ -36,6 +36,9 @@ public class AccountingSource {
 
     @Column(name = "active", nullable = false)
     private boolean active;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "connection_mode", nullable = false, length = 20)
+    private AccountingConnectionMode connectionMode = AccountingConnectionMode.DIRECT;
 
     protected AccountingSource() {
     }
@@ -70,4 +73,6 @@ public class AccountingSource {
     public boolean isActive() {
         return active;
     }
+    public AccountingConnectionMode getConnectionMode() { return connectionMode; }
+    public void reserveConnectorRoute() { connectionMode = AccountingConnectionMode.CONNECTOR; }
 }

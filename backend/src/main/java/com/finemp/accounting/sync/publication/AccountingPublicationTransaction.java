@@ -49,6 +49,7 @@ public class AccountingPublicationTransaction {
         if (!sourceId.equals(claim.request().accountingSourceId())) throw new StaleSyncClaimException();
         var source = sources.findLockedForSyncById(sourceId).orElseThrow(StaleSyncClaimException::new);
         var run = runs.findByIdAndAccountingSourceId(claim.runId(), sourceId).orElseThrow(StaleSyncClaimException::new);
+        if (source.getConnectionMode() != AccountingConnectionMode.DIRECT) throw new StaleSyncClaimException();
         if (run.getStatus() != SyncRunStatus.RUNNING || run.getVersion() != claim.version() || run.getMode() != claim.mode()
                 || !run.getStartDate().equals(claim.request().startDate()) || !run.getEndDate().equals(claim.request().endDate()))
             throw new StaleSyncClaimException();

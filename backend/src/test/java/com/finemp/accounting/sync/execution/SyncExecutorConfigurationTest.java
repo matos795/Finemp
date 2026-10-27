@@ -61,5 +61,15 @@ class SyncExecutorConfigurationTest {
             assertThat(context.getBeansOfType(QuestorAccountingImportService.class)).isEmpty();
         }
     }
+    @Test void shouldDisableTheStudyImportWhenConnectorProvisioningIsEnabled() {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("synthetic", Map.of(
+                    "finemp.integration.questor.enabled", "true", "finemp.connector.enabled", "true")));
+            context.register(QuestorAccountingImportController.class, QuestorAccountingImportService.class);
+            context.refresh();
+            assertThat(context.getBeansOfType(QuestorAccountingImportController.class)).isEmpty();
+            assertThat(context.getBeansOfType(QuestorAccountingImportService.class)).isEmpty();
+        }
+    }
 }
 
