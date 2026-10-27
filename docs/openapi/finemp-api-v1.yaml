@@ -19,7 +19,37 @@ tags:
   - name: DRE
   - name: Accounting synchronization
   - name: Connector administration
+  - name: Connector machine protocol
 paths:
+  /api/connector/v1/session:
+    get:
+      tags: [Connector machine protocol]
+      operationId: getConnectorMachineScope
+      summary: Confere identidade de máquina vigente e retorna somente o vínculo de escopo.
+      description: Exige HTTPS efetivo, FINEMP_CONNECTOR_ENABLED e FINEMP_CONNECTOR_PROTOCOL_ENABLED. Stateless; não aceita cookie como credencial, parâmetros de URL ou token em query. O servidor HTTP de desenvolvimento não atende este protocolo. Não executa nem publica lotes.
+      security:
+        - ConnectorBearer: []
+      responses:
+        '200':
+          description: IDs e versão do vínculo, no-store, sem cookie/segredo/emissor ou dados contábeis.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorMachineScope'}
+        '401':
+          description: TLS ou credencial ausente/inválida/inativa, sempre sanitizado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorProtocolError'}
+        '429':
+          description: Limite por endereço/credencial; Retry-After de 60 segundos.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorProtocolError'}
+        '503':
+          description: Verificação temporariamente indisponível, sem detalhes internos.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorProtocolError'}
   /api/accounting-sources/{accountingSourceId}/sync-runs:
     parameters:
       - $ref: '#/components/parameters/AccountingSourceId'
@@ -1054,6 +1084,11 @@ paths:
         '422': {description: RESOURCE_LIMIT; solicitar período menor, sem resultado truncado.}
 components:
   securitySchemes:
+    ConnectorBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Segredo de máquina restrito a uma fonte, enviado somente via HTTPS em Authorization. Não é JWT nem credencial ERP.
     SessionCookie:
       type: apiKey
       in: cookie
@@ -1261,6 +1296,19 @@ components:
             items:
               type: array
               items: {$ref: '#/components/schemas/ConnectorCredential'}
+    ConnectorMachineScope:
+      type: object
+      required: [credentialId, accountingFirmId, accountingSourceId, credentialVersion]
+      properties:
+        credentialId: {type: string, format: uuid}
+        accountingFirmId: {type: string, format: uuid}
+        accountingSourceId: {type: string, format: uuid}
+        credentialVersion: {type: integer, format: int64}
+    ConnectorProtocolError:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string, enum: [CONNECTOR_UNAUTHORIZED, CONNECTOR_RATE_LIMITED, CONNECTOR_UNAVAILABLE]}
     AccessCatalog:
       type: object
       required: [version, platformPermissions, accountingFirmPermissions, companyPermissions, companyScreenPresets]
