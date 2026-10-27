@@ -6,6 +6,8 @@ Adapter lê código/CNPJ efetivamente retornados pelo banco. Não usa o CNPJ esp
 
 Tabela precisa ser identificável sem ambiguidade, coluna de código precisa ser integral e CNPJ textual limitado. Resultado precisa ter exatamente uma linha. CNPJ é derivado do texto retornado, preservando zeros iniciais e normalizando somente pontuação/espaços convencionais conforme o contrato numérico atual. Ausência/ambiguidade/mismatch impede movimentos; configuração não comprovada falha fechado.
 
+Na comparação de referências Questor, códigos inteiros positivos equivalentes (por exemplo, 0057 e 57) identificam o mesmo código consultado pelo adapter. A identidade observada continua contendo o valor retornado pelo banco, sem substituir pelo esperado; CNPJ continua obrigatório. Essa equivalência não é aplicada a outras origens.
+
 `VerifiedQuestorSnapshotReader` obtém identidade e movimentos na MESMA conexão/transação solicitada como somente leitura, REPEATABLE_READ. Compara identidade antes da consulta de movimentos. O SQL Razão sem CC, parâmetros de empresa/período e formato canônico foram preservados. Sessão pertence ao adapter, termina em rollback/close e não expõe caminho de commit. Limites de linhas e timeout de statement continuam explícitos; exceções descartam causas/suppressed do driver que poderiam conter detalhes privados.
 
 Com identidade habilitada, há um único reader canônico verificado e também a porta de snapshot reutilizável pelo agente. O executor direto revalida identidade antes do I/O e trata divergência como IDENTITY_MISMATCH; mapeamento não comprovado é SOURCE_NOT_AVAILABLE, sem retry como se fosse erro de rede. Snapshot volta a conferir na mesma transação da extração, evitando janela entre prova e movimentos.

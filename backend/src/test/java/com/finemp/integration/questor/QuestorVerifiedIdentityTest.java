@@ -34,6 +34,18 @@ class QuestorVerifiedIdentityTest {
         assertThatThrownBy(() -> reader(f).readIdentity(invalid)).isInstanceOf(AccountingIdentityConfigurationException.class);
         verifyNoInteractions(f.provider());
     }
+    @Test void shouldVerifyAPaddedCompanyCodeUsingTheActualObservedReference() throws Exception {
+        var padded = new AccountingReadRequest(request.accountingSourceId(), request.companyId(), AccountingSourceType.QUESTOR,
+                "0057", request.expectedCompanyCnpj(), request.startDate(), request.endDate());
+        var f = fixture(); when(f.rows().getInt("FINEMP_OBS_REF")).thenReturn(57);
+        when(f.rows().getString("FINEMP_OBS_CNPJ")).thenReturn(request.expectedCompanyCnpj());
+        var movements = mock(FirebirdQuestorAccountingReader.class);
+        when(movements.readOn(f.connection(), "0057", request.startDate(), request.endDate())).thenReturn(List.of());
+        var result = new VerifiedQuestorSnapshotReader(f.provider(), reader(f), movements).readSnapshot(padded);
+        assertThat(result.identity().externalReference()).isEqualTo("57");
+        assertThat(result.identity().matches(padded)).isTrue(); verify(f.statement()).setInt(1, 57);
+        verify(movements).readOn(f.connection(), "0057", request.startDate(), request.endDate());
+    }
     @Test void shouldValidateExactTableColumnAndTypesBeforeExecutingTheIdentityQuery() throws Exception {
         var missing = fixture(); when(missing.tables().next()).thenReturn(false);
         assertThatThrownBy(() -> reader(missing).readIdentity(request)).isInstanceOf(AccountingIdentityConfigurationException.class);
