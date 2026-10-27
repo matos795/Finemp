@@ -115,4 +115,12 @@ public class CompanyAccessGrant {
     public boolean hasPermission(CompanyPermission permission) {
         return permissions.contains(permission);
     }
+
+    public void replaceAccess(CompanyAccessRole role, CostCenterScope scope, Set<CompanyPermission> permissions) {
+        var requested = Set.copyOf(permissions);
+        this.role = java.util.Objects.requireNonNull(role);
+        this.costCenterScope = java.util.Objects.requireNonNull(scope);
+        this.permissions.clear();
+        this.permissions.addAll(requested);
+    }
 }

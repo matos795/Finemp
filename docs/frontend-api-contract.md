@@ -47,6 +47,13 @@ Com entrega de e-mail configurada, a API também oferece `POST /api/auth/passwor
 
 ### 3.3 Autorização
 
+A [administração de grants por empresa](architecture/company-access-administration.md)
+usa `/api/admin/accounting-firms/{firmId}/clients/{clientId}/companies/{companyId}/users`
+(GET paginado) e `/{userId}` (GET/PUT/DELETE). PUT recebe `role`,
+`costCenterScope` e `permissions`; role não concede capabilities implicitamente.
+O destinatário deve ser membro da contabilidade. RESTRICTED é rejeitado com 409
+até haver filtro real; DELETE preserva identidade e todos os outros vínculos.
+
 As [leituras contábeis](architecture/accounting-read-authorization.md) exigem
 `ACCOUNTING_MOVEMENT_VIEW` para o razão e `ACCOUNT_CLASSIFICATION_VIEW` ou
 `ACCOUNT_CLASSIFICATION_MANAGE` para classificações. `DRE_VIEW` não autoriza
