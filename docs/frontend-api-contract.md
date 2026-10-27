@@ -47,6 +47,13 @@ Com entrega de e-mail configurada, a API também oferece `POST /api/auth/passwor
 
 ### 3.3 Autorização
 
+A [administração de membros da contabilidade](architecture/firm-access-administration.md)
+usa `/api/admin/accounting-firms/{firmId}/users` (GET paginado) e `/{userId}`
+(GET/PUT/DELETE). PUT recebe `permissions` administrativas; DELETE retorna 409
+se ainda houver acessos explícitos às empresas dessa contabilidade. Não há
+cascata financeira nem alteração da conta global. Exige `USER_ACCESS_MANAGE`
+na firma ou `PLATFORM_USER_MANAGE` global, além de CSRF nas mutações.
+
 A [administração global de identidades](architecture/platform-user-administration.md) usa `/api/admin/users` para busca/detalhe, PATCH de status e PUT de permissões de plataforma. Exige `PLATFORM_USER_MANAGE`, CSRF nas mutações e não concede grants financeiros. A remoção do último administrador ativo e a ativação de marcador de convite são rejeitadas com 409.
 
 Alterar classificação exige `ACCOUNT_CLASSIFICATION_MANAGE` na empresa; importar Questor exige `QUESTOR_SYNC` na empresa da fonte, resolvida pelo servidor. Sessão, ID recebido ou grant genérico não autorizam essas escritas. Escopo `RESTRICTED` não pode receber dados integrais enquanto não houver filtro efetivo no backend. Ver [autorizações contábeis](architecture/accounting-write-authorization.md).
@@ -206,7 +213,7 @@ Resposta `200`:
 }
 ```
 
-Resposta: `204`. A proteção final da operação com `ACCOUNT_CLASSIFICATION_MANAGE` é parte do incremento de classificação já planejado.
+Resposta: `204`. Exige `ACCOUNT_CLASSIFICATION_MANAGE` explícita na empresa e escopo integral autorizado.
 
 ### 4.4 DRE inicial
 

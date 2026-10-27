@@ -19,6 +19,91 @@ tags:
   - name: DRE
   - name: Accounting synchronization
 paths:
+  /api/admin/accounting-firms/{firmId}/users:
+    parameters:
+      - name: firmId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Identity administration]
+      operationId: listAccountingFirmUsers
+      summary: Lista membros com USER_ACCESS_MANAGE na firma ou PLATFORM_USER_MANAGE global.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de resumos sem credenciais nem permissões globais.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UserAdministrationPage'}
+        '400': {description: Paginação inválida.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/accounting-firms/{firmId}/users/{userId}:
+    parameters:
+      - name: firmId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Identity administration]
+      operationId: getAccountingFirmUserAccess
+      summary: Detalha somente o vínculo da contabilidade autorizada.
+      responses:
+        '200':
+          description: Identidade resumida e permissões administrativas da firma.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FirmUserAccess'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Identity administration]
+      operationId: replaceAccountingFirmUserPermissions
+      summary: Substitui permissões sem conceder acesso financeiro.
+      description: Gestor da firma altera membros existentes; administrador global pode associar identidade existente. Repetição idêntica é idempotente.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties:
+                permissions:
+                  type: array
+                  uniqueItems: true
+                  items: {$ref: '#/components/schemas/AccountingFirmPermission'}
+      responses:
+        '200':
+          description: Vínculo atualizado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FirmUserAccess'}
+        '400': {description: Payload inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Identity administration]
+      operationId: revokeAccountingFirmUserAccess
+      summary: Remove somente o vínculo administrativo, sem cascata financeira.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204': {description: Vínculo removido ou já ausente; identidade global preservada.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Revogar explicitamente os grants de empresas dessa contabilidade antes.}
   /api/admin/users:
     get:
       tags: [Identity administration]
@@ -719,6 +804,19 @@ components:
     PlatformPermission:
       type: string
       enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]
+    AccountingFirmPermission:
+      type: string
+      enum: [HIERARCHY_MANAGE, USER_ACCESS_MANAGE, ACCOUNTING_SOURCE_MANAGE, CONNECTOR_MANAGE]
+    FirmUserAccess:
+      type: object
+      required: [accountingFirmId, user, permissions]
+      properties:
+        accountingFirmId: {type: string, format: uuid}
+        user: {$ref: '#/components/schemas/UserAdministrationSummary'}
+        permissions:
+          type: array
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/AccountingFirmPermission'}
     UserAdministrationSummary:
       type: object
       required: [id, name, email, active, invitationPending]
