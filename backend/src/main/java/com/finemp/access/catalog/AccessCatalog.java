@@ -26,7 +26,7 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
     }
 
     public static AccessCatalog current() {
-        return new AccessCatalog("2026-10-26.1", Set.of(PlatformPermission.values()),
+        return new AccessCatalog("2026-10-27.1", Set.of(PlatformPermission.values()),
                 Set.of(AccountingFirmPermission.values()), Set.of(CompanyPermission.values()), List.of(
                 new ScreenPreset("accounting-ledger", "Razão contábil", true, false,
                         Set.of(CompanyPermission.ACCOUNTING_MOVEMENT_VIEW), Set.of(), null),
@@ -36,6 +36,8 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
                         Set.of(CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
                         Set.of(CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW, CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE), null),
                 new ScreenPreset("questor-import", "Importação Questor", false, true,
-                        Set.of(), Set.of(CompanyPermission.QUESTOR_SYNC), "QUESTOR_INTEGRATION_ENABLED")));
+                        Set.of(), Set.of(CompanyPermission.QUESTOR_SYNC), "QUESTOR_INTEGRATION_ENABLED"),
+                new ScreenPreset("sync-history", "Controle e histórico de sincronização", true, true,
+                        Set.of(CompanyPermission.QUESTOR_SYNC), Set.of(CompanyPermission.QUESTOR_SYNC), "SYNC_CONTROL_ENABLED")));
     }
 }

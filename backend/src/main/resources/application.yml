@@ -12,6 +12,10 @@ spring:
     locations: classpath:db/migration
 
 finemp:
+  sync:
+    control:
+      enabled: ${FINEMP_SYNC_CONTROL_ENABLED:false}
+      max-window-days: ${FINEMP_SYNC_MAX_WINDOW_DAYS:366}
   integration:
     questor:
       enabled: ${FINEMP_QUESTOR_ENABLED:false}

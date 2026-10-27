@@ -53,6 +53,10 @@ public class SecurityConfiguration {
                                                                 "/api/accounting-sources/{accountingSourceId}/questor-import")
                                                 .access(questorImportAuthorizationManager)
 
+                                                .requestMatchers(
+                                                                "/api/accounting-sources/{accountingSourceId}/sync-runs/**")
+                                                .access(questorImportAuthorizationManager)
+
                                                 .requestMatchers(HttpMethod.PUT,
                                                                 "/api/companies/{companyId}/accounting-accounts/{accountId}/classification")
                                                 .access(permissionAuthorizationManagerFactory.forPermission(

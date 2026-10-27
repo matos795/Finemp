@@ -27,4 +27,9 @@ public class CompanyPermissionAuthorizationService {
                 .map(grant -> grant.getCostCenterScope() == CostCenterScope.ALL && grant.hasPermission(permission))
                 .orElse(false);
     }
+
+    // Scalar query intentionally bypasses already-initialized grants in the JPA persistence context.
+    public boolean hasFreshPermission(UUID userAccountId, UUID companyId, CompanyPermission permission) {
+        return companyAccessGrantRepository.existsCurrentPermission(userAccountId, companyId, CostCenterScope.ALL, permission);
+    }
 }
