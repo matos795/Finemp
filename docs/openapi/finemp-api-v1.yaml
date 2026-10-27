@@ -13,11 +13,204 @@ servers:
 tags:
   - name: Authentication
   - name: Identity administration
+  - name: SaaS administration
   - name: Accounting movements
   - name: Account classification
   - name: DRE
   - name: Accounting synchronization
 paths:
+  /api/admin/accounting-firms:
+    get:
+      tags: [SaaS administration]
+      operationId: listAccountingFirms
+      summary: Consulta contabilidades com ACCOUNTING_FIRM_VIEW na plataforma.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de contabilidades.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountingFirmPage'}
+        '400': {description: Paginação inválida.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [SaaS administration]
+      operationId: createAccountingFirm
+      summary: Cadastra contabilidade com ACCOUNTING_FIRM_CREATE na plataforma.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NameRequest'}
+      responses:
+        '201':
+          description: Contabilidade criada ativa, sem grants financeiros implícitos.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountingFirm'}
+        '400': {description: Cadastro inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: Cadastro conflitante.}
+  /api/accounting-firms/{accountingFirmId}/clients:
+    parameters:
+      - $ref: '#/components/parameters/AccountingFirmId'
+    get:
+      tags: [SaaS administration]
+      operationId: listClients
+      summary: Lista clientes com HIERARCHY_MANAGE na contabilidade.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de clientes no escopo.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ClientPage'}
+        '400': {description: Paginação inválida.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [SaaS administration]
+      operationId: createClient
+      summary: Cria cliente na contabilidade autorizada.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NameRequest'}
+      responses:
+        '201':
+          description: Cliente criado ativo.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Client'}
+        '400': {description: Cadastro inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Cadastro conflitante.}
+  /api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies:
+    parameters:
+      - $ref: '#/components/parameters/AccountingFirmId'
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [SaaS administration]
+      operationId: listClientCompanies
+      summary: Lista empresas com HIERARCHY_MANAGE e relação contabilidade/cliente válida.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de empresas do cliente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompanyPage'}
+        '400': {description: Paginação inválida.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [SaaS administration]
+      operationId: createClientCompany
+      summary: Cria empresa obrigatoriamente vinculada ao cliente autorizado.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateCompanyRequest'}
+      responses:
+        '201':
+          description: Empresa criada, sem concessão automática de acesso financeiro.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Company'}
+        '400': {description: Cadastro inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Cadastro conflitante.}
+  /api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/assignment:
+    parameters:
+      - $ref: '#/components/parameters/AccountingFirmId'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/CompanyId'
+    put:
+      tags: [SaaS administration]
+      operationId: assignUnlinkedCompany
+      summary: Associa empresa legada sem cliente, com autorização dupla e auditoria.
+      description: Exige UNASSIGNED_COMPANY_ASSIGN global e HIERARCHY_MANAGE no destino. Mesmo destino é idempotente; outro destino é rejeitado.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Empresa vinculada ao cliente solicitado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Company'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Empresa já vinculada a outro cliente.}
+  /api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/accounting-sources:
+    parameters:
+      - $ref: '#/components/parameters/AccountingFirmId'
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [SaaS administration]
+      operationId: listCompanyAccountingSources
+      summary: Lista fontes com ACCOUNTING_SOURCE_MANAGE e relações pai/filho válidas.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de fontes; busca por referência externa, sem secrets.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountingSourcePage'}
+        '400': {description: Paginação inválida.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [SaaS administration]
+      operationId: createCompanyAccountingSource
+      summary: Cria fonte sem receber configuração de conexão ou credenciais.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateAccountingSourceRequest'}
+      responses:
+        '201':
+          description: Fonte criada ativa; tipo atualmente suportado QUESTOR.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountingSource'}
+        '400': {description: Cadastro inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Cadastro conflitante.}
   /api/admin/accounting-firms/{firmId}/invitations:
     post:
       tags: [Identity administration]
@@ -345,6 +538,29 @@ components:
       name: JSESSIONID
       description: Sessão HTTP mantida em cookie HttpOnly.
   parameters:
+    AccountingFirmId:
+      name: accountingFirmId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 0, default: 0}
+    Size:
+      name: size
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    Search:
+      name: search
+      in: query
+      description: Busca textual por nome/razão social; nas fontes, referência externa. Vazia inclui todos os registros do escopo.
+      schema: {type: string, default: ''}
     CompanyId:
       name: companyId
       in: path
@@ -387,6 +603,87 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    NameRequest:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+    CreateCompanyRequest:
+      type: object
+      required: [legalName, cnpj]
+      properties:
+        legalName: {type: string, minLength: 1, maxLength: 255}
+        cnpj: {type: string, pattern: '^[0-9]{14}$'}
+    CreateAccountingSourceRequest:
+      type: object
+      required: [type]
+      properties:
+        type: {type: string, enum: [QUESTOR]}
+        externalReference: {type: [string, 'null'], maxLength: 255}
+    AccountingFirm:
+      type: object
+      required: [id, name, active]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        active: {type: boolean}
+    Client:
+      type: object
+      required: [id, accountingFirmId, name, active]
+      properties:
+        id: {type: string, format: uuid}
+        accountingFirmId: {type: string, format: uuid}
+        name: {type: string}
+        active: {type: boolean}
+    Company:
+      type: object
+      required: [id, clientId, legalName, cnpj]
+      properties:
+        id: {type: string, format: uuid}
+        clientId: {type: string, format: uuid}
+        legalName: {type: string}
+        cnpj: {type: string, pattern: '^[0-9]{14}$'}
+    AccountingSource:
+      type: object
+      required: [id, companyId, type, externalReference, active]
+      properties:
+        id: {type: string, format: uuid}
+        companyId: {type: string, format: uuid}
+        type: {type: string, enum: [QUESTOR]}
+        externalReference: {type: [string, 'null']}
+        active: {type: boolean}
+    PageMetadata:
+      type: object
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 100}
+        totalItems: {type: integer, format: int64, minimum: 0}
+        totalPages: {type: integer, minimum: 0}
+    AccountingFirmPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/AccountingFirm'}}
+    ClientPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/Client'}}
+    CompanyPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/Company'}}
+    AccountingSourcePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/AccountingSource'}}
     InviteFirmUserRequest:
       type: object
       required: [name, email, permissions]
