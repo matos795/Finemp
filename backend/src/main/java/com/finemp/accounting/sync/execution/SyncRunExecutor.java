@@ -4,6 +4,8 @@ import com.finemp.accounting.reading.AccountingCompanyIdentityReader;
 import com.finemp.accounting.reading.AccountingSourceReaderRegistry;
 import com.finemp.accounting.reading.ExternalCompanyIdentity;
 import com.finemp.accounting.reading.AccountingReadLimitExceededException;
+import com.finemp.accounting.reading.AccountingIdentityMismatchException;
+import com.finemp.accounting.reading.AccountingIdentityConfigurationException;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
 import com.finemp.accounting.sync.SyncFailureCode;
 import java.util.List;
@@ -36,10 +38,14 @@ public class SyncRunExecutor {
         if (claim.agent().isConnector()) return SyncExecutionOutcome.STALE;
         ExternalCompanyIdentity identity;
         try { identity = identities.readIdentity(claim.request()); }
+        catch (AccountingIdentityMismatchException mismatch) { return fail(claim, SyncFailureCode.IDENTITY_MISMATCH); }
+        catch (AccountingIdentityConfigurationException unsupported) { return fail(claim, SyncFailureCode.SOURCE_NOT_AVAILABLE); }
         catch (RuntimeException readFailure) { return fail(claim, SyncFailureCode.READ_FAILED); }
         if (identity == null || !identity.matches(claim.request())) return fail(claim, SyncFailureCode.IDENTITY_MISMATCH);
         List<ImportedAccountingMovement> movements;
         try { movements = readers.readMovements(claim.request()); }
+        catch (AccountingIdentityMismatchException mismatch) { return fail(claim, SyncFailureCode.IDENTITY_MISMATCH); }
+        catch (AccountingIdentityConfigurationException unsupported) { return fail(claim, SyncFailureCode.SOURCE_NOT_AVAILABLE); }
         catch (AccountingReadLimitExceededException limit) { return fail(claim, SyncFailureCode.RESOURCE_LIMIT); }
         catch (RuntimeException readFailure) { return fail(claim, SyncFailureCode.READ_FAILED); }
         try { publication.publish(claim, movements); }

@@ -54,6 +54,7 @@ public class FirebirdQuestorAccountingReader
 
     private final QuestorConnectionProvider connectionProvider;
     private final int maxRecords;
+    private final int timeoutSeconds;
 
     public FirebirdQuestorAccountingReader(
             QuestorConnectionProvider connectionProvider) {
@@ -61,9 +62,14 @@ public class FirebirdQuestorAccountingReader
     }
 
     public FirebirdQuestorAccountingReader(QuestorConnectionProvider connectionProvider, int maxRecords) {
+        this(connectionProvider, maxRecords, 30);
+    }
+    public FirebirdQuestorAccountingReader(QuestorConnectionProvider connectionProvider, int maxRecords, int timeoutSeconds) {
         if (maxRecords < 1 || maxRecords == Integer.MAX_VALUE) throw new IllegalArgumentException("Invalid reader resource limit.");
+        if (timeoutSeconds < 1 || timeoutSeconds > 120) throw new IllegalArgumentException("Invalid Questor query timeout.");
         this.connectionProvider = connectionProvider;
         this.maxRecords = maxRecords;
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     @Override
@@ -71,12 +77,20 @@ public class FirebirdQuestorAccountingReader
             String externalCompanyReference,
             LocalDate startDate,
             LocalDate endDate) {
-        int companyCode = Integer.parseInt(externalCompanyReference);
+        Integer.parseInt(externalCompanyReference); // Validate before opening the source session.
 
-        try (
-                Connection connection = connectionProvider.openConnection();
-                PreparedStatement statement = connection.prepareStatement(SQL)) {
+        try (var session = QuestorReadOnlySession.open(connectionProvider)) {
+            return readOn(session.connection(), externalCompanyReference, startDate, endDate);
+        } catch (AccountingReadLimitExceededException overflow) { throw new AccountingReadLimitExceededException(); }
+        catch (SQLException | RuntimeException exception) {
+            throw new QuestorReadException("Failed to read accounting movements from Questor", null);
+        }
+    }
+    List<ImportedAccountingMovement> readOn(Connection connection, String externalCompanyReference, LocalDate startDate, LocalDate endDate) throws SQLException {
+        int companyCode = Integer.parseInt(externalCompanyReference);
+        try (PreparedStatement statement = connection.prepareStatement(SQL)) {
             statement.setMaxRows(maxRecords + 1);
+            statement.setQueryTimeout(timeoutSeconds);
             setParameters(
                     statement,
                     companyCode,
@@ -88,10 +102,6 @@ public class FirebirdQuestorAccountingReader
                 return mapMovements(resultSet);
             }
 
-        } catch (SQLException exception) {
-            throw new QuestorReadException(
-                    "Failed to read accounting movements from Questor",
-                    exception);
         }
     }
 
