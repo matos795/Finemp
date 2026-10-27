@@ -83,5 +83,15 @@ class SyncRunExecutorTest {
         assertThat(executor.executeClaim(machine)).isEqualTo(SyncExecutionOutcome.STALE);
         verifyNoInteractions(lifecycle, identities, readers, publication);
     }
+    @Test void shouldTreatUnverifiedMappingAsUnavailableInsteadOfRetryingItAsANetworkFailure() {
+        when(identities.readIdentity(request)).thenThrow(new AccountingIdentityConfigurationException());
+        assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
+        verify(lifecycle).failIfCurrent(claim, SyncFailureCode.SOURCE_NOT_AVAILABLE); verifyNoInteractions(readers, publication);
+    }
+    @Test void shouldRefuseAnIdentityChangeDetectedInsideTheSourceSnapshotBeforePublication() {
+        when(readers.readMovements(request)).thenThrow(new AccountingIdentityMismatchException());
+        assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
+        verify(lifecycle).failIfCurrent(claim, SyncFailureCode.IDENTITY_MISMATCH); verifyNoInteractions(publication);
+    }
 }
 
