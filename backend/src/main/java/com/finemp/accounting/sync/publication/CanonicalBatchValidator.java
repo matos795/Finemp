@@ -22,7 +22,12 @@ public final class CanonicalBatchValidator {
                     || row.accountingDate() == null || row.accountingDate().isBefore(request.startDate())
                     || row.accountingDate().isAfter(request.endDate()) || row.amount() == null) throw invalid();
             java.math.BigDecimal amount;
-            try { amount = row.amount().setScale(4, RoundingMode.UNNECESSARY); }
+            try {
+                // Check representability BEFORE scale expansion: a short exponent must not allocate an enormous BigInteger.
+                var compact = row.amount().signum() == 0 ? java.math.BigDecimal.ZERO : row.amount().stripTrailingZeros();
+                if (compact.scale() > 4 || (long) compact.precision() - compact.scale() > 15) throw invalid();
+                amount = compact.setScale(4, RoundingMode.UNNECESSARY);
+            }
             catch (ArithmeticException unrepresentable) { throw invalid(); }
             if (amount.precision() > 19) throw invalid();
             var normalized = new ImportedAccountingMovement(row.sourceEntryKey(), row.accountingDate(), row.externalAccountId(),
