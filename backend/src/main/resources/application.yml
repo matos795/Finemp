@@ -13,6 +13,11 @@ spring:
 
 finemp:
   sync:
+    worker:
+      enabled: ${FINEMP_SYNC_WORKER_ENABLED:false}
+      concurrency: ${FINEMP_SYNC_WORKER_CONCURRENCY:2}
+      poll-delay-ms: ${FINEMP_SYNC_POLL_DELAY_MS:5000}
+      max-execution-seconds: ${FINEMP_SYNC_MAX_EXECUTION_SECONDS:900}
     retry:
       max-attempts: ${FINEMP_SYNC_MAX_ATTEMPTS:3}
       lease-seconds: ${FINEMP_SYNC_LEASE_SECONDS:300}
