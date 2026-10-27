@@ -20,9 +20,10 @@ public class CompanyAccessAuthorizationService {
             UUID companyId) {
 
         return companyAccessGrantRepository
-                .existsByUserAccountIdAndCompanyId(
+                .existsByUserAccountIdAndCompanyIdAndCostCenterScope(
                         userAccountId,
-                        companyId);
+                        companyId,
+                        CostCenterScope.ALL);
     }
 
     public void requireAccess(

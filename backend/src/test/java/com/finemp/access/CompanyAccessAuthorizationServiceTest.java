@@ -23,9 +23,10 @@ class CompanyAccessAuthorizationServiceTest {
         UUID companyId = UUID.randomUUID();
 
         when(companyAccessGrantRepository
-                .existsByUserAccountIdAndCompanyId(
+                .existsByUserAccountIdAndCompanyIdAndCostCenterScope(
                         userAccountId,
-                        companyId))
+                        companyId,
+                        CostCenterScope.ALL))
                 .thenReturn(true);
 
         CompanyAccessAuthorizationService service = new CompanyAccessAuthorizationService(
@@ -43,9 +44,10 @@ class CompanyAccessAuthorizationServiceTest {
         UUID companyId = UUID.randomUUID();
 
         when(companyAccessGrantRepository
-                .existsByUserAccountIdAndCompanyId(
+                .existsByUserAccountIdAndCompanyIdAndCostCenterScope(
                         userAccountId,
-                        companyId))
+                        companyId,
+                        CostCenterScope.ALL))
                 .thenReturn(false);
 
         CompanyAccessAuthorizationService service = new CompanyAccessAuthorizationService(
