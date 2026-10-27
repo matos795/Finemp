@@ -19,6 +19,19 @@ tags:
   - name: DRE
   - name: Accounting synchronization
 paths:
+  /api/auth/organization-access:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentOrganizationAccess
+      summary: Consulta as permissões administrativas do próprio usuário autenticado.
+      description: Identidade determinada somente pela sessão. Não concede nem lista dados financeiros de empresas.
+      responses:
+        '200':
+          description: Permissões de plataforma e vínculos explícitos de contabilidade.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OrganizationAccess'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /api/admin/accounting-firms:
     get:
       tags: [SaaS administration]
@@ -603,6 +616,31 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    OrganizationAccess:
+      type: object
+      required: [platformPermissions, accountingFirms]
+      properties:
+        platformPermissions:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]
+        accountingFirms:
+          type: array
+          items:
+            type: object
+            required: [accountingFirmId, name, active, permissions]
+            properties:
+              accountingFirmId: {type: string, format: uuid}
+              name: {type: string}
+              active: {type: boolean}
+              permissions:
+                type: array
+                uniqueItems: true
+                items:
+                  type: string
+                  enum: [HIERARCHY_MANAGE, USER_ACCESS_MANAGE, ACCOUNTING_SOURCE_MANAGE, CONNECTOR_MANAGE]
     NameRequest:
       type: object
       required: [name]
