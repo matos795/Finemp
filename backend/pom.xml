@@ -110,8 +110,33 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>connector-jar</id>
+						<phase>package</phase>
+						<goals><goal>jar</goal></goals>
+						<configuration><classifier>connector</classifier></configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<mainClass>com.finemp.FinempApiApplication</mainClass>
+				</configuration>
+				<executions>
+					<execution>
+						<id>connector-repackage</id>
+						<goals><goal>repackage</goal></goals>
+						<configuration>
+							<classifier>connector</classifier>
+							<mainClass>com.finemp.connector.agent.ConnectorMain</mainClass>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

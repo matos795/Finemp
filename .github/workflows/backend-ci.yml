@@ -37,3 +37,6 @@ jobs:
 
       - name: Verify backend
         run: ./mvnw --batch-mode verify
+
+      - name: Verify standalone Connector entry point without database or server startup
+        run: java -jar target/finemp-api-0.0.1-SNAPSHOT-connector.jar --help
