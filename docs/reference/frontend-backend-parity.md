@@ -6,8 +6,10 @@
   nos três escopos, grants explícitos e auditoria. RESTRICTED permanece negado
   até haver filtro real; não é funcionalidade afirmada pronta.
 - **FATO CONFIRMADO:** porta canônica ERP (#81 / PR #84) e persistência SyncRun
-  (#83 / PR #86) integradas. A API de controle #85 é incremental e condicionada
-  a feature flag; não equivale a executor, Connector ou sincronização concluída.
+  (#83 / PR #86) integradas. A API de controle #85 / PR #87 foi integrada e é
+  condicionada a feature flag. O executor #88 acrescenta coordenação e fencing;
+  seus ports obrigatórios não equivalem a publicação concreta, Connector ou
+  integração operacional homologada.
 - **PONTO ABERTO:** comprovação da identidade externa e provisionamento scoped
   continuam gates de produção. A #50 e os demais módulos permanecem abertos.
 

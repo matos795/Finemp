@@ -13,6 +13,8 @@ spring:
 
 finemp:
   sync:
+    executor:
+      enabled: ${FINEMP_SYNC_EXECUTOR_ENABLED:false}
     control:
       enabled: ${FINEMP_SYNC_CONTROL_ENABLED:false}
       max-window-days: ${FINEMP_SYNC_MAX_WINDOW_DAYS:366}

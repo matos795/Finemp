@@ -16,6 +16,8 @@ class SyncControlDisabledIntegrationTest {
         assertThat(context.containsBean("syncControlController")).isFalse();
         assertThat(context.containsBean("syncControlService")).isFalse();
         assertThat(context.containsBean("syncControlTransactionGuard")).isFalse();
+        assertThat(context.containsBean("syncRunExecutor")).isFalse();
+        assertThat(context.containsBean("jpaSyncExecutionLifecycle")).isFalse();
     }
 }
 
