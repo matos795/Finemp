@@ -4,6 +4,7 @@ import com.finemp.access.CompanyPermission;
 import com.finemp.access.CompanyPermissionAuthorizationService;
 import com.finemp.accounting.account.*;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
+import com.finemp.accounting.reading.ExternalCompanyIdentity;
 import com.finemp.accounting.movement.*;
 import com.finemp.accounting.source.*;
 import com.finemp.accounting.sync.*;
@@ -12,13 +13,14 @@ import com.finemp.accounting.sync.execution.*;
 import java.time.Clock;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@ConditionalOnProperty(prefix = "finemp.sync.executor", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("${finemp.sync.executor.enabled:false} || ${finemp.connector.protocol.enabled:false}")
 public class AccountingPublicationTransaction {
     private static final int LOOKUP_CHUNK = 500;
     private final SyncRunRepository runs;
@@ -31,25 +33,37 @@ public class AccountingPublicationTransaction {
     private final Clock clock;
     private final int maxRecords;
     private final SyncAttemptRepository attempts;
+    private final ObjectProvider<SyncAgentAuthorization> agents;
 
     public AccountingPublicationTransaction(SyncRunRepository runs, AccountingSourceRepository sources,
             AccountingAccountRepository accounts, AccountingMovementRepository movements, SyncRunEventRepository events,
             CompanyPermissionAuthorizationService permissions, SyncControlTransactionGuard transactions,
-            Clock clock, @Value("${finemp.sync.publication.max-records:25000}") int maxRecords, SyncAttemptRepository attempts) {
+            Clock clock, @Value("${finemp.sync.publication.max-records:25000}") int maxRecords, SyncAttemptRepository attempts,
+            ObjectProvider<SyncAgentAuthorization> agents) {
         if (maxRecords < 1) throw new IllegalArgumentException("Invalid publication resource limit.");
         this.runs = runs; this.sources = sources; this.accounts = accounts; this.movements = movements;
         this.events = events; this.permissions = permissions; this.transactions = transactions;
         this.clock = clock; this.maxRecords = maxRecords; this.attempts = attempts;
+        this.agents = agents;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void publish(ClaimedSyncRun claim, List<ImportedAccountingMovement> records) {
+        if (claim.agent().isConnector()) throw new StaleSyncClaimException();
+        publishAuthorized(claim, records, null);
+    }
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void publishConnector(ClaimedSyncRun claim, ExternalCompanyIdentity observedIdentity, List<ImportedAccountingMovement> records) {
+        if (!claim.agent().isConnector()) throw new StaleSyncClaimException();
+        publishAuthorized(claim, records, observedIdentity);
+    }
+    private void publishAuthorized(ClaimedSyncRun claim, List<ImportedAccountingMovement> records, ExternalCompanyIdentity observedIdentity) {
         transactions.requireReadCommitted();
         var sourceId = runs.findSourceIdByRunId(claim.runId()).orElseThrow(StaleSyncClaimException::new);
         if (!sourceId.equals(claim.request().accountingSourceId())) throw new StaleSyncClaimException();
         var source = sources.findLockedForSyncById(sourceId).orElseThrow(StaleSyncClaimException::new);
         var run = runs.findByIdAndAccountingSourceId(claim.runId(), sourceId).orElseThrow(StaleSyncClaimException::new);
-        if (source.getConnectionMode() != AccountingConnectionMode.DIRECT || claim.agent().isConnector()) throw new StaleSyncClaimException();
+        if (!agentIsCurrent(claim.agent(), source)) throw new StaleSyncClaimException();
         if (run.getStatus() != SyncRunStatus.RUNNING || run.getVersion() != claim.version() || run.getMode() != claim.mode()
                 || !run.getStartDate().equals(claim.request().startDate()) || !run.getEndDate().equals(claim.request().endDate()))
             throw new StaleSyncClaimException();
@@ -63,6 +77,8 @@ public class AccountingPublicationTransaction {
             throw rejected(SyncFailureCode.IDENTITY_MISMATCH);
         if (!permissions.hasFreshPermission(run.getRequestedByUserId(), source.getCompany().getId(), CompanyPermission.QUESTOR_SYNC))
             throw rejected(SyncFailureCode.ACCESS_REVOKED);
+        if (claim.agent().isConnector() && (observedIdentity == null || !observedIdentity.matches(claim.request())))
+            throw rejected(SyncFailureCode.IDENTITY_MISMATCH);
 
         var batch = CanonicalBatchValidator.validate(claim.request(), records, maxRecords);
         var knownAccounts = loadAccounts(sourceId, batch.accounts().keySet());
@@ -96,6 +112,12 @@ public class AccountingPublicationTransaction {
         runs.flush(); // Includes movements, ownership FKs, measured counters and terminal audit.
     }
 
+    private boolean agentIsCurrent(SyncClaimAgent agent, AccountingSource source) {
+        if (!agent.isConnector()) return source.getConnectionMode() == AccountingConnectionMode.DIRECT;
+        var authorization = agents.getIfUnique();
+        return source.getConnectionMode() == AccountingConnectionMode.CONNECTOR && authorization != null
+                && authorization.isCurrent(agent, source.getId());
+    }
     private Map<String, AccountingAccount> loadAccounts(UUID sourceId, Set<String> keys) {
         var result = new HashMap<String, AccountingAccount>(); var list = new ArrayList<>(keys);
         for (int from = 0; from < list.size(); from += LOOKUP_CHUNK)
