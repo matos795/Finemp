@@ -18,6 +18,8 @@ class SyncControlDisabledIntegrationTest {
         assertThat(context.containsBean("syncControlTransactionGuard")).isFalse();
         assertThat(context.containsBean("syncRunExecutor")).isFalse();
         assertThat(context.containsBean("jpaSyncExecutionLifecycle")).isFalse();
+        assertThat(context.containsBean("jpaAtomicSyncPublication")).isFalse();
+        assertThat(context.containsBean("accountingPublicationTransaction")).isFalse();
     }
 }
 

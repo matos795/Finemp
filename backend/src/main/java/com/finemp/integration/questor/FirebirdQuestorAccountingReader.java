@@ -2,6 +2,7 @@ package com.finemp.integration.questor;
 
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
 import com.finemp.accounting.movement.AccountingMovementSide;
+import com.finemp.accounting.reading.AccountingReadLimitExceededException;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -52,10 +53,17 @@ public class FirebirdQuestorAccountingReader
             """;
 
     private final QuestorConnectionProvider connectionProvider;
+    private final int maxRecords;
 
     public FirebirdQuestorAccountingReader(
             QuestorConnectionProvider connectionProvider) {
+        this(connectionProvider, 25000);
+    }
+
+    public FirebirdQuestorAccountingReader(QuestorConnectionProvider connectionProvider, int maxRecords) {
+        if (maxRecords < 1 || maxRecords == Integer.MAX_VALUE) throw new IllegalArgumentException("Invalid reader resource limit.");
         this.connectionProvider = connectionProvider;
+        this.maxRecords = maxRecords;
     }
 
     @Override
@@ -68,6 +76,7 @@ public class FirebirdQuestorAccountingReader
         try (
                 Connection connection = connectionProvider.openConnection();
                 PreparedStatement statement = connection.prepareStatement(SQL)) {
+            statement.setMaxRows(maxRecords + 1);
             setParameters(
                     statement,
                     companyCode,
@@ -107,6 +116,7 @@ public class FirebirdQuestorAccountingReader
         List<ImportedAccountingMovement> movements = new ArrayList<>();
 
         while (resultSet.next()) {
+            if (movements.size() >= maxRecords) throw new AccountingReadLimitExceededException();
             movements.add(
                     new ImportedAccountingMovement(
                             resultSet.getString("SOURCE_ENTRY_KEY"),

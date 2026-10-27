@@ -23,8 +23,9 @@ public class QuestorIntegrationConfiguration {
 
     @Bean
     QuestorAccountingReader questorAccountingReader(
-            QuestorConnectionProvider connectionProvider) {
+            QuestorConnectionProvider connectionProvider,
+            @org.springframework.beans.factory.annotation.Value("${finemp.sync.publication.max-records:25000}") int maxRecords) {
         return new FirebirdQuestorAccountingReader(
-                connectionProvider);
+                connectionProvider, maxRecords);
     }
 }

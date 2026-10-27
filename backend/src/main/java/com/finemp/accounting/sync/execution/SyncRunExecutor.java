@@ -3,6 +3,7 @@ package com.finemp.accounting.sync.execution;
 import com.finemp.accounting.reading.AccountingCompanyIdentityReader;
 import com.finemp.accounting.reading.AccountingSourceReaderRegistry;
 import com.finemp.accounting.reading.ExternalCompanyIdentity;
+import com.finemp.accounting.reading.AccountingReadLimitExceededException;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
 import com.finemp.accounting.sync.SyncFailureCode;
 import java.util.List;
@@ -34,9 +35,11 @@ public class SyncRunExecutor {
         if (identity == null || !identity.matches(claim.request())) return fail(claim, SyncFailureCode.IDENTITY_MISMATCH);
         List<ImportedAccountingMovement> movements;
         try { movements = readers.readMovements(claim.request()); }
+        catch (AccountingReadLimitExceededException limit) { return fail(claim, SyncFailureCode.RESOURCE_LIMIT); }
         catch (RuntimeException readFailure) { return fail(claim, SyncFailureCode.READ_FAILED); }
         try { publication.publish(claim, movements); }
         catch (StaleSyncClaimException stale) { return SyncExecutionOutcome.STALE; }
+        catch (SyncPublicationRejectedException rejected) { return fail(claim, rejected.getCode()); }
         catch (RuntimeException publicationFailure) { return fail(claim, SyncFailureCode.PUBLICATION_FAILED); }
         return SyncExecutionOutcome.PUBLISHED;
     }

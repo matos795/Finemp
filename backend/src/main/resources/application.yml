@@ -13,6 +13,8 @@ spring:
 
 finemp:
   sync:
+    publication:
+      max-records: ${FINEMP_SYNC_MAX_RECORDS:25000}
     executor:
       enabled: ${FINEMP_SYNC_EXECUTOR_ENABLED:false}
     control:
