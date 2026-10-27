@@ -19,6 +19,88 @@ tags:
   - name: DRE
   - name: Accounting synchronization
 paths:
+  /api/admin/accounting-firms/{firmId}/clients/{clientId}/companies/{companyId}/users:
+    parameters:
+      - name: firmId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Identity administration]
+      operationId: listCompanyUsers
+      summary: Lista grants da empresa com autorização administrativa e cadeia pai/filho verificada.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de identidades resumidas, sem credenciais.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UserAdministrationPage'}
+        '400': {description: Paginação inválida.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/accounting-firms/{firmId}/clients/{clientId}/companies/{companyId}/users/{userId}:
+    parameters:
+      - name: firmId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Identity administration]
+      operationId: getCompanyUserAccess
+      summary: Consulta somente o grant da empresa autorizada.
+      responses:
+        '200':
+          description: Permissões explícitas e rótulo/escopo do grant.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompanyUserAccess'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Identity administration]
+      operationId: replaceCompanyUserAccess
+      summary: Substitui explicitamente um grant, sem inferir permissões por role.
+      description: Exige USER_ACCESS_MANAGE na firma ou PLATFORM_USER_MANAGE global. Destinatário deve ter vínculo explícito na firma. RESTRICTED retorna 409 enquanto não houver filtro real.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SetCompanyAccessRequest'}
+      responses:
+        '200':
+          description: Grant atualizado; repetição idêntica não gera nova auditoria.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompanyUserAccess'}
+        '400': {description: Payload inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Destinatário sem vínculo na firma ou escopo restrito ainda não suportado.}
+    delete:
+      tags: [Identity administration]
+      operationId: revokeCompanyUserAccess
+      summary: Remove somente este grant; preserva identidade e outros acessos.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204': {description: Grant removido ou já ausente.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /api/admin/accounting-firms/{firmId}/users:
     parameters:
       - name: firmId
@@ -805,6 +887,24 @@ components:
     PlatformPermission:
       type: string
       enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]
+    SetCompanyAccessRequest:
+      type: object
+      required: [role, costCenterScope, permissions]
+      properties:
+        role: {$ref: '#/components/schemas/CompanyAccessRole'}
+        costCenterScope: {$ref: '#/components/schemas/CostCenterScope'}
+        permissions:
+          type: array
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/CompanyPermission'}
+    CompanyUserAccess:
+      allOf:
+        - $ref: '#/components/schemas/SetCompanyAccessRequest'
+        - type: object
+          required: [companyId, user]
+          properties:
+            companyId: {type: string, format: uuid}
+            user: {$ref: '#/components/schemas/UserAdministrationSummary'}
     AccountingFirmPermission:
       type: string
       enum: [HIERARCHY_MANAGE, USER_ACCESS_MANAGE, ACCOUNTING_SOURCE_MANAGE, CONNECTOR_MANAGE]

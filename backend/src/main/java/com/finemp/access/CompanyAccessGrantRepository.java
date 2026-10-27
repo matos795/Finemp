@@ -26,6 +26,19 @@ public interface CompanyAccessGrantRepository
                         UUID companyId);
 
         @org.springframework.data.jpa.repository.Query("""
+                        select accessGrant.userAccount from CompanyAccessGrant accessGrant
+                        where accessGrant.company.id = :companyId
+                          and (:search = ''
+                               or locate(lower(:search), lower(accessGrant.userAccount.name)) > 0
+                               or locate(lower(:search), lower(accessGrant.userAccount.email)) > 0)
+                        order by accessGrant.userAccount.name, accessGrant.id
+                        """)
+        org.springframework.data.domain.Page<UserAccount> searchCompanyUsers(
+                        @org.springframework.data.repository.query.Param("companyId") UUID companyId,
+                        @org.springframework.data.repository.query.Param("search") String search,
+                        org.springframework.data.domain.Pageable pageable);
+
+        @org.springframework.data.jpa.repository.Query("""
                         select case when count(accessGrant) > 0 then true else false end
                         from CompanyAccessGrant accessGrant
                         where accessGrant.userAccount.id = :userId
