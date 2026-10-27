@@ -13,6 +13,11 @@ public interface CompanyAccessGrantRepository
                         UUID userAccountId,
                         UUID companyId);
 
+        boolean existsByUserAccountIdAndCompanyIdAndCostCenterScope(
+                        UUID userAccountId,
+                        UUID companyId,
+                        CostCenterScope costCenterScope);
+
         List<CompanyAccessGrant> findAllByUserAccountId(
                         UUID userAccountId);
 

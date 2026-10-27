@@ -24,7 +24,7 @@ public class CompanyPermissionAuthorizationService {
                 .findByUserAccountIdAndCompanyId(
                         userAccountId,
                         companyId)
-                .map(grant -> grant.hasPermission(permission))
+                .map(grant -> grant.getCostCenterScope() == CostCenterScope.ALL && grant.hasPermission(permission))
                 .orElse(false);
     }
 }
