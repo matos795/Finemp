@@ -19,6 +19,109 @@ tags:
   - name: DRE
   - name: Accounting synchronization
 paths:
+  /api/accounting-sources/{accountingSourceId}/sync-runs:
+    parameters:
+      - $ref: '#/components/parameters/AccountingSourceId'
+    post:
+      tags: [Accounting synchronization]
+      operationId: requestSynchronization
+      summary: Registra intenção de sincronização; não lê ERP durante a requisição.
+      description: Condicional a FINEMP_SYNC_CONTROL_ENABLED. Exige QUESTOR_SYNC na empresa da fonte e escopo ALL. Replay idêntico retorna a mesma execução, sem evento duplicado. Executor é entrega separada.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RequestSyncRun'}
+      responses:
+        '202':
+          description: Intenção registrada ou replay da execução existente; consultar status.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SyncRun'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Chave divergente, execução ativa, fonte indisponível ou conflito concorrente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/ProblemDetail'}
+    get:
+      tags: [Accounting synchronization]
+      operationId: listSynchronizations
+      summary: Consulta histórico paginado da fonte autorizada.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: status
+          in: query
+          schema: {$ref: '#/components/schemas/SyncRunStatus'}
+      responses:
+        '200':
+          description: Página ordenada por solicitação decrescente e ID.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SyncRunPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /api/accounting-sources/{accountingSourceId}/sync-runs/{runId}:
+    parameters:
+      - $ref: '#/components/parameters/AccountingSourceId'
+      - $ref: '#/components/parameters/SyncRunId'
+    get:
+      tags: [Accounting synchronization]
+      operationId: getSynchronization
+      summary: Consulta somente execução pertencente à fonte autorizada.
+      responses:
+        '200':
+          description: Estado e métricas medidas; null não deve ser exibido como zero.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SyncRun'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Accounting synchronization]
+      operationId: cancelQueuedSynchronization
+      summary: Cancela apenas REQUESTED; preserva execução, histórico e dados importados.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204': {description: Cancelada ou já CANCELLED.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Estado não cancelável ou conflito concorrente.}
+  /api/accounting-sources/{accountingSourceId}/sync-runs/{runId}/events:
+    parameters:
+      - $ref: '#/components/parameters/AccountingSourceId'
+      - $ref: '#/components/parameters/SyncRunId'
+    get:
+      tags: [Accounting synchronization]
+      operationId: listSynchronizationEvents
+      summary: Consulta snapshots de transição no mesmo escopo da execução.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Histórico paginado, sem payload contábil ou erro livre.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SyncRunEventPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /api/auth/access-catalog:
     get:
       tags: [Authentication]
@@ -831,6 +934,16 @@ components:
       name: JSESSIONID
       description: Sessão HTTP mantida em cookie HttpOnly.
   parameters:
+    AccountingSourceId:
+      name: accountingSourceId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    SyncRunId:
+      name: runId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     UserId:
       name: userId
       in: path
@@ -904,6 +1017,68 @@ components:
     PlatformPermission:
       type: string
       enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]
+    SyncRunStatus:
+      type: string
+      enum: [REQUESTED, RUNNING, SUCCEEDED, FAILED, CANCELLED]
+    SyncRunMode:
+      type: string
+      enum: [INITIAL, INCREMENTAL, RECONCILIATION]
+      description: Intenção explícita; não implica cursor ou retificação já implementados.
+    RequestSyncRun:
+      type: object
+      required: [mode, startDate, endDate]
+      properties:
+        mode: {$ref: '#/components/schemas/SyncRunMode'}
+        startDate: {type: string, format: date}
+        endDate:
+          type: string
+          format: date
+          description: Inclusiva, não anterior ao início; janela configurável, padrão 366 dias por solicitação nova.
+    SyncRun:
+      type: object
+      required: [id, accountingSourceId, requestedByUserId, mode, status, startDate, endDate, requestedAt, startedAt, finishedAt, readCount, importedCount, skippedCount, failureCode]
+      properties:
+        id: {type: string, format: uuid}
+        accountingSourceId: {type: string, format: uuid}
+        requestedByUserId: {type: string, format: uuid}
+        mode: {$ref: '#/components/schemas/SyncRunMode'}
+        status: {$ref: '#/components/schemas/SyncRunStatus'}
+        startDate: {type: string, format: date}
+        endDate: {type: string, format: date}
+        requestedAt: {type: string, format: date-time}
+        startedAt: {type: [string, 'null'], format: date-time}
+        finishedAt: {type: [string, 'null'], format: date-time}
+        readCount: {type: [integer, 'null'], format: int64, minimum: 0}
+        importedCount: {type: [integer, 'null'], format: int64, minimum: 0}
+        skippedCount: {type: [integer, 'null'], format: int64, minimum: 0}
+        failureCode:
+          type: [string, 'null']
+          enum: [READ_FAILED, IDENTITY_MISMATCH, INVALID_PAYLOAD, PUBLICATION_FAILED, LEASE_EXPIRED, RETRY_LIMIT, null]
+    SyncRunPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/SyncRun'}
+    SyncRunEvent:
+      type: object
+      required: [id, status, actorType, actorId, occurredAt]
+      properties:
+        id: {type: string, format: uuid}
+        status: {$ref: '#/components/schemas/SyncRunStatus'}
+        actorType: {type: string, enum: [USER, SYSTEM, CONNECTOR]}
+        actorId: {type: [string, 'null'], format: uuid}
+        occurredAt: {type: string, format: date-time}
+    SyncRunEventPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/SyncRunEvent'}
     AccessCatalog:
       type: object
       required: [version, platformPermissions, accountingFirmPermissions, companyPermissions, companyScreenPresets]
@@ -941,7 +1116,7 @@ components:
                 items: {$ref: '#/components/schemas/CompanyPermission'}
               availabilityCondition:
                 type: [string, 'null']
-                description: QUESTOR_INTEGRATION_ENABLED quando a ação exige configuração externa habilitada.
+                description: QUESTOR_INTEGRATION_ENABLED ou SYNC_CONTROL_ENABLED, conforme a configuração exigida pela operação.
     SetCompanyAccessRequest:
       type: object
       required: [role, costCenterScope, permissions]
@@ -1338,6 +1513,9 @@ components:
     ProblemDetail:
       type: object
       properties:
+        code:
+          type: string
+          description: Código opcional de conflito, como IDEMPOTENCY_MISMATCH ou CONCURRENT_CONFLICT.
         type:
           type: string
           format: uri-reference

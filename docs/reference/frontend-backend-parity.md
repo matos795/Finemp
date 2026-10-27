@@ -1,5 +1,16 @@
 # FINEMP — matriz integral de paridade funcional
 
+## Checkpoint de implementação — 27/10/2026
+
+- **FATO CONFIRMADO:** #36 e #37 integradas: identidade, sessões, administração
+  nos três escopos, grants explícitos e auditoria. RESTRICTED permanece negado
+  até haver filtro real; não é funcionalidade afirmada pronta.
+- **FATO CONFIRMADO:** porta canônica ERP (#81 / PR #84) e persistência SyncRun
+  (#83 / PR #86) integradas. A API de controle #85 é incremental e condicionada
+  a feature flag; não equivale a executor, Connector ou sincronização concluída.
+- **PONTO ABERTO:** comprovação da identidade externa e provisionamento scoped
+  continuam gates de produção. A #50 e os demais módulos permanecem abertos.
+
 ## Autoridade da referência
 
 **DECISÃO — 26/10/2026:** o negócio homologou as funcionalidades, comportamentos e cálculos executáveis de `FINEMP_web_1.zip`. Eles são requisitos funcionais. A arquitetura continua sendo o monólito modular Java/Spring/PostgreSQL existente.
