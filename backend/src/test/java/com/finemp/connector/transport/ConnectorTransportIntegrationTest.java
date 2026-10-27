@@ -86,6 +86,18 @@ class ConnectorTransportIntegrationTest {
         mvc.perform(get("/api/auth/me").secure(true).header("Authorization", "Bearer " + issued.secret()))
                 .andExpect(status().isUnauthorized());
     }
+    @Test void shouldBoundBodiesOnlyAfterMachineAuthenticationAndKeepTheBrowserChainSeparate() throws Exception {
+        String large = "x".repeat(2049);
+        mvc.perform(post("/api/connector/v1/work/claim").secure(true).header("Authorization", "Bearer " + issued.secret())
+                .contentType("application/json").content(large))
+                .andExpect(status().isPayloadTooLarge()).andExpect(jsonPath("$.code").value("CONNECTOR_PAYLOAD_TOO_LARGE"));
+        mvc.perform(post("/api/connector/v1/work/claim").secure(true).contentType("application/json").content(large))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get(route).secure(true).header("Authorization", "Bearer " + issued.secret()).header("Content-Encoding", "gzip"))
+                .andExpect(status().isUnsupportedMediaType());
+        mvc.perform(get("/api/auth/me").with(user(new UserAccountPrincipal(actor))).header("Content-Encoding", "gzip"))
+                .andExpect(status().isOk());
+    }
     @Test void shouldRejectRotatedOrRevokedCredentialsOnTheNextRequest() throws Exception {
         var rotated = service.rotate(actor.getId(), firmId, issued.credential().id());
         mvc.perform(get(route).secure(true).header("Authorization", "Bearer " + issued.secret())).andExpect(status().isUnauthorized());

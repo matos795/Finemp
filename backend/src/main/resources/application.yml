@@ -17,6 +17,9 @@ finemp:
     credential-lifetime-days: ${FINEMP_CONNECTOR_CREDENTIAL_LIFETIME_DAYS:90}
     protocol:
       enabled: ${FINEMP_CONNECTOR_PROTOCOL_ENABLED:false}
+      max-batch-bytes: ${FINEMP_CONNECTOR_MAX_BATCH_BYTES:8388608}
+      max-metadata-bytes: ${FINEMP_CONNECTOR_MAX_METADATA_BYTES:2048}
+      max-concurrent-requests: ${FINEMP_CONNECTOR_MAX_CONCURRENT_REQUESTS:2}
       rate-limit:
         capacity: ${FINEMP_CONNECTOR_AUTH_CAPACITY:10000}
         address-per-minute: ${FINEMP_CONNECTOR_AUTH_ADDRESS_PER_MINUTE:600}
