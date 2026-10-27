@@ -158,6 +158,20 @@ class SyncRetryIntegrationTest {
                 .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
         assertThatThrownBy(() -> attemptQuery.list(actor, sourceId, runId, 0, 101)).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void shouldSelectOnlyQueuedExpiredOrDueIdsAndExcludeLiveBackoffAndTerminalRuns() {
+        var candidates = new com.finemp.accounting.sync.worker.JdbcSyncCandidateSource(jdbc, clock);
+        assertThat(candidates.due(8)).contains(runId);
+        var claim = lifecycle.claim(runId).orElseThrow();
+        assertThat(candidates.due(8)).doesNotContain(runId);
+        at(300); assertThat(candidates.due(8)).contains(runId);
+        lifecycle.claim(runId); // Marks expiry and starts backoff.
+        assertThat(candidates.due(8)).doesNotContain(runId);
+        at(330); assertThat(candidates.due(8)).contains(runId);
+        var next = lifecycle.claim(runId).orElseThrow();
+        publication.publish(next, List.of());
+        assertThat(candidates.due(8)).doesNotContain(runId);
+        assertThatThrownBy(() -> candidates.due(9)).isInstanceOf(IllegalArgumentException.class);
+    }
     private void at(long seconds) { when(clock.instant()).thenReturn(initial.plusSeconds(seconds)); }
     private SyncRun run() { return runs.findByIdAndAccountingSourceId(runId, sourceId).orElseThrow(); }
     private SyncAttempt last() { return attempts.findFirstBySyncRunIdOrderByAttemptNumberDesc(runId).orElseThrow(); }
