@@ -581,7 +581,7 @@ paths:
       tags: [Accounting movements]
       operationId: listAccountingMovements
       summary: Lista movimentos contábeis de uma empresa em um período.
-      description: A resposta atual ainda não possui paginação server-side.
+      description: Exige ACCOUNTING_MOVEMENT_VIEW e escopo ALL. DRE_VIEW não autoriza o razão bruto. A resposta atual ainda não possui paginação server-side.
       parameters:
         - $ref: '#/components/parameters/CompanyId'
         - $ref: '#/components/parameters/StartDate'
@@ -606,6 +606,7 @@ paths:
       tags: [Account classification]
       operationId: listAccountingAccountClassifications
       summary: Lista contas da empresa e o estado da classificação gerencial.
+      description: Exige ACCOUNT_CLASSIFICATION_VIEW ou ACCOUNT_CLASSIFICATION_MANAGE na empresa e escopo ALL.
       parameters:
         - $ref: '#/components/parameters/CompanyId'
       responses:
@@ -1166,6 +1167,8 @@ components:
     CompanyPermission:
       type: string
       enum:
+        - ACCOUNTING_MOVEMENT_VIEW
+        - ACCOUNT_CLASSIFICATION_VIEW
         - DASHBOARD_VIEW
         - DRE_VIEW
         - BALANCE_SHEET_VIEW

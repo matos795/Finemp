@@ -1,6 +1,8 @@
 package com.finemp.access;
 
 public enum CompanyPermission {
+    ACCOUNTING_MOVEMENT_VIEW,
+    ACCOUNT_CLASSIFICATION_VIEW,
 
     DASHBOARD_VIEW,
     DRE_VIEW,

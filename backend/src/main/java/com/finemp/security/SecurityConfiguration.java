@@ -31,7 +31,6 @@ public class SecurityConfiguration {
         SecurityFilterChain securityFilterChain(
                         HttpSecurity http,
                         SecurityContextRepository securityContextRepository,
-                        CompanyRequestAuthorizationManager companyAuthorizationManager,
                         SessionAccountStateValidator sessionAccountStateValidator,
                         QuestorImportAuthorizationManager questorImportAuthorizationManager,
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
@@ -59,8 +58,21 @@ public class SecurityConfiguration {
                                                 .access(permissionAuthorizationManagerFactory.forPermission(
                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE))
 
-                                                .requestMatchers(
-                                                                "/api/companies/{companyId}/dre/**")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-movements")
+                                                .access(permissionAuthorizationManagerFactory.forPermission(
+                                                                CompanyPermission.ACCOUNTING_MOVEMENT_VIEW))
+
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-accounts/classifications")
+                                                .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
+                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
+                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
+
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/dre")
                                                 .access(
                                                                 permissionAuthorizationManagerFactory
                                                                                 .forPermission(
@@ -68,7 +80,7 @@ public class SecurityConfiguration {
 
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/**")
-                                                .access(companyAuthorizationManager)
+                                                .denyAll()
 
                                                 .anyRequest()
                                                 .authenticated())

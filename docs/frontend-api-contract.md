@@ -47,6 +47,12 @@ Com entrega de e-mail configurada, a API também oferece `POST /api/auth/passwor
 
 ### 3.3 Autorização
 
+As [leituras contábeis](architecture/accounting-read-authorization.md) exigem
+`ACCOUNTING_MOVEMENT_VIEW` para o razão e `ACCOUNT_CLASSIFICATION_VIEW` ou
+`ACCOUNT_CLASSIFICATION_MANAGE` para classificações. `DRE_VIEW` não autoriza
+o razão completo. Grants novos vazios e rótulo ADMIN não autorizam leitura.
+A V15 explicita somente capacidades já existentes nos grants legados.
+
 A [administração de membros da contabilidade](architecture/firm-access-administration.md)
 usa `/api/admin/accounting-firms/{firmId}/users` (GET paginado) e `/{userId}`
 (GET/PUT/DELETE). PUT recebe `permissions` administrativas; DELETE retorna 409
@@ -75,6 +81,8 @@ usuário autenticado
 
 Permissões existentes:
 
+- `ACCOUNTING_MOVEMENT_VIEW`
+- `ACCOUNT_CLASSIFICATION_VIEW`
 - `DASHBOARD_VIEW`
 - `DRE_VIEW`
 - `BALANCE_SHEET_VIEW`
