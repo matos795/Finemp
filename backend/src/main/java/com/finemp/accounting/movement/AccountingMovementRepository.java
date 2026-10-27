@@ -12,6 +12,13 @@ public interface AccountingMovementRepository
         extends JpaRepository<AccountingMovement, UUID> {
 
     @Query("""
+            select movement from AccountingMovement movement join fetch movement.account account
+            where movement.accountingSourceId = :sourceId and movement.sourceEntryKey in :entryKeys
+            """)
+    List<AccountingMovement> findAllForPublication(
+            @Param("sourceId") UUID sourceId, @Param("entryKeys") java.util.Collection<String> entryKeys);
+
+    @Query("""
             select movement
             from AccountingMovement movement
             join fetch movement.account account

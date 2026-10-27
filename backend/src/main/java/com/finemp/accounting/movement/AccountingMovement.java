@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.PrePersist;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,6 +29,9 @@ public class AccountingMovement {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "account_id", nullable = false)
     private AccountingAccount account;
+
+    @Column(name = "accounting_source_id", nullable = false, updatable = false)
+    private UUID accountingSourceId;
 
     @Column(name = "source_entry_key", nullable = false)
     private String sourceEntryKey;
@@ -66,6 +70,15 @@ public class AccountingMovement {
     public UUID getId() {
         return id;
     }
+
+    @PrePersist
+    void bindSourceOwnership() {
+        if (account == null || account.getAccountingSource() == null || account.getAccountingSource().getId() == null)
+            throw new IllegalStateException("Accounting movement requires a persisted source account.");
+        accountingSourceId = account.getAccountingSource().getId();
+    }
+
+    public UUID getAccountingSourceId() { return accountingSourceId; }
 
     public AccountingAccount getAccount() {
         return account;
