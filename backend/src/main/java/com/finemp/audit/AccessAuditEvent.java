@@ -47,7 +47,7 @@ public class AccessAuditEvent {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "access_audit_event_permissions", joinColumns = @JoinColumn(name = "event_id"))
-    @Column(name = "permission", nullable = false, length = 80, updatable = false)
+    @Column(name = "permission", nullable = false, length = 80)
     private Set<String> permissionSnapshot = new HashSet<>();
 
     protected AccessAuditEvent() { }
