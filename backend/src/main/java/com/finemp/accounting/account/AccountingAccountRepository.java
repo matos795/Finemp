@@ -11,6 +11,9 @@ import java.util.UUID;
 public interface AccountingAccountRepository
                 extends JpaRepository<AccountingAccount, UUID> {
 
+        List<AccountingAccount> findAllByAccountingSourceIdAndExternalAccountIdIn(
+                        UUID accountingSourceId, java.util.Collection<String> externalAccountIds);
+
         Optional<AccountingAccount> findByAccountingSourceIdAndExternalAccountId(
                         UUID accountingSourceId,
                         String externalAccountId);

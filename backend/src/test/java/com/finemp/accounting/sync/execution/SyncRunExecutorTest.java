@@ -61,5 +61,16 @@ class SyncRunExecutorTest {
         assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.NOT_CLAIMED);
         verifyNoInteractions(identities, readers, publication);
     }
+    @Test void shouldPropagateSanitizedPublicationRejectionWithoutTreatingItAsAnUnknownDatabaseFailure() {
+        doThrow(new SyncPublicationRejectedException(SyncFailureCode.DATA_CONFLICT)).when(publication).publish(claim, List.of());
+        assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
+        verify(lifecycle).failIfCurrent(claim, SyncFailureCode.DATA_CONFLICT);
+    }
+    @Test void shouldNeverPublishOrRetryAnOversizedReadAsIfItWereComplete() {
+        when(readers.readMovements(request)).thenThrow(new AccountingReadLimitExceededException());
+        assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
+        verify(lifecycle).failIfCurrent(claim, SyncFailureCode.RESOURCE_LIMIT);
+        verifyNoInteractions(publication);
+    }
 }
 

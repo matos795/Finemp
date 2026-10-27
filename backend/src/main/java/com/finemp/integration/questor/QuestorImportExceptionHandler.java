@@ -1,6 +1,7 @@
 package com.finemp.integration.questor;
 
 import com.finemp.accounting.reading.AccountingReaderUnavailableException;
+import com.finemp.accounting.reading.AccountingReadLimitExceededException;
 import com.finemp.administration.SaasResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -9,6 +10,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = QuestorAccountingImportController.class)
 public class QuestorImportExceptionHandler {
+    @ExceptionHandler(AccountingReadLimitExceededException.class)
+    ProblemDetail resourceLimit() {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, "Leitura excede o limite de recursos; solicite período menor.");
+        problem.setProperty("code", "RESOURCE_LIMIT"); return problem;
+    }
     @ExceptionHandler(QuestorSourceStateException.class)
     ProblemDetail invalidSource() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Fonte contábil indisponível para importação.");

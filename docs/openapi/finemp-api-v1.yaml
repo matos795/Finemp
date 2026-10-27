@@ -929,6 +929,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409': {description: Fonte inativa ou incompatível.}
         '502': {description: Leitura externa indisponível; dados anteriores preservados.}
+        '422': {description: RESOURCE_LIMIT; solicitar período menor, sem resultado truncado.}
 components:
   securitySchemes:
     SessionCookie:
@@ -1056,7 +1057,7 @@ components:
         skippedCount: {type: [integer, 'null'], format: int64, minimum: 0}
         failureCode:
           type: [string, 'null']
-          enum: [READ_FAILED, IDENTITY_MISMATCH, INVALID_PAYLOAD, PUBLICATION_FAILED, LEASE_EXPIRED, RETRY_LIMIT, SOURCE_NOT_AVAILABLE, ACCESS_REVOKED, UNSUPPORTED_MODE, null]
+          enum: [READ_FAILED, IDENTITY_MISMATCH, INVALID_PAYLOAD, PUBLICATION_FAILED, LEASE_EXPIRED, RETRY_LIMIT, SOURCE_NOT_AVAILABLE, ACCESS_REVOKED, UNSUPPORTED_MODE, DATA_CONFLICT, RESOURCE_LIMIT, null]
     SyncRunPage:
       allOf:
         - $ref: '#/components/schemas/PageMetadata'

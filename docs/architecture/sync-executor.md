@@ -59,3 +59,7 @@ PostgreSQL cobre claim concorrente, versão obsoleta, solicitante revogado,
 fonte inativa, ordem causal e ausência de transação durante I/O. A publicação
 dos testes de decomposição é uma fake explícita para lote vazio; não substitui
 os testes do publicador concreto do próximo incremento.
+> Atualização #89: [publicação atômica concreta](atomic-accounting-publication.md).
+> O leitor operacional de identidade continua obrigatório e em validação; o
+> incremento #88 abaixo registra sua etapa de coordenação/ports.
+
