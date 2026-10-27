@@ -11,6 +11,7 @@ public interface SyncRunRepository extends JpaRepository<SyncRun, UUID> {
     @org.springframework.data.jpa.repository.Query("select run.accountingSource.id from SyncRun run where run.id = :id")
     Optional<UUID> findSourceIdByRunId(@org.springframework.data.repository.query.Param("id") UUID id);
     Optional<SyncRun> findByIdAndAccountingSourceId(UUID id, UUID accountingSourceId);
+    Optional<SyncRun> findFirstByAccountingSourceIdAndStatusInOrderByRequestedAtAscIdAsc(UUID accountingSourceId, Collection<SyncRunStatus> statuses);
     Optional<SyncRun> findByAccountingSourceIdAndIdempotencyKey(UUID accountingSourceId, UUID idempotencyKey);
     boolean existsByAccountingSourceIdAndStatusIn(UUID accountingSourceId, Collection<SyncRunStatus> statuses);
     Page<SyncRun> findAllByAccountingSourceId(UUID accountingSourceId, Pageable pageable);

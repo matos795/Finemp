@@ -1,6 +1,7 @@
 package com.finemp.connector;
 
 import com.finemp.access.*;
+import com.finemp.accounting.sync.execution.*;
 import com.finemp.identity.OpaqueAccountToken;
 import java.time.Clock;
 import java.sql.Timestamp;
@@ -12,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @ConditionalOnProperty(prefix = "finemp.connector", name = "enabled", havingValue = "true")
-public class ConnectorCredentialVerifier {
+public class ConnectorCredentialVerifier implements SyncAgentAuthorization {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final ConnectorSourceOwnership ownership;
@@ -33,6 +34,13 @@ public class ConnectorCredentialVerifier {
         if (identity == null) return false;
         return lookup("credential.id = ? AND credential.version = ?", List.of(identity.credentialId(), identity.version()))
                 .filter(identity::equals).isPresent();
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isCurrent(SyncClaimAgent agent, UUID sourceId) {
+        if (agent == null || !agent.isConnector()) return false;
+        return lookup("credential.id = ? AND credential.version = ?", List.of(agent.credentialId(), agent.credentialVersion()))
+                .filter(identity -> identity.accountingSourceId().equals(sourceId)).isPresent();
     }
     private Optional<ConnectorIdentity> lookup(String predicate, List<Object> arguments) {
         var parameters = new ArrayList<Object>(arguments);
