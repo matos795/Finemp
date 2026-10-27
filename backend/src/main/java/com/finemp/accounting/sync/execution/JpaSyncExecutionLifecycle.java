@@ -24,10 +24,13 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
     private final CompanyPermissionAuthorizationService permissions;
     private final SyncControlTransactionGuard transactions;
     private final Clock clock;
+    private final SyncAttemptRepository attempts;
+    private final SyncRetryPolicy retry;
     public JpaSyncExecutionLifecycle(SyncRunRepository runs, AccountingSourceRepository sources, SyncRunEventRepository events,
-            CompanyPermissionAuthorizationService permissions, SyncControlTransactionGuard transactions, Clock clock) {
+            CompanyPermissionAuthorizationService permissions, SyncControlTransactionGuard transactions, Clock clock,
+            SyncAttemptRepository attempts, SyncRetryPolicy retry) {
         this.runs = runs; this.sources = sources; this.events = events; this.permissions = permissions;
-        this.transactions = transactions; this.clock = clock;
+        this.transactions = transactions; this.clock = clock; this.attempts = attempts; this.retry = retry;
     }
 
     @Override
@@ -35,10 +38,26 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
     public Optional<ClaimedSyncRun> claim(UUID runId) {
         transactions.requireReadCommitted();
         var locked = lock(runId, null);
-        if (locked.isEmpty() || locked.get().run().getStatus() != SyncRunStatus.REQUESTED) return Optional.empty();
+        if (locked.isEmpty()) return Optional.empty();
         var run = locked.get().run(); var source = locked.get().source(); Instant now = clock.instant();
-        run.start(now);
-        events.save(new SyncRunEvent(run, SyncRunActorType.SYSTEM, null, now));
+        if (run.getStatus() == SyncRunStatus.REQUESTED) {
+            run.start(now);
+            events.save(new SyncRunEvent(run, SyncRunActorType.SYSTEM, null, now));
+        } else if (run.getStatus() == SyncRunStatus.RUNNING) {
+            var previous = attempts.findFirstBySyncRunIdOrderByAttemptNumberDesc(runId);
+            if (previous.isEmpty()) { reject(run, SyncFailureCode.INVALID_PAYLOAD, now); return Optional.empty(); }
+            var attempt = previous.get();
+            if (attempt.getStatus() == SyncAttemptStatus.RUNNING) {
+                if (now.isBefore(attempt.getLeaseExpiresAt())) return Optional.empty();
+                boolean canRetry = retry.canRetry(SyncFailureCode.LEASE_EXPIRED, attempt.getAttemptNumber());
+                attempt.expire(now, canRetry ? now.plus(retry.delayAfter(attempt.getAttemptNumber())) : null);
+                if (!canRetry) reject(run, SyncFailureCode.RETRY_LIMIT, now);
+                return Optional.empty();
+            }
+            if (attempt.getNextAttemptAt() == null) { reject(run, SyncFailureCode.RETRY_LIMIT, now); return Optional.empty(); }
+            if (now.isBefore(attempt.getNextAttemptAt())) return Optional.empty();
+            if (run.getAttemptNumber() >= retry.maxAttempts()) { reject(run, SyncFailureCode.RETRY_LIMIT, now); return Optional.empty(); }
+        } else return Optional.empty();
         if (!source.isActive() || source.getType() != AccountingSourceType.QUESTOR) {
             reject(run, SyncFailureCode.SOURCE_NOT_AVAILABLE, now); return Optional.empty();
         }
@@ -55,20 +74,48 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
         } catch (IllegalArgumentException invalidContext) {
             reject(run, SyncFailureCode.INVALID_PAYLOAD, now); return Optional.empty();
         }
+        int number = run.beginAttempt();
         runs.flush();
+        attempts.save(new SyncAttempt(runId, number, run.getVersion(), now, retry.leaseDuration()));
         return Optional.of(new ClaimedSyncRun(run.getId(), run.getVersion(), run.getMode(), request));
     }
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public boolean failIfCurrent(ClaimedSyncRun claim, SyncFailureCode code) {
+    public SyncFailureDisposition failIfCurrent(ClaimedSyncRun claim, SyncFailureCode code) {
+        transactions.requireReadCommitted();
+        var locked = lock(claim.runId(), claim.request().accountingSourceId());
+        if (locked.isEmpty()) return SyncFailureDisposition.STALE;
+        var run = locked.get().run();
+        Instant now = clock.instant();
+        var attempt = currentAttempt(run, claim, now);
+        if (attempt.isEmpty()) return SyncFailureDisposition.STALE;
+        boolean canRetry = retry.canRetry(code, attempt.get().getAttemptNumber());
+        attempt.get().fail(code, now, canRetry ? now.plus(retry.delayAfter(attempt.get().getAttemptNumber())) : null);
+        if (canRetry) return SyncFailureDisposition.RETRY_SCHEDULED;
+        boolean exhausted = code == SyncFailureCode.READ_FAILED || code == SyncFailureCode.PUBLICATION_FAILED;
+        reject(run, exhausted && retry.maxAttempts() > 1 ? SyncFailureCode.RETRY_LIMIT : code, now);
+        return SyncFailureDisposition.TERMINAL_FAILURE;
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public boolean renewLease(ClaimedSyncRun claim) {
         transactions.requireReadCommitted();
         var locked = lock(claim.runId(), claim.request().accountingSourceId());
         if (locked.isEmpty()) return false;
-        var run = locked.get().run();
-        if (run.getStatus() != SyncRunStatus.RUNNING || run.getVersion() != claim.version() || run.getMode() != claim.mode()) return false;
-        reject(run, code, clock.instant());
+        var source = locked.get().source(); var run = locked.get().run(); Instant now = clock.instant();
+        var attempt = currentAttempt(run, claim, now);
+        if (attempt.isEmpty() || !source.isActive() || !permissions.hasFreshPermission(run.getRequestedByUserId(),
+                source.getCompany().getId(), CompanyPermission.QUESTOR_SYNC)) return false;
+        attempt.get().renew(now, retry.leaseDuration());
         return true;
+    }
+
+    private Optional<SyncAttempt> currentAttempt(SyncRun run, ClaimedSyncRun claim, Instant now) {
+        if (run.getStatus() != SyncRunStatus.RUNNING || run.getVersion() != claim.version() || run.getMode() != claim.mode())
+            return Optional.empty();
+        return attempts.findBySyncRunIdAndFenceVersion(run.getId(), claim.version()).filter(attempt -> attempt.isLive(now));
     }
 
     private Optional<LockedRun> lock(UUID runId, UUID expectedSource) {

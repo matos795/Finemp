@@ -122,6 +122,27 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/accounting-sources/{accountingSourceId}/sync-runs/{runId}/attempts:
+    parameters:
+      - $ref: '#/components/parameters/AccountingSourceId'
+      - $ref: '#/components/parameters/SyncRunId'
+    get:
+      tags: [Accounting synchronization]
+      operationId: listSynchronizationAttempts
+      summary: Consulta tentativas e prazos, separadamente do ciclo geral da execução.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Tentativas mais recentes primeiro; exige QUESTOR_SYNC no mesmo escopo. Sem payload contábil ou erro livre.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SyncAttemptPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /api/auth/access-catalog:
     get:
       tags: [Authentication]
@@ -1088,6 +1109,27 @@ components:
             items:
               type: array
               items: {$ref: '#/components/schemas/SyncRunEvent'}
+    SyncAttempt:
+      type: object
+      required: [id, attemptNumber, status, startedAt, lastRenewedAt, leaseExpiresAt, finishedAt, nextAttemptAt, failureCode]
+      properties:
+        id: {type: string, format: uuid}
+        attemptNumber: {type: integer, minimum: 1, maximum: 10}
+        status: {type: string, enum: [RUNNING, SUCCEEDED, FAILED, EXPIRED]}
+        startedAt: {type: string, format: date-time}
+        lastRenewedAt: {type: string, format: date-time}
+        leaseExpiresAt: {type: string, format: date-time}
+        finishedAt: {type: [string, 'null'], format: date-time}
+        nextAttemptAt: {type: [string, 'null'], format: date-time}
+        failureCode: {$ref: '#/components/schemas/SyncFailureCode'}
+    SyncAttemptPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/SyncAttempt'}
     AccessCatalog:
       type: object
       required: [version, platformPermissions, accountingFirmPermissions, companyPermissions, companyScreenPresets]

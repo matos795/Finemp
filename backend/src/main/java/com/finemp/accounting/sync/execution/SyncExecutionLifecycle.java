@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public interface SyncExecutionLifecycle {
     Optional<ClaimedSyncRun> claim(UUID runId);
-    boolean failIfCurrent(ClaimedSyncRun claim, SyncFailureCode code);
+    SyncFailureDisposition failIfCurrent(ClaimedSyncRun claim, SyncFailureCode code);
+    boolean renewLease(ClaimedSyncRun claim);
 }
 
