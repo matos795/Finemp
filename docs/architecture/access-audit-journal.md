@@ -16,6 +16,8 @@ Append-only pela aplicação não é WORM nem proteção contra administrador do
 
 ## Estado da entrega
 
-Migration V14 e recorder interno; nenhum evento de domínio é automaticamente presumido como coberto. Ligação aos fluxos de identidade e grants/estado segue em incrementos de #36/#37. Consulta administrativa paginada e outros domínios continuam em #51.
+Migration V14 e recorder interno. A ligação de identidade registra emissão de convite/reset, ativação, senha alterada e concessão administrativa por convite. O ator administrativo é propagado no convite; recuperação pública não fabrica ator de sessão. Ativação/reset concluídos registram a identidade comprovada pelo link. Replays/falhas não geram evento de sucesso. Snapshot de convite representa as permissões administrativas finais, sem grant financeiro implícito.
+
+Demais mutações de grants/estado seguem #37; consulta administrativa paginada e outros domínios continuam em #51. Nenhum evento não ligado explicitamente ao recorder é presumido como coberto.
 
 PostgreSQL real verifica commit, snapshot, rollback e recusa fora de transação. Fixtures e limpeza usam somente IDs sintéticos do teste.

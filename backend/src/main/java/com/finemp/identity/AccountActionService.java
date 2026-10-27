@@ -2,6 +2,8 @@ package com.finemp.identity;
 
 import com.finemp.access.UserAccount;
 import com.finemp.access.UserAccountRepository;
+import com.finemp.audit.AccessAuditAction;
+import com.finemp.audit.AccessAuditRecorder;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,6 +23,7 @@ public class AccountActionService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
+    private final AccessAuditRecorder audit;
     private final Duration invitationTtl;
     private final Duration resetTtl;
 
@@ -30,6 +33,7 @@ public class AccountActionService {
             PasswordEncoder passwordEncoder,
             ApplicationEventPublisher eventPublisher,
             Clock clock,
+            AccessAuditRecorder audit,
             @Value("${finemp.identity.invitation-ttl:PT24H}") Duration invitationTtl,
             @Value("${finemp.identity.password-reset-ttl:PT30M}") Duration resetTtl) {
         if (invitationTtl.isZero() || invitationTtl.isNegative()
@@ -41,12 +45,22 @@ public class AccountActionService {
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
+        this.audit = audit;
         this.invitationTtl = invitationTtl;
         this.resetTtl = resetTtl;
     }
 
     @Transactional
     public void inviteNewUser(String name, String email) {
+        invite(name, email, null);
+    }
+
+    @Transactional
+    public void inviteNewUser(String name, String email, java.util.UUID actorId) {
+        invite(name, email, actorId);
+    }
+
+    private void invite(String name, String email, java.util.UUID actorId) {
         String normalizedEmail = normalizeEmail(email);
         userAccountRepository.insertInvitedIfAbsent(
                 java.util.UUID.randomUUID(), name.trim(), normalizedEmail, clock.instant());
@@ -57,7 +71,7 @@ public class AccountActionService {
         if (!locked.isInvitationPending()) {
             return;
         }
-        issue(locked, AccountActionPurpose.INVITATION, invitationTtl);
+        issue(locked, AccountActionPurpose.INVITATION, invitationTtl, actorId);
     }
 
     @Transactional
@@ -65,7 +79,7 @@ public class AccountActionService {
         userAccountRepository.findIdByEmailIgnoreCase(normalizeEmail(email)).ifPresent(userAccountId -> {
             UserAccount locked = userAccountRepository.findLockedById(userAccountId).orElseThrow();
             if (locked.isActive()) {
-                issue(locked, AccountActionPurpose.PASSWORD_RESET, resetTtl);
+                issue(locked, AccountActionPurpose.PASSWORD_RESET, resetTtl, null);
             }
         });
     }
@@ -109,14 +123,20 @@ public class AccountActionService {
         }
         token.consume(now);
         invalidateUnconsumedTokens(userAccount, now);
+        audit.record(purpose == AccountActionPurpose.INVITATION
+                        ? AccessAuditAction.ACCOUNT_ACTIVATED : AccessAuditAction.PASSWORD_CHANGED,
+                userAccount.getId(), userAccount.getId(), null, null, java.util.Set.of());
     }
 
-    private void issue(UserAccount userAccount, AccountActionPurpose purpose, Duration ttl) {
+    private void issue(UserAccount userAccount, AccountActionPurpose purpose, Duration ttl, java.util.UUID actorId) {
         Instant now = clock.instant();
         invalidateUnconsumedTokens(userAccount, now);
         OpaqueAccountToken token = OpaqueAccountToken.generate();
         Instant expiresAt = now.plus(ttl);
         tokenRepository.save(new AccountActionToken(userAccount, purpose, token.hash(), now, expiresAt));
+        audit.record(purpose == AccountActionPurpose.INVITATION
+                        ? AccessAuditAction.INVITATION_ISSUED : AccessAuditAction.PASSWORD_RESET_ISSUED,
+                actorId, userAccount.getId(), null, null, java.util.Set.of());
         eventPublisher.publishEvent(new AccountActionRequested(userAccount.getEmail(), purpose, token, expiresAt));
     }
 

@@ -2,7 +2,7 @@
 
 ## Estado da entrega
 
-O primeiro incremento da Issue #36 implementa o núcleo transacional de tokens e as transições de credenciais. Os endpoints de convite/ativação/recuperação e a entrega de e-mail são incrementos posteriores da mesma Issue. Nenhuma nova operação pública de recuperação é exposta por este incremento.
+O fluxo implementado inclui núcleo transacional de tokens, convites por contabilidade, ativação, recuperação, transporte de e-mail após commit, revogação de sessão, limites de tentativas e auditoria de ações de identidade. As rotas de entrega/ativação/recuperação somente existem com o transporte configurado e habilitado. Ver [identidade HTTP](identity-http.md), [convites](firm-invitations.md) e [auditoria](access-audit-journal.md).
 
 ## Tokens
 
@@ -54,11 +54,8 @@ Validades configuráveis:
 
 O relógio é injetado por `Clock`, usando UTC em execução e instantes controlados em teste.
 
-## Próximo incremento
+## Cobertura e continuidade
 
-- autorização administrativa para convites;
-- resposta neutra de recuperação, sem revelar existência do e-mail;
-- e-mail via port/adapter, enviado somente após commit, sem retornar o token em respostas HTTP;
-- revogação efetiva de sessão pela versão de credenciais;
-- limitação de tentativas de login/recuperação;
-- DTOs/OpenAPI e testes HTTP 401/403/400 e de replay.
+Auditoria transacional de convite, ativação e recuperação está ligada ao journal V14. Guarda ações/IDs/escopo e permissões administrativas, sem token, senha ou e-mail. Ator administrativo é conhecido apenas quando propagado pelo caso de uso autorizado; requests públicos não fabricam esse ator. Replays e falhas não geram evento de sucesso.
+
+As permissões administrativas continuam separadas dos grants financeiros. CRUD/revogação completa de acessos e estado global continuam em #37; auditoria de outros domínios e sua consulta paginada continuam em #51. A configuração real do provedor pertence ao ambiente e não exige alteração da lógica nem armazenamento de secrets no repositório.
