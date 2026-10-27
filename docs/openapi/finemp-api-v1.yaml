@@ -12,11 +12,45 @@ servers:
     description: Ambiente local
 tags:
   - name: Authentication
+  - name: Identity administration
   - name: Accounting movements
   - name: Account classification
   - name: DRE
   - name: Accounting synchronization
 paths:
+  /api/admin/accounting-firms/{firmId}/invitations:
+    post:
+      tags: [Identity administration]
+      operationId: inviteAccountingFirmUser
+      summary: Convida ou vincula uma identidade à contabilidade autorizada.
+      description: Requer entrega habilitada e USER_ACCESS_MANAGE nessa contabilidade. Permissões solicitadas são aditivas; não concede acesso financeiro.
+      parameters:
+        - name: firmId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteFirmUserRequest'
+      responses:
+        '204':
+          description: Operação concluída, sem token/senha na resposta e sem revelar a existência global do e-mail.
+        '400':
+          description: Formato de requisição inválido.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Contabilidade não encontrada no escopo autorizado ou entrega desabilitada.
+        '429':
+          description: Limite temporário de convites desse administrador excedido.
   /api/auth/csrf:
     get:
       tags: [Authentication]
@@ -353,6 +387,24 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    InviteFirmUserRequest:
+      type: object
+      required: [name, email, permissions]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        permissions:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [HIERARCHY_MANAGE, USER_ACCESS_MANAGE, ACCOUNTING_SOURCE_MANAGE, CONNECTOR_MANAGE]
     CsrfToken:
       type: object
       required: [headerName, token]
