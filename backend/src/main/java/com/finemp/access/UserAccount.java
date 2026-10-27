@@ -140,4 +140,20 @@ public class UserAccount {
         this.passwordHash = passwordHash;
         this.credentialsVersion++;
     }
+
+    public void reactivate() {
+        if (invitationPending || "!pending-invitation".equals(passwordHash)) {
+            throw new IllegalStateException("Account must define its own password before administrative reactivation.");
+        }
+        if (!active) {
+            this.active = true;
+            this.credentialsVersion++;
+        }
+    }
+
+    public void replacePlatformPermissions(Set<PlatformPermission> permissions) {
+        Set<PlatformPermission> requested = Set.copyOf(permissions);
+        this.platformPermissions.clear();
+        this.platformPermissions.addAll(requested);
+    }
 }

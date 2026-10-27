@@ -44,8 +44,25 @@ public interface UserAccountRepository
             join userAccount.platformPermissions permission
             where userAccount.id = :userAccountId
               and permission = :permission
+              and userAccount.active = true
             """)
     boolean existsByIdAndPlatformPermission(
             @Param("userAccountId") UUID userAccountId,
             @Param("permission") PlatformPermission permission);
+
+    @Query("""
+            select count(distinct userAccount.id) from UserAccount userAccount
+            join userAccount.platformPermissions permission
+            where userAccount.active = true and permission = :permission
+            """)
+    long countActiveByPlatformPermission(@Param("permission") PlatformPermission permission);
+
+    @Query("""
+            select userAccount from UserAccount userAccount
+            where :search = ''
+               or locate(lower(:search), lower(userAccount.name)) > 0
+               or locate(lower(:search), lower(userAccount.email)) > 0
+            """)
+    org.springframework.data.domain.Page<UserAccount> searchForAdministration(
+            @Param("search") String search, org.springframework.data.domain.Pageable pageable);
 }
