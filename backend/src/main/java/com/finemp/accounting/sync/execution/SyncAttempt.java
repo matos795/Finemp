@@ -20,12 +20,18 @@ public class SyncAttempt {
     @Column(name = "finished_at") private Instant finishedAt;
     @Column(name = "next_attempt_at") private Instant nextAttemptAt;
     @Enumerated(EnumType.STRING) @Column(name = "failure_code", length = 40) private SyncFailureCode failureCode;
+    @Column(name = "connector_credential_id", updatable = false) private UUID connectorCredentialId;
+    @Column(name = "connector_credential_version", updatable = false) private Long connectorCredentialVersion;
     protected SyncAttempt() { }
     public SyncAttempt(UUID runId, int number, long version, Instant now, Duration lease) {
+        this(runId, number, version, now, lease, SyncClaimAgent.direct());
+    }
+    public SyncAttempt(UUID runId, int number, long version, Instant now, Duration lease, SyncClaimAgent agent) {
         if (number < 1 || number > 10 || version < 0 || lease == null || lease.isNegative() || lease.isZero())
             throw new IllegalArgumentException("Invalid sync attempt.");
         syncRunId = Objects.requireNonNull(runId); attemptNumber = number; fenceVersion = version;
         startedAt = Objects.requireNonNull(now); lastRenewedAt = now; leaseExpiresAt = now.plus(lease); status = SyncAttemptStatus.RUNNING;
+        connectorCredentialId = Objects.requireNonNull(agent).credentialId(); connectorCredentialVersion = agent.credentialVersion();
     }
     public boolean isLive(Instant now) {
         return status == SyncAttemptStatus.RUNNING && now != null && !now.isBefore(lastRenewedAt) && now.isBefore(leaseExpiresAt);
@@ -59,6 +65,7 @@ public class SyncAttempt {
     public Instant getFinishedAt() { return finishedAt; }
     public Instant getNextAttemptAt() { return nextAttemptAt; }
     public SyncFailureCode getFailureCode() { return failureCode; }
+    public SyncClaimAgent getAgent() { return new SyncClaimAgent(connectorCredentialId, connectorCredentialVersion); }
     public SyncAttemptStatus getStatus() { return status; }
     @Override public String toString() { return "SyncAttempt[number=" + attemptNumber + ", status=" + status + "]"; }
 }

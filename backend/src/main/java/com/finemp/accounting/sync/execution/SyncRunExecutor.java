@@ -33,6 +33,7 @@ public class SyncRunExecutor {
     /** Internal worker entry point. Publication rechecks this claim; this is never a browser endpoint. */
     @Transactional(propagation = Propagation.NEVER)
     public SyncExecutionOutcome executeClaim(ClaimedSyncRun claim) {
+        if (claim.agent().isConnector()) return SyncExecutionOutcome.STALE;
         ExternalCompanyIdentity identity;
         try { identity = identities.readIdentity(claim.request()); }
         catch (RuntimeException readFailure) { return fail(claim, SyncFailureCode.READ_FAILED); }

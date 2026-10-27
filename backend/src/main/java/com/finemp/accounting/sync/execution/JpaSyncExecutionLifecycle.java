@@ -10,13 +10,14 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@ConditionalOnProperty(prefix = "finemp.sync.executor", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("${finemp.sync.executor.enabled:false} || ${finemp.connector.protocol.enabled:false}")
 public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
     private final SyncRunRepository runs;
     private final AccountingSourceRepository sources;
@@ -26,21 +27,32 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
     private final Clock clock;
     private final SyncAttemptRepository attempts;
     private final SyncRetryPolicy retry;
+    private final ObjectProvider<SyncAgentAuthorization> agents;
     public JpaSyncExecutionLifecycle(SyncRunRepository runs, AccountingSourceRepository sources, SyncRunEventRepository events,
             CompanyPermissionAuthorizationService permissions, SyncControlTransactionGuard transactions, Clock clock,
-            SyncAttemptRepository attempts, SyncRetryPolicy retry) {
+            SyncAttemptRepository attempts, SyncRetryPolicy retry, ObjectProvider<SyncAgentAuthorization> agents) {
         this.runs = runs; this.sources = sources; this.events = events; this.permissions = permissions;
         this.transactions = transactions; this.clock = clock; this.attempts = attempts; this.retry = retry;
+        this.agents = agents;
     }
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public Optional<ClaimedSyncRun> claim(UUID runId) {
+        return claimInternal(runId, SyncClaimAgent.direct());
+    }
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public Optional<ClaimedSyncRun> claimConnector(UUID runId, SyncClaimAgent agent) {
+        if (agent == null || !agent.isConnector()) return Optional.empty();
+        return claimInternal(runId, agent);
+    }
+    private Optional<ClaimedSyncRun> claimInternal(UUID runId, SyncClaimAgent agent) {
         transactions.requireReadCommitted();
         var locked = lock(runId, null);
         if (locked.isEmpty()) return Optional.empty();
         var run = locked.get().run(); var source = locked.get().source(); Instant now = clock.instant();
-        if (source.getConnectionMode() != AccountingConnectionMode.DIRECT) return Optional.empty();
+        if (!agentIsCurrent(agent, source)) return Optional.empty();
         if (run.getStatus() == SyncRunStatus.REQUESTED) {
             run.start(now);
             events.save(new SyncRunEvent(run, SyncRunActorType.SYSTEM, null, now));
@@ -77,8 +89,8 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
         }
         int number = run.beginAttempt();
         runs.flush();
-        attempts.save(new SyncAttempt(runId, number, run.getVersion(), now, retry.leaseDuration()));
-        return Optional.of(new ClaimedSyncRun(run.getId(), run.getVersion(), run.getMode(), request));
+        attempts.save(new SyncAttempt(runId, number, run.getVersion(), now, retry.leaseDuration(), agent));
+        return Optional.of(new ClaimedSyncRun(run.getId(), run.getVersion(), run.getMode(), request, agent));
     }
 
     @Override
@@ -87,6 +99,7 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
         transactions.requireReadCommitted();
         var locked = lock(claim.runId(), claim.request().accountingSourceId());
         if (locked.isEmpty()) return SyncFailureDisposition.STALE;
+        if (!agentIsCurrent(claim.agent(), locked.get().source())) return SyncFailureDisposition.STALE;
         var run = locked.get().run();
         Instant now = clock.instant();
         var attempt = currentAttempt(run, claim, now);
@@ -107,7 +120,7 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
         if (locked.isEmpty()) return false;
         var source = locked.get().source(); var run = locked.get().run(); Instant now = clock.instant();
         var attempt = currentAttempt(run, claim, now);
-        if (attempt.isEmpty() || !source.isActive() || !permissions.hasFreshPermission(run.getRequestedByUserId(),
+        if (attempt.isEmpty() || !agentIsCurrent(claim.agent(), source) || !source.isActive() || !permissions.hasFreshPermission(run.getRequestedByUserId(),
                 source.getCompany().getId(), CompanyPermission.QUESTOR_SYNC)) return false;
         attempt.get().renew(now, retry.leaseDuration());
         return true;
@@ -116,7 +129,14 @@ public class JpaSyncExecutionLifecycle implements SyncExecutionLifecycle {
     private Optional<SyncAttempt> currentAttempt(SyncRun run, ClaimedSyncRun claim, Instant now) {
         if (run.getStatus() != SyncRunStatus.RUNNING || run.getVersion() != claim.version() || run.getMode() != claim.mode())
             return Optional.empty();
-        return attempts.findBySyncRunIdAndFenceVersion(run.getId(), claim.version()).filter(attempt -> attempt.isLive(now));
+        return attempts.findBySyncRunIdAndFenceVersion(run.getId(), claim.version())
+                .filter(attempt -> attempt.getAgent().equals(claim.agent()) && attempt.isLive(now));
+    }
+    private boolean agentIsCurrent(SyncClaimAgent agent, AccountingSource source) {
+        if (!agent.isConnector()) return source.getConnectionMode() == AccountingConnectionMode.DIRECT;
+        var authorization = agents.getIfUnique();
+        return source.getConnectionMode() == AccountingConnectionMode.CONNECTOR && authorization != null
+                && authorization.isCurrent(agent, source.getId());
     }
 
     private Optional<LockedRun> lock(UUID runId, UUID expectedSource) {
