@@ -18,6 +18,7 @@ tags:
   - name: Account classification
   - name: DRE
   - name: Accounting synchronization
+  - name: Connector administration
 paths:
   /api/accounting-sources/{accountingSourceId}/sync-runs:
     parameters:
@@ -143,6 +144,106 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/accounting-firms/{firmId}/connectors:
+    parameters:
+      - name: firmId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Connector administration]
+      operationId: listConnectorCredentials
+      summary: Lista somente metadados; exige CONNECTOR_MANAGE explícito na contabilidade.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Metadados paginados sem segredo/hash, Cache-Control no-store.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorCredentialPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [Connector administration]
+      operationId: issueConnectorCredential
+      summary: Provisiona credencial de uma única fonte, com segredo mostrado uma vez.
+      description: Exige CONNECTOR_MANAGE na contabilidade e QUESTOR_SYNC ALL na empresa. Reserva rota CONNECTOR sem execução ativa. Flag FINEMP_CONNECTOR_ENABLED; não recebe senhas ERP.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountingSourceId, label]
+              properties:
+                accountingSourceId: {type: string, format: uuid}
+                label: {type: string, minLength: 1, maxLength: 80}
+      responses:
+        '201':
+          description: Segredo efêmero na resposta no-store; somente hash é persistido.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorSecret'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Vínculo já existente ou execução ativa; nenhum segredo é repetido.}
+  /api/admin/accounting-firms/{firmId}/connectors/{credentialId}:
+    parameters:
+      - name: firmId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: credentialId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    delete:
+      tags: [Connector administration]
+      operationId: revokeConnectorCredential
+      summary: Revoga idempotentemente, sem fallback para conexão direta.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204': {description: Credencial revogada; exige CONNECTOR_MANAGE na contabilidade.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/accounting-firms/{firmId}/connectors/{credentialId}/rotate:
+    parameters:
+      - name: firmId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: credentialId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Connector administration]
+      operationId: rotateConnectorCredential
+      summary: Invalida o segredo anterior e retorna um novo somente nesta resposta no-store.
+      description: Exige novamente CONNECTOR_MANAGE e QUESTOR_SYNC ALL. Credencial revogada não pode ser reativada por rotação.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Novo segredo; não há recuperação do segredo perdido.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorSecret'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Credencial revogada.}
   /api/auth/access-catalog:
     get:
       tags: [Authentication]
@@ -1130,6 +1231,36 @@ components:
             items:
               type: array
               items: {$ref: '#/components/schemas/SyncAttempt'}
+    ConnectorCredential:
+      type: object
+      required: [id, accountingFirmId, accountingSourceId, label, createdAt, expiresAt, revokedAt, version]
+      properties:
+        id: {type: string, format: uuid}
+        accountingFirmId: {type: string, format: uuid}
+        accountingSourceId: {type: string, format: uuid}
+        label: {type: string}
+        createdAt: {type: string, format: date-time}
+        expiresAt: {type: string, format: date-time}
+        revokedAt: {type: [string, 'null'], format: date-time}
+        version: {type: integer, format: int64}
+    ConnectorSecret:
+      type: object
+      required: [credential, secret]
+      properties:
+        credential: {$ref: '#/components/schemas/ConnectorCredential'}
+        secret:
+          type: string
+          minLength: 43
+          maxLength: 43
+          description: Segredo opaco apresentado uma vez. Não registrar, compartilhar ou persistir no backend em texto puro.
+    ConnectorCredentialPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/ConnectorCredential'}
     AccessCatalog:
       type: object
       required: [version, platformPermissions, accountingFirmPermissions, companyPermissions, companyScreenPresets]
@@ -1292,13 +1423,14 @@ components:
         cnpj: {type: string, pattern: '^[0-9]{14}$'}
     AccountingSource:
       type: object
-      required: [id, companyId, type, externalReference, active]
+      required: [id, companyId, type, externalReference, active, connectionMode]
       properties:
         id: {type: string, format: uuid}
         companyId: {type: string, format: uuid}
         type: {type: string, enum: [QUESTOR]}
         externalReference: {type: [string, 'null']}
         active: {type: boolean}
+        connectionMode: {type: string, enum: [DIRECT, CONNECTOR]}
     PageMetadata:
       type: object
       required: [items, page, size, totalItems, totalPages]

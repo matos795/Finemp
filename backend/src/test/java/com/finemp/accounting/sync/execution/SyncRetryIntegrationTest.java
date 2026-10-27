@@ -173,6 +173,14 @@ class SyncRetryIntegrationTest {
         assertThat(candidates.due(8)).doesNotContain(runId);
         assertThatThrownBy(() -> candidates.due(9)).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void shouldNeverClaimOrPublishConnectorBoundSourcesThroughDirectExecution() {
+        jdbc.update("UPDATE accounting_sources SET connection_mode = 'CONNECTOR' WHERE id = ?", sourceId);
+        var candidates = new com.finemp.accounting.sync.worker.JdbcSyncCandidateSource(jdbc, clock);
+        assertThat(candidates.due(8)).doesNotContain(runId);
+        assertThat(lifecycle.claim(runId)).isEmpty();
+        assertThat(run().getStatus()).isEqualTo(SyncRunStatus.REQUESTED);
+        verifyNoInteractions(identities, readers);
+    }
     private void at(long seconds) { when(clock.instant()).thenReturn(initial.plusSeconds(seconds)); }
     private SyncRun run() { return runs.findByIdAndAccountingSourceId(runId, sourceId).orElseThrow(); }
     private SyncAttempt last() { return attempts.findFirstBySyncRunIdOrderByAttemptNumberDesc(runId).orElseThrow(); }

@@ -34,6 +34,7 @@ class QuestorImportContextTest {
         when(source.getId()).thenReturn(sourceId);
         when(source.isActive()).thenReturn(true);
         when(source.getType()).thenReturn(AccountingSourceType.QUESTOR);
+        when(source.getConnectionMode()).thenReturn(AccountingConnectionMode.DIRECT);
         when(source.getExternalReference()).thenReturn("synthetic-ref");
         when(source.getCompany()).thenReturn(company);
         when(company.getId()).thenReturn(companyId);
@@ -55,6 +56,11 @@ class QuestorImportContextTest {
     @Test
     void shouldNeverReadOrIngestInactiveSource() {
         when(source.isActive()).thenReturn(false);
+        assertThatThrownBy(() -> service.importMovements(sourceId, start, end)).isInstanceOf(QuestorSourceStateException.class);
+        verifyNoInteractions(readers, ingestion);
+    }
+    @Test void shouldNeverUseTheStudyImportForAConnectorBoundSource() {
+        when(source.getConnectionMode()).thenReturn(AccountingConnectionMode.CONNECTOR);
         assertThatThrownBy(() -> service.importMovements(sourceId, start, end)).isInstanceOf(QuestorSourceStateException.class);
         verifyNoInteractions(readers, ingestion);
     }
