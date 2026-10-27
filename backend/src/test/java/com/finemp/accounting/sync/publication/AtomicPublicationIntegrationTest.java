@@ -24,7 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-@SpringBootTest(properties = {"finemp.sync.control.enabled=true", "finemp.sync.executor.enabled=true"})
+@SpringBootTest(properties = {"finemp.sync.control.enabled=true", "finemp.sync.executor.enabled=true", "finemp.sync.retry.max-attempts=1"})
 @Import(TestcontainersConfiguration.class)
 class AtomicPublicationIntegrationTest {
     @Autowired private SyncRunExecutor executor;

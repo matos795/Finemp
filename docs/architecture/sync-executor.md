@@ -63,3 +63,7 @@ os testes do publicador concreto do próximo incremento.
 > O leitor operacional de identidade continua obrigatório e em validação; o
 > incremento #88 abaixo registra sua etapa de coordenação/ports.
 
+# Atualização #92
+
+Tentativas/leases/backoff e distinção entre falha de tentativa e falha terminal estão em [sync-retries-and-leases.md](sync-retries-and-leases.md). O ciclo geral continua RUNNING enquanto aguarda nova tentativa; o executor pode retornar RETRY_SCHEDULED. Os detalhes históricos abaixo descrevem os incrementos anteriores.
+

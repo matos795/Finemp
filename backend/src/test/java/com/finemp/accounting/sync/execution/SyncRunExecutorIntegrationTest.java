@@ -21,7 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.*;
 import org.springframework.transaction.support.*;
 
-@SpringBootTest(properties = {"finemp.sync.control.enabled=true", "finemp.sync.executor.enabled=true"})
+@SpringBootTest(properties = {"finemp.sync.control.enabled=true", "finemp.sync.executor.enabled=true", "finemp.sync.retry.max-attempts=1"})
 @Import(TestcontainersConfiguration.class)
 class SyncRunExecutorIntegrationTest {
     @Autowired private SyncRunExecutor executor;
@@ -29,6 +29,7 @@ class SyncRunExecutorIntegrationTest {
     @Autowired private SyncControlService control;
     @Autowired private SyncRunRepository runs;
     @Autowired private SyncRunEventRepository events;
+    @Autowired private SyncAttemptRepository attempts;
     @Autowired private UserAccountRepository users;
     @Autowired private CompanyRepository companies;
     @Autowired private AccountingSourceRepository sources;
@@ -69,6 +70,7 @@ class SyncRunExecutorIntegrationTest {
                 sources.findLockedForSyncById(sourceId).orElseThrow();
                 var run = runs.findByIdAndAccountingSourceId(claim.runId(), sourceId).orElseThrow();
                 assertThat(run.getVersion()).isEqualTo(claim.version());
+                attempts.findBySyncRunIdAndFenceVersion(runId, claim.version()).orElseThrow().succeed(now);
                 run.succeed(0, 0, 0, now);
                 events.save(new SyncRunEvent(run, SyncRunActorType.SYSTEM, null, now));
             });
@@ -129,10 +131,10 @@ class SyncRunExecutorIntegrationTest {
     @Test void shouldFenceOldFailureAndKeepTerminalFailureIdempotent() {
         var claim = lifecycle.claim(runId).orElseThrow();
         var stale = new ClaimedSyncRun(runId, claim.version() + 1, claim.mode(), claim.request());
-        assertThat(lifecycle.failIfCurrent(stale, SyncFailureCode.READ_FAILED)).isFalse();
+        assertThat(lifecycle.failIfCurrent(stale, SyncFailureCode.READ_FAILED)).isEqualTo(SyncFailureDisposition.STALE);
         assertThat(run().getStatus()).isEqualTo(SyncRunStatus.RUNNING);
-        assertThat(lifecycle.failIfCurrent(claim, SyncFailureCode.READ_FAILED)).isTrue();
-        assertThat(lifecycle.failIfCurrent(claim, SyncFailureCode.PUBLICATION_FAILED)).isFalse();
+        assertThat(lifecycle.failIfCurrent(claim, SyncFailureCode.READ_FAILED)).isEqualTo(SyncFailureDisposition.TERMINAL_FAILURE);
+        assertThat(lifecycle.failIfCurrent(claim, SyncFailureCode.PUBLICATION_FAILED)).isEqualTo(SyncFailureDisposition.STALE);
         assertThat(run().getFailureCode()).isEqualTo(SyncFailureCode.READ_FAILED);
     }
     @Test void shouldFailClosedForRevokedRequesterAndInactiveSource() {

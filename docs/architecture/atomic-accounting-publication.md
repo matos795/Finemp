@@ -47,3 +47,7 @@ duplicidade deve preservar quantidade/valores ao falhar. Somente dados sintétic
 
 Seguem leases/tentativas/retries/resumibilidade e FINEMP Connector na #50.
 Não habilitar operação sem concluir identidade e operação do worker.
+# Atualização #92
+
+A publicação também exige uma tentativa com lease vigente e fecha SUCCEEDED da tentativa na mesma transação. Prazo vencido gera stale e rollback. Ver [tentativas/leases](sync-retries-and-leases.md).
+

@@ -83,12 +83,16 @@ class SyncControlHttpIntegrationTest {
         var run = runs.findByAccountingSourceIdAndIdempotencyKey(source.getId(), key).orElseThrow();
         var foreign = sources.saveAndFlush(new AccountingSource(source.getCompany(), AccountingSourceType.QUESTOR, "other-synthetic", true));
         mvc.perform(get(route(foreign) + "/" + run.getId()).with(user(new UserAccountPrincipal(actor)))).andExpect(status().isNotFound());
+        mvc.perform(get(route(foreign) + "/" + run.getId() + "/attempts").with(user(new UserAccountPrincipal(actor)))).andExpect(status().isNotFound());
+        mvc.perform(get(route(source) + "/" + run.getId() + "/attempts")).andExpect(status().isUnauthorized());
         for (int i = 0; i < 2; i++)
             mvc.perform(delete(route(source) + "/" + run.getId()).with(user(new UserAccountPrincipal(actor))).with(csrf())).andExpect(status().isNoContent());
         mvc.perform(get(route(source)).with(user(new UserAccountPrincipal(actor))).param("status", "CANCELLED").param("size", "1"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(1));
         mvc.perform(get(route(source) + "/" + run.getId() + "/events").with(user(new UserAccountPrincipal(actor))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(2));
+        mvc.perform(get(route(source) + "/" + run.getId() + "/attempts").with(user(new UserAccountPrincipal(actor))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(0));
         assertThat(jdbc.queryForObject("SELECT actor_id FROM sync_run_events WHERE sync_run_id = ? AND status = 'CANCELLED'",
                 UUID.class, run.getId())).isEqualTo(actor.getId());
     }

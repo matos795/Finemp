@@ -24,7 +24,7 @@ class SyncRunExecutorTest {
     private final SyncRunExecutor executor = new SyncRunExecutor(lifecycle, identities, readers, publication);
     @BeforeEach void prepare() {
         when(lifecycle.claim(runId)).thenReturn(Optional.of(claim));
-        when(lifecycle.failIfCurrent(eq(claim), any())).thenReturn(true);
+        when(lifecycle.failIfCurrent(eq(claim), any())).thenReturn(SyncFailureDisposition.TERMINAL_FAILURE);
         when(identities.readIdentity(request)).thenReturn(new ExternalCompanyIdentity("synthetic", "26.262.626/0001-26"));
         when(readers.readMovements(request)).thenReturn(List.of());
     }
@@ -70,6 +70,12 @@ class SyncRunExecutorTest {
         when(readers.readMovements(request)).thenThrow(new AccountingReadLimitExceededException());
         assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
         verify(lifecycle).failIfCurrent(claim, SyncFailureCode.RESOURCE_LIMIT);
+        verifyNoInteractions(publication);
+    }
+    @Test void shouldDistinguishAnAttemptFailureFromAFinalRunFailure() {
+        when(readers.readMovements(request)).thenThrow(new IllegalStateException("synthetic"));
+        when(lifecycle.failIfCurrent(claim, SyncFailureCode.READ_FAILED)).thenReturn(SyncFailureDisposition.RETRY_SCHEDULED);
+        assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.RETRY_SCHEDULED);
         verifyNoInteractions(publication);
     }
 }
