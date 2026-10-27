@@ -898,6 +898,8 @@ paths:
       description: |
         Operação administrativa disponível somente quando a integração Questor
         está habilitada. Não deve ser chamada durante uma leitura de tela.
+        É desativada quando FINEMP_SYNC_EXECUTOR_ENABLED está habilitado;
+        nesse modo, usar o controle SyncRun.
         Exige QUESTOR_SYNC na empresa proprietária da fonte, resolvida pelo servidor,
         e escopo ALL enquanto não houver segmentação de centro de custo.
         Valida fonte ativa, referência e período antes do adapter.
@@ -1053,7 +1055,7 @@ components:
         skippedCount: {type: [integer, 'null'], format: int64, minimum: 0}
         failureCode:
           type: [string, 'null']
-          enum: [READ_FAILED, IDENTITY_MISMATCH, INVALID_PAYLOAD, PUBLICATION_FAILED, LEASE_EXPIRED, RETRY_LIMIT, null]
+          enum: [READ_FAILED, IDENTITY_MISMATCH, INVALID_PAYLOAD, PUBLICATION_FAILED, LEASE_EXPIRED, RETRY_LIMIT, SOURCE_NOT_AVAILABLE, ACCESS_REVOKED, UNSUPPORTED_MODE, null]
     SyncRunPage:
       allOf:
         - $ref: '#/components/schemas/PageMetadata'
@@ -1064,13 +1066,18 @@ components:
               items: {$ref: '#/components/schemas/SyncRun'}
     SyncRunEvent:
       type: object
-      required: [id, status, actorType, actorId, occurredAt]
+      required: [id, status, actorType, actorId, occurredAt, transitionIndex]
       properties:
         id: {type: string, format: uuid}
         status: {$ref: '#/components/schemas/SyncRunStatus'}
         actorType: {type: string, enum: [USER, SYSTEM, CONNECTOR]}
         actorId: {type: [string, 'null'], format: uuid}
         occurredAt: {type: string, format: date-time}
+        transitionIndex:
+          type: integer
+          minimum: 0
+          maximum: 2
+          description: Fase causal do ciclo geral, independente de empates no timestamp UTC.
     SyncRunEventPage:
       allOf:
         - $ref: '#/components/schemas/PageMetadata'

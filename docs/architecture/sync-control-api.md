@@ -50,6 +50,13 @@ INCREMENTAL e RECONCILIATION continuam intenções explícitas, sem inferir curs
 ou regra de retificação/exclusão. A importação síncrona legada permanece separada;
 antes de habilitar execução, ela também deverá respeitar exclusão mútua por fonte.
 
+## Evolução do executor
+
+O [executor controlado](sync-executor.md) acrescenta claim/fencing e exige ports
+reais de identidade/publicação antes de ser habilitado. Histórico de eventos
+inclui `transitionIndex` e ordena por fase causal decrescente, inclusive em
+empates de timestamp. Não significa que publicação concreta/Connector estejam prontos.
+
 ## PONTO ABERTO / próximos blocos
 
 Identidade externa/CNPJ e provisionamento scoped continuam gates de produção.

@@ -274,6 +274,8 @@ Parâmetros obrigatórios: `startDate`, `endDate`. Resposta: `204`.
 
 Este endpoint:
 
+- fica desativado quando o executor controlado é habilitado; nesse modo usar
+  a API SyncRun, sem contornar seu protocolo de exclusão mútua;
 - usa a [porta canônica de leitura](architecture/accounting-source-reader.md),
   valida contexto/fonte ativa e retorna 400/409/502 neutros quando necessário;
 - mantém a validação da identidade externa da empresa como gate de produção
