@@ -54,6 +54,18 @@ class CanonicalBatchValidatorTest {
         assertThat(batch.readCount()).isZero(); assertThat(batch.uniqueMovements()).isEmpty();
         assertThat(batch.toString()).doesNotContain("Synthetic", "30303030000130");
     }
+    @Test void shouldBoundExponentWorkBeforeRescalingAndPreserveExactZeroAndNumericBoundary() {
+        org.junit.jupiter.api.Assertions.assertTimeout(java.time.Duration.ofSeconds(2), () -> {
+            for (var exponent : List.of("1e2147483640", "1e-2147483640", "-1e2147483640"))
+                assertRejected(() -> validate(List.of(row("entry", exponent, start, "key", "Synthetic")), 10), SyncFailureCode.INVALID_PAYLOAD);
+            assertThat(validate(List.of(row("zero", "0e-2147483647", start, "key", "Synthetic")), 10)
+                    .uniqueMovements().getFirst().amount()).isEqualByComparingTo("0.0000").hasScaleOf(4);
+        });
+        assertThat(validate(List.of(row("limit", "999999999999999.9999", start, "key", "Synthetic")), 10)
+                .uniqueMovements().getFirst().amount()).isEqualByComparingTo("999999999999999.9999");
+        assertThat(validate(List.of(row("exact", "1.00000000000e2", start, "key", "Synthetic")), 10)
+                .uniqueMovements().getFirst().amount()).isEqualByComparingTo("100.0000");
+    }
     private ValidatedAccountingBatch validate(List<ImportedAccountingMovement> movements, int max) {
         return CanonicalBatchValidator.validate(request, movements, max);
     }
