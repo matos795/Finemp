@@ -183,6 +183,20 @@ class ConnectorCredentialIntegrationTest {
                 .andExpect(jsonPath("$.items[0].tokenHash").doesNotExist());
         mvc.perform(get(route()).with(user(new UserAccountPrincipal(actor))).param("size", "101")).andExpect(status().isBadRequest());
     }
+    @Test void shouldMapAdministrativeDenialsMissingResourcesAndInvalidInputToSanitized4xx() throws Exception {
+        var stranger = users.saveAndFlush(new UserAccount("Synthetic Stranger", UUID.randomUUID() + "@example.invalid", "hash"));
+        mvc.perform(get(route()).with(user(new UserAccountPrincipal(stranger)))).andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Acesso ao Connector não autorizado."));
+        mvc.perform(delete(route() + "/" + UUID.randomUUID()).with(user(new UserAccountPrincipal(actor))).with(csrf()))
+                .andExpect(status().isNotFound());
+        mvc.perform(post(route() + "/" + UUID.randomUUID() + "/rotate").with(user(new UserAccountPrincipal(actor))).with(csrf()))
+                .andExpect(status().isNotFound());
+        mvc.perform(get(route()).with(user(new UserAccountPrincipal(actor))).param("page", "-1"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(route()).with(user(new UserAccountPrincipal(actor))).with(csrf()).contentType("application/json")
+                .content("{\"accountingSourceId\":\"" + sourceId + "\",\"label\":\"   \"}"))
+                .andExpect(status().isBadRequest());
+    }
     private ConnectorSecretResponse issue() { return service.issue(actor.getId(), firmId, new CreateConnectorCredentialRequest(sourceId, "Synthetic Connector")); }
     private String route() { return "/api/admin/accounting-firms/" + firmId + "/connectors"; }
 }

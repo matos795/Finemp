@@ -1,7 +1,7 @@
 package com.finemp.accounting.sync.control;
 
 import java.sql.Connection;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@ConditionalOnProperty(prefix = "finemp.sync.control", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("${finemp.sync.control.enabled:false} || ${finemp.sync.executor.enabled:false} || ${finemp.connector.enabled:false}")
 public class SyncControlTransactionGuard {
     private final JdbcTemplate jdbc;
     public SyncControlTransactionGuard(JdbcTemplate jdbc) { this.jdbc = jdbc; }
