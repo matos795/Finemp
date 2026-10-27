@@ -70,3 +70,7 @@ HTTP/PostgreSQL cobre sessão, CSRF, escopo, whitelist, fonte inativa, cancelame
 paginação e feature flag. Transações concorrentes verificam mesma chave,
 solicitações distintas e recusa de isolamento externo incompatível. Sem Firebird
 real ou dados de clientes nos testes regulares.
+> Atualização #89: [publicação INITIAL](atomic-accounting-publication.md) confirma
+> dados/contadores/sucesso juntos; DATA_CONFLICT preserva dados e RESOURCE_LIMIT
+> nunca significa sucesso parcial. Identidade operacional continua gate.
+
