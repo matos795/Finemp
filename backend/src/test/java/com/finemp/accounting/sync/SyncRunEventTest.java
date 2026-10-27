@@ -16,6 +16,7 @@ class SyncRunEventTest {
         var event = new SyncRunEvent(run, SyncRunActorType.USER, actor, now);
         run.cancel(now);
         assertThat(event.getStatus()).isEqualTo(SyncRunStatus.REQUESTED);
+        assertThat(event.getTransitionIndex()).isZero();
         assertThat(event.getActorId()).isEqualTo(actor);
         assertThatThrownBy(() -> new SyncRunEvent(run, SyncRunActorType.USER, null, now)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new SyncRunEvent(run, SyncRunActorType.SYSTEM, actor, now)).isInstanceOf(IllegalArgumentException.class);

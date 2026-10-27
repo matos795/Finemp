@@ -1,6 +1,6 @@
 package com.finemp.integration.questor;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/accounting-sources")
-@ConditionalOnProperty(prefix = "finemp.integration.questor", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("${finemp.integration.questor.enabled:false} && !${finemp.sync.executor.enabled:false}")
 public class QuestorAccountingImportController {
 
     private final QuestorAccountingImportService importService;

@@ -15,9 +15,11 @@ public class SyncRunEvent {
     @Enumerated(EnumType.STRING) @Column(name = "actor_type", nullable = false, updatable = false, length = 20) private SyncRunActorType actorType;
     @Column(name = "actor_id", updatable = false) private UUID actorId;
     @Column(name = "occurred_at", nullable = false, updatable = false) private Instant occurredAt;
+    @Column(name = "transition_index", nullable = false, updatable = false) private int transitionIndex;
     protected SyncRunEvent() { }
     public SyncRunEvent(SyncRun run, SyncRunActorType actorType, UUID actorId, Instant now) {
         syncRun = Objects.requireNonNull(run); status = run.getStatus(); this.actorType = Objects.requireNonNull(actorType);
+        transitionIndex = switch (status) { case REQUESTED -> 0; case RUNNING -> 1; default -> 2; };
         if ((actorType == SyncRunActorType.SYSTEM) != (actorId == null)) throw new IllegalArgumentException("Invalid sync actor.");
         if (now == null || now.isBefore(run.getRequestedAt())) throw new IllegalArgumentException("Invalid sync event time.");
         this.actorId = actorId; occurredAt = now;
@@ -27,5 +29,6 @@ public class SyncRunEvent {
     public SyncRunActorType getActorType() { return actorType; }
     public UUID getActorId() { return actorId; }
     public Instant getOccurredAt() { return occurredAt; }
+    public int getTransitionIndex() { return transitionIndex; }
 }
 

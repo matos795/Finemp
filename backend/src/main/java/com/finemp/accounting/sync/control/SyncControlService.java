@@ -80,7 +80,7 @@ public class SyncControlService {
     public PagedResponse<SyncRunEventResponse> events(UUID actor, UUID sourceId, UUID runId, int page, int size) {
         requireAccess(actor, sourceId); requireRun(sourceId, runId);
         return PagedResponse.from(events.findAllBySyncRunIdAndSyncRunAccountingSourceId(runId, sourceId,
-                paging(page, size, "occurredAt")), SyncRunEventResponse::from);
+                paging(page, size, "transitionIndex")), SyncRunEventResponse::from);
     }
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void cancel(UUID actor, UUID sourceId, UUID runId) {

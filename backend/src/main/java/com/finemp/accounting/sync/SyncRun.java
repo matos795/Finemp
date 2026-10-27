@@ -74,6 +74,7 @@ public class SyncRun {
         if (now == null || now.isBefore(previous)) throw new IllegalArgumentException("Invalid sync timestamp.");
     }
     public UUID getId() { return id; }
+    public long getVersion() { return version; }
     public AccountingSource getAccountingSource() { return accountingSource; }
     public UUID getRequestedByUserId() { return requestedByUserId; }
     public UUID getIdempotencyKey() { return idempotencyKey; }
