@@ -4,6 +4,10 @@ import com.finemp.accounting.ingestion.AccountingMovementIngestionService;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
 import com.finemp.accounting.source.AccountingSource;
 import com.finemp.accounting.source.AccountingSourceRepository;
+import com.finemp.accounting.reading.AccountingReadRequest;
+import com.finemp.accounting.reading.AccountingSourceReaderRegistry;
+import com.finemp.accounting.source.AccountingSourceType;
+import com.finemp.administration.SaasResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
@@ -20,16 +24,16 @@ import java.util.UUID;
 public class QuestorAccountingImportService {
 
     private final AccountingSourceRepository accountingSourceRepository;
-    private final QuestorAccountingReader questorAccountingReader;
+    private final AccountingSourceReaderRegistry readers;
     private final AccountingMovementIngestionService ingestionService;
 
     public QuestorAccountingImportService(
             AccountingSourceRepository accountingSourceRepository,
-            QuestorAccountingReader questorAccountingReader,
+            AccountingSourceReaderRegistry readers,
             AccountingMovementIngestionService ingestionService) {
 
         this.accountingSourceRepository = accountingSourceRepository;
-        this.questorAccountingReader = questorAccountingReader;
+        this.readers = readers;
         this.ingestionService = ingestionService;
     }
 
@@ -39,13 +43,16 @@ public class QuestorAccountingImportService {
             LocalDate endDate) {
 
         AccountingSource accountingSource = accountingSourceRepository
-                .findById(accountingSourceId)
-                .orElseThrow();
+                .findForReadingById(accountingSourceId)
+                .orElseThrow(() -> new SaasResourceNotFoundException("Accounting source"));
 
-        List<ImportedAccountingMovement> movements = questorAccountingReader.readMovements(
-                accountingSource.getExternalReference(),
-                startDate,
-                endDate);
+        if (!accountingSource.isActive() || accountingSource.getType() != AccountingSourceType.QUESTOR)
+            throw new QuestorSourceStateException();
+
+        var request = new AccountingReadRequest(accountingSource.getId(), accountingSource.getCompany().getId(),
+                accountingSource.getType(), accountingSource.getExternalReference(), accountingSource.getCompany().getCnpj(),
+                startDate, endDate);
+        List<ImportedAccountingMovement> movements = readers.readMovements(request);
 
         ingestionService.ingest(accountingSourceId, movements);
     }

@@ -8,4 +8,8 @@ public record QuestorConnectionProperties(
         String username,
         String password
 ) {
+    @Override
+    public String toString() {
+        return "QuestorConnectionProperties[redacted]";
+    }
 }

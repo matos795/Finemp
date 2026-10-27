@@ -11,6 +11,11 @@ import org.springframework.context.annotation.Configuration;
 public class QuestorIntegrationConfiguration {
 
     @Bean
+    com.finemp.accounting.reading.AccountingSourceReader questorSourceReader(QuestorAccountingReader delegate) {
+        return new QuestorSourceReader(delegate);
+    }
+
+    @Bean
     QuestorConnectionProvider questorConnectionProvider(
             QuestorConnectionProperties properties) {
         return new QuestorConnectionProvider(properties);

@@ -11,6 +11,10 @@ import java.util.UUID;
 public interface AccountingSourceRepository
         extends JpaRepository<AccountingSource, UUID> {
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "company")
+    @Query("select source from AccountingSource source where source.id = :id")
+    java.util.Optional<AccountingSource> findForReadingById(@Param("id") UUID id);
+
     @Query("select source.company.id from AccountingSource source where source.id = :sourceId")
     java.util.Optional<UUID> findCompanyIdById(@Param("sourceId") UUID sourceId);
 

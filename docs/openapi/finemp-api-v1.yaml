@@ -797,6 +797,9 @@ paths:
         está habilitada. Não deve ser chamada durante uma leitura de tela.
         Exige QUESTOR_SYNC na empresa proprietária da fonte, resolvida pelo servidor,
         e escopo ALL enquanto não houver segmentação de centro de custo.
+        Valida fonte ativa, referência e período antes do adapter.
+        CNPJ esperado não substitui comprovação da identidade externa;
+        gate de produção multi-tenant ainda aberto.
       parameters:
         - name: accountingSourceId
           in: path
@@ -818,6 +821,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409': {description: Fonte inativa ou incompatível.}
+        '502': {description: Leitura externa indisponível; dados anteriores preservados.}
 components:
   securitySchemes:
     SessionCookie:
