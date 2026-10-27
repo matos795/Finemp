@@ -161,6 +161,7 @@ class SyncRetryIntegrationTest {
     @Test void shouldSelectOnlyQueuedExpiredOrDueIdsAndExcludeLiveBackoffAndTerminalRuns() {
         var candidates = new com.finemp.accounting.sync.worker.JdbcSyncCandidateSource(jdbc, clock);
         assertThat(candidates.due(8)).contains(runId);
+        assertThat(candidates.due(8, Set.of(runId))).doesNotContain(runId);
         var claim = lifecycle.claim(runId).orElseThrow();
         assertThat(candidates.due(8)).doesNotContain(runId);
         at(300); assertThat(candidates.due(8)).contains(runId);

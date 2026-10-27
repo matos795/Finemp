@@ -29,7 +29,7 @@ class BoundedSyncWorkerTest {
     @BeforeEach void prepare() {
         worker = new BoundedSyncWorker(candidates, lifecycle, executor, pool, pulses, 1,
                 Duration.ofSeconds(1), Duration.ofSeconds(10), nanos::get);
-        when(candidates.due(1)).thenReturn(List.of(first, second)); // Untrusted port returns too many: still cap.
+        when(candidates.due(eq(1), anySet())).thenReturn(List.of(first, second)); // Untrusted port returns too many: still cap.
         when(lifecycle.claim(first)).thenReturn(Optional.of(claim));
         when(lifecycle.renewLease(claim)).thenReturn(true);
         doReturn(future).when(pulses).scheduleAtFixedRate(any(Runnable.class), anyLong(), anyLong(), any(TimeUnit.class));
@@ -38,7 +38,7 @@ class BoundedSyncWorkerTest {
     @Test void shouldBoundOutstandingWorkWithoutUnboundedQueueOrDuplicateDispatch() {
         worker.poll(); worker.poll();
         var task = ArgumentCaptor.forClass(Runnable.class);
-        verify(pool).execute(task.capture()); verify(candidates).due(1);
+        verify(pool).execute(task.capture()); verify(candidates).due(1, Set.of());
         task.getValue().run();
         verify(lifecycle).claim(first); verify(executor).executeClaim(claim); verify(future).cancel(false);
         worker.poll(); verify(pool, times(2)).execute(any());
@@ -78,7 +78,7 @@ class BoundedSyncWorkerTest {
         verify(pool).shutdownNow(); verify(pulses).shutdownNow(); verifyNoInteractions(lifecycle, executor);
     }
     @Test void shouldKeepThePollLoopAliveAfterLookupOrHeartbeatSchedulingFailure() {
-        when(candidates.due(1)).thenThrow(new IllegalStateException("synthetic private endpoint")).thenReturn(List.of(first));
+        when(candidates.due(eq(1), anySet())).thenThrow(new IllegalStateException("synthetic private endpoint")).thenReturn(List.of(first));
         worker.poll(); worker.poll();
         var task = ArgumentCaptor.forClass(Runnable.class); verify(pool).execute(task.capture());
         doThrow(new RejectedExecutionException()).when(pulses).scheduleAtFixedRate(any(Runnable.class), anyLong(), anyLong(), any(TimeUnit.class));
@@ -94,6 +94,17 @@ class BoundedSyncWorkerTest {
             return SyncExecutionOutcome.PUBLISHED;
         }).when(executor).executeClaim(claim);
         runOne(); verify(future).cancel(false);
+    }
+    @Test void shouldExcludeBlockedLocalWorkBeforeTheDatabaseLimitSoAnotherSlotCanMakeProgress() {
+        worker.close();
+        var otherPool = mock(ExecutorService.class); var otherPulses = mock(ScheduledExecutorService.class);
+        worker = new BoundedSyncWorker(candidates, lifecycle, executor, otherPool, otherPulses, 2,
+                Duration.ofSeconds(1), Duration.ofSeconds(10), nanos::get);
+        when(candidates.due(2, Set.of())).thenReturn(List.of(first));
+        when(candidates.due(1, Set.of(first))).thenReturn(List.of(second));
+        worker.poll(); worker.poll();
+        verify(candidates).due(1, Set.of(first));
+        verify(otherPool, times(2)).execute(any());
     }
     private void runOne() { worker.poll(); var task = ArgumentCaptor.forClass(Runnable.class); verify(pool).execute(task.capture()); task.getValue().run(); }
 }

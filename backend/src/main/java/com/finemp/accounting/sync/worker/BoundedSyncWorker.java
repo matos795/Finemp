@@ -39,7 +39,7 @@ public class BoundedSyncWorker implements AutoCloseable {
         try {
             int available = capacity.availablePermits();
             if (available == 0) return;
-            var ids = candidates.due(available);
+            var ids = candidates.due(available, Set.copyOf(inFlight));
             // Do not trust an implementation of the port to respect the requested resource cap.
             for (var id : ids.stream().limit(available).toList()) {
                 if (closed.get()) break;
