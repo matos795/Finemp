@@ -47,6 +47,11 @@ Com entrega de e-mail configurada, a API também oferece `POST /api/auth/passwor
 
 ### 3.3 Autorização
 
+`GET /api/auth/access-catalog` publica [metadados e presets view/edit](architecture/access-catalog.md)
+versionados das operações disponíveis. Não são grants do usuário nem autorização.
+O consumidor aplica sugestões somente ao PUT explícito de um grant para a
+empresa selecionada; presets indisponíveis nunca autorizam operação.
+
 A [administração de grants por empresa](architecture/company-access-administration.md)
 usa `/api/admin/accounting-firms/{firmId}/clients/{clientId}/companies/{companyId}/users`
 (GET paginado) e `/{userId}` (GET/PUT/DELETE). PUT recebe `role`,
