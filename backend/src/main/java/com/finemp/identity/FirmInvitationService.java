@@ -6,6 +6,8 @@ import com.finemp.access.AccountingFirmPermission;
 import com.finemp.access.AccountingFirmPermissionAuthorizationService;
 import com.finemp.access.UserAccountRepository;
 import com.finemp.accountingfirm.AccountingFirmRepository;
+import com.finemp.audit.AccessAuditAction;
+import com.finemp.audit.AccessAuditRecorder;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -21,15 +23,18 @@ public class FirmInvitationService {
     private final UserAccountRepository users;
     private final AccountingFirmAccessGrantRepository grants;
     private final AccountActionService actions;
+    private final AccessAuditRecorder audit;
 
     public FirmInvitationService(AccountingFirmPermissionAuthorizationService authorization,
                                  AccountingFirmRepository firms, UserAccountRepository users,
-                                 AccountingFirmAccessGrantRepository grants, AccountActionService actions) {
+                                 AccountingFirmAccessGrantRepository grants, AccountActionService actions,
+                                 AccessAuditRecorder audit) {
         this.authorization = authorization;
         this.firms = firms;
         this.users = users;
         this.grants = grants;
         this.actions = actions;
+        this.audit = audit;
     }
 
     @Transactional
@@ -38,13 +43,14 @@ public class FirmInvitationService {
             throw new AccessDeniedException("Acesso administrativo não autorizado.");
         }
         var firm = firms.findById(firmId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        actions.inviteNewUser(request.name(), request.email());
+        actions.inviteNewUser(request.name(), request.email(), actorId);
         // The action service holds the identity lock until this transaction commits.
         UUID userId = users.findIdByEmailIgnoreCase(request.email().trim()).orElseThrow();
         var user = users.findLockedById(userId).orElseThrow();
         var grant = grants.findByUserAccountIdAndAccountingFirmId(userId, firmId)
                 .orElseGet(() -> grants.save(new AccountingFirmAccessGrant(user, firm, java.util.Set.of())));
         grant.addPermissions(request.permissions());
+        audit.record(AccessAuditAction.FIRM_ACCESS_GRANTED, actorId, userId, firmId, null, grant.getPermissions());
         // No company/financial permission is granted by an invitation.
     }
 }
