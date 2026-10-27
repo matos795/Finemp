@@ -69,10 +69,24 @@ class ConnectorAgentCycleTest {
         when(reader.readSnapshot(any())).thenAnswer(call->{entered.countDown();new CountDownLatch(1).await();return snapshot;});
         when(client.heartbeat(shortWork)).thenAnswer(call->{beat.countDown();throw new ConnectorClientException(ConnectorClientException.Kind.CREDENTIAL,401,0);});
         try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2))) {
-            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.HALTED);
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.HALTED);
             assertThat(entered.await(1,TimeUnit.SECONDS)).isTrue();assertThat(beat.await(1,TimeUnit.SECONDS)).isTrue();
         }
+        verify(client,times(1)).claim();
         verify(client,never()).complete(any(),any());verify(client,never()).fail(any(),any());
+    }
+    @Test void shouldHonorHeartbeatRetryAfterBeforeAnyNewClaim() {
+        var shortWork=work(600);prepare(shortWork);var nanos=new AtomicLong();
+        when(client.claim()).thenReturn(Optional.of(shortWork),Optional.empty());
+        when(reader.readSnapshot(any())).thenAnswer(call->{new CountDownLatch(1).await();return snapshot;});
+        when(client.heartbeat(shortWork)).thenThrow(new ConnectorClientException(ConnectorClientException.Kind.HTTP,429,12));
+        try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2),nanos::get)) {
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);verify(client,times(1)).claim();
+            nanos.set(Duration.ofSeconds(12).toNanos());assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.IDLE);
+        }
+        verify(client,times(2)).claim();verify(client,never()).complete(any(),any());verify(client,never()).fail(any(),any());
     }
     @Test void shouldNotReadWhenTheSourceTypeIsNotConfiguredAndShouldStopAfterClose() {
         when(client.claim()).thenReturn(Optional.of(work));

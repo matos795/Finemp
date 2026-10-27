@@ -21,6 +21,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
     private final ExecutorService reads;
     private final ScheduledExecutorService heartbeats;
     private final AtomicBoolean cycling=new AtomicBoolean(), reading=new AtomicBoolean();
+    private final AtomicReference<ConnectorClientException> heartbeatFailure=new AtomicReference<>();
     private volatile boolean closed, halted;
     private volatile LeaseKeeper activeLease;
     private Pending pending;
@@ -43,10 +44,11 @@ public final class ConnectorAgentCycle implements AutoCloseable {
         LeaseKeeper keeper=null;
         try {
             if(closed) return Outcome.STOPPED;
-            if(reading.get()) return Outcome.BUSY; // Future.cancel is not evidence that native I/O has stopped.
+            drainHeartbeatPolicy();
             if(halted) return Outcome.HALTED;
             if(backoff && nextTry-nanoTime.getAsLong()>0) return Outcome.RETRY_LATER;
             backoff=false;
+            if(reading.get()) return Outcome.BUSY; // Future.cancel is not evidence that native I/O has stopped.
             if(pending!=null) return resolvePending();
             long requested=nanoTime.getAsLong();var claim=client.claim();
             if(claim.isEmpty()) return Outcome.IDLE;
@@ -54,16 +56,16 @@ public final class ConnectorAgentCycle implements AutoCloseable {
             if(work.mode()!=SyncRunMode.INITIAL || reader.sourceType()!=work.context().sourceType()) {halted=true;return Outcome.HALTED;}
             keeper=new LeaseKeeper(work,requested); activeLease=keeper;
             if(closed) return Outcome.STOPPED;
-            if(!keeper.live()) return Outcome.RETRY_LATER;
+            if(!keeper.live()) return lostLease();
             keeper.arm();
             AccountingSourceSnapshot snapshot;
             try {snapshot=read(work,keeper);}
             catch(AccountingIdentityConfigurationException invalidLocalMapping) {halted=true;return Outcome.HALTED;}
             catch(AccountingIdentityMismatchException mismatch) {return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);}
             catch(AccountingReadLimitExceededException | ReadBudgetExceeded exhausted) {return report(work,keeper,SyncFailureCode.RESOURCE_LIMIT);}
-            catch(CancellationException lostLease) {return closed?Outcome.STOPPED:Outcome.RETRY_LATER;}
+            catch(CancellationException lostLease) {return lostLease();}
             catch(RuntimeException unavailable) {return report(work,keeper,SyncFailureCode.READ_FAILED);}
-            if(!keeper.live()) return Outcome.RETRY_LATER;
+            if(!keeper.live()) return lostLease();
             if(snapshot==null || !snapshot.identity().matches(work.context())) return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);
             try {return accept(work,client.complete(work,snapshot),keeper.expires.get());}
             catch(ConnectorClientException uncertain) {
@@ -72,7 +74,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
             }
         } catch(InterruptedException interrupted) {Thread.currentThread().interrupt();return closed?Outcome.STOPPED:Outcome.RETRY_LATER;}
         catch(ConnectorClientException unavailable) {delay(unavailable);return halted?Outcome.HALTED:Outcome.RETRY_LATER;}
-        finally {if(keeper!=null)keeper.close();activeLease=null;cycling.set(false);}
+        finally {if(keeper!=null)keeper.close();drainHeartbeatPolicy();activeLease=null;cycling.set(false);}
     }
     private AccountingSourceSnapshot read(ConnectorWorkResponse work,LeaseKeeper keeper) throws InterruptedException {
         long deadline=nanoTime.getAsLong()+readNanos;
@@ -101,7 +103,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
         } finally {if(!task.isDone())task.cancel(true);}
     }
     private Outcome report(ConnectorWorkResponse work,LeaseKeeper keeper,SyncFailureCode code) {
-        if(!keeper.live()) return Outcome.RETRY_LATER;
+        if(!keeper.live()) return lostLease();
         try {return accept(work,client.fail(work,code),keeper.expires.get());}
         catch(ConnectorClientException uncertain) {pending=new Pending(work,keeper.expires.get());delay(uncertain);return halted?Outcome.HALTED:Outcome.PENDING;}
     }
@@ -127,10 +129,23 @@ public final class ConnectorAgentCycle implements AutoCloseable {
         if(expires-nanoTime.getAsLong()<=0) {pending=null;return Outcome.RETRY_LATER;}
         pending=new Pending(work,expires);return Outcome.PENDING;
     }
+    private Outcome lostLease() {
+        drainHeartbeatPolicy();return closed?Outcome.STOPPED:halted?Outcome.HALTED:Outcome.RETRY_LATER;
+    }
+    private void drainHeartbeatPolicy() {var failure=heartbeatFailure.getAndSet(null);if(failure!=null)delay(failure);}
+    private void rememberHeartbeatFailure(ConnectorClientException failure) {
+        heartbeatFailure.accumulateAndGet(failure,(previous,current)->previous==null?current:
+                previous.kind()==ConnectorClientException.Kind.CREDENTIAL?previous:
+                current.kind()==ConnectorClientException.Kind.CREDENTIAL?current:
+                previous.retryAfterSeconds()>=current.retryAfterSeconds()?previous:current);
+    }
     private void delay(ConnectorClientException failure) {
         if(failure.kind()==ConnectorClientException.Kind.CREDENTIAL) {halted=true;return;}
         int seconds=failure.retryAfterSeconds()>0?Math.min(failure.retryAfterSeconds(),300):5;
-        nextTry=nanoTime.getAsLong()+TimeUnit.SECONDS.toNanos(seconds);backoff=true;
+        long now=nanoTime.getAsLong(), wait=TimeUnit.SECONDS.toNanos(seconds);
+        // A concurrent heartbeat failure must never shorten an existing foreground Retry-After.
+        if(!backoff||nextTry-now<wait)nextTry=now+wait;
+        backoff=true;
     }
     @Override public void close() {
         closed=true;var lease=activeLease;if(lease!=null)lease.close();reads.shutdownNow();heartbeats.shutdownNow();
@@ -169,7 +184,12 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                 if(stopped.get())return;
                 if(!work.attemptId().equals(lease.attemptId()))throw new ConnectorClientException(ConnectorClientException.Kind.PROTOCOL);
                 update(lease.leaseExpiresAt(),lease.serverTime(),requested);arm();
-            }catch(RuntimeException unavailable){if(!stopped.get())invalidate();}
+            }catch(ConnectorClientException unavailable){
+                if(unavailable.kind()!=ConnectorClientException.Kind.INTERRUPTED)rememberHeartbeatFailure(unavailable);
+                if(!stopped.get())invalidate();
+            }catch(RuntimeException unavailable){
+                if(!stopped.get()){rememberHeartbeatFailure(new ConnectorClientException(ConnectorClientException.Kind.TRANSPORT));invalidate();}
+            }
         }
         private void invalidate(){lost.set(true);var task=readTask.get();if(task!=null)task.cancel(true);}
         @Override public void close(){stopped.set(true);var scheduledNow=scheduled;if(scheduledNow!=null)scheduledNow.cancel(true);invalidate();}
