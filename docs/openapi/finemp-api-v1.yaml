@@ -19,6 +19,98 @@ tags:
   - name: DRE
   - name: Accounting synchronization
 paths:
+  /api/admin/users:
+    get:
+      tags: [Identity administration]
+      operationId: listPlatformUsers
+      summary: Busca identidades globais com PLATFORM_USER_MANAGE explícita.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Página de resumos, sem credenciais ou coleções de permission.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UserAdministrationPage'}
+        '400': {description: Paginação inválida.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /api/admin/users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Identity administration]
+      operationId: getPlatformUser
+      summary: Consulta identidade e permissões de plataforma, sem credenciais.
+      responses:
+        '200':
+          description: Detalhe administrativo autorizado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UserAdministrationDetail'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/admin/users/{userId}/status:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    patch:
+      tags: [Identity administration]
+      operationId: setPlatformUserActive
+      summary: Altera estado global, protegendo o último administrador ativo.
+      description: Exige PLATFORM_USER_MANAGE. Não ativa marcador de convite sem senha definida. Incrementa versão das credenciais em mudança real.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              properties:
+                active: {type: boolean}
+      responses:
+        '200':
+          description: Estado atual da identidade; repetição sem mudança é idempotente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UserAdministrationSummary'}
+        '400': {description: Payload inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Último administrador ativo ou identidade sem senha definida pelo usuário.}
+  /api/admin/users/{userId}/platform-permissions:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    put:
+      tags: [Identity administration]
+      operationId: replacePlatformPermissions
+      summary: Substitui explicitamente permissões de plataforma, sem conceder grants financeiros.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties:
+                permissions:
+                  type: array
+                  uniqueItems: true
+                  items: {$ref: '#/components/schemas/PlatformPermission'}
+      responses:
+        '204': {description: Permissões atualizadas, ou já iguais; alteração real é auditada.}
+        '400': {description: Payload inválido.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Tentativa de remover o último administrador ativo.}
   /api/auth/organization-access:
     get:
       tags: [Authentication]
@@ -554,6 +646,11 @@ components:
       name: JSESSIONID
       description: Sessão HTTP mantida em cookie HttpOnly.
   parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
     AccountingFirmId:
       name: accountingFirmId
       in: path
@@ -575,7 +672,7 @@ components:
     Search:
       name: search
       in: query
-      description: Busca textual por nome/razão social; nas fontes, referência externa. Vazia inclui todos os registros do escopo.
+      description: Busca textual por nome/razão social; nas fontes, referência externa; nas identidades, nome ou e-mail. Vazia inclui todos os registros do escopo.
       schema: {type: string, default: ''}
     CompanyId:
       name: companyId
@@ -619,6 +716,35 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    PlatformPermission:
+      type: string
+      enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]
+    UserAdministrationSummary:
+      type: object
+      required: [id, name, email, active, invitationPending]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        email: {type: string, format: email}
+        active: {type: boolean}
+        invitationPending: {type: boolean}
+    UserAdministrationDetail:
+      type: object
+      required: [user, platformPermissions]
+      properties:
+        user: {$ref: '#/components/schemas/UserAdministrationSummary'}
+        platformPermissions:
+          type: array
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/PlatformPermission'}
+    UserAdministrationPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/UserAdministrationSummary'}
     OrganizationAccess:
       type: object
       required: [platformPermissions, accountingFirms]
