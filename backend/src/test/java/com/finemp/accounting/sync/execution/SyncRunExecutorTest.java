@@ -78,5 +78,10 @@ class SyncRunExecutorTest {
         assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.RETRY_SCHEDULED);
         verifyNoInteractions(publication);
     }
+    @Test void shouldNeverReadTheServerErpForAConnectorClaim() {
+        var machine = new ClaimedSyncRun(runId, claim.version(), claim.mode(), request, new SyncClaimAgent(UUID.randomUUID(), 0L));
+        assertThat(executor.executeClaim(machine)).isEqualTo(SyncExecutionOutcome.STALE);
+        verifyNoInteractions(lifecycle, identities, readers, publication);
+    }
 }
 
