@@ -1373,6 +1373,9 @@ components:
         failureCode:
           type: [string, 'null']
           enum: [READ_FAILED, IDENTITY_MISMATCH, INVALID_PAYLOAD, PUBLICATION_FAILED, LEASE_EXPIRED, RETRY_LIMIT, SOURCE_NOT_AVAILABLE, ACCESS_REVOKED, UNSUPPORTED_MODE, DATA_CONFLICT, RESOURCE_LIMIT, null]
+    SyncFailureCode:
+      type: [string, 'null']
+      enum: [READ_FAILED, IDENTITY_MISMATCH, INVALID_PAYLOAD, PUBLICATION_FAILED, LEASE_EXPIRED, RETRY_LIMIT, SOURCE_NOT_AVAILABLE, ACCESS_REVOKED, UNSUPPORTED_MODE, DATA_CONFLICT, RESOURCE_LIMIT, null]
     SyncRunPage:
       allOf:
         - $ref: '#/components/schemas/PageMetadata'
@@ -1504,13 +1507,14 @@ components:
         skippedCount: {type: [integer, 'null'], format: int64}
     ConnectorWork:
       type: object
-      required: [attemptId, runId, attemptNumber, mode, leaseExpiresAt, context]
+      required: [attemptId, runId, attemptNumber, mode, leaseExpiresAt, serverTime, context]
       properties:
         attemptId: {type: string, format: uuid}
         runId: {type: string, format: uuid}
         attemptNumber: {type: integer, minimum: 1, maximum: 10}
         mode: {type: string, enum: [INITIAL]}
         leaseExpiresAt: {type: string, format: date-time}
+        serverTime: {type: string, format: date-time, description: Tempo do servidor para calcular duração restante sem assumir relógio local sincronizado.}
         context:
           type: object
           required: [accountingSourceId, companyId, sourceType, externalCompanyReference, expectedCompanyCnpj, startDate, endDate]
@@ -1524,10 +1528,11 @@ components:
             endDate: {type: string, format: date}
     ConnectorLease:
       type: object
-      required: [attemptId, leaseExpiresAt]
+      required: [attemptId, leaseExpiresAt, serverTime]
       properties:
         attemptId: {type: string, format: uuid}
         leaseExpiresAt: {type: string, format: date-time}
+        serverTime: {type: string, format: date-time}
     ConnectorMachineScope:
       type: object
       required: [credentialId, accountingFirmId, accountingSourceId, credentialVersion]

@@ -100,6 +100,7 @@ class ConnectorWorkIntegrationTest {
         assertThat(context.getBeansOfType(SyncRunExecutor.class)).isEmpty();
         assertThat(context.getBeansOfType(com.finemp.accounting.reading.AccountingCompanyIdentityReader.class)).isEmpty();
         var result = work.claim(identity).orElseThrow();
+        assertThat(result.serverTime()).isEqualTo(now);
         assertThat(result.context().accountingSourceId()).isEqualTo(sourceId);
         assertThat(result.context().expectedCompanyCnpj()).isEqualTo("47474747000147");
         assertThat(result.context().startDate()).isEqualTo(LocalDate.of(2026,7,1));
@@ -122,6 +123,7 @@ class ConnectorWorkIntegrationTest {
     @Test void shouldRenewOnlyTheCurrentLiveLeaseAndLeaveTheFenceUnchanged() {
         var result = work.claim(identity).orElseThrow(); var before = run().getVersion();
         at(200); var renewed = work.renew(identity, result.attemptId());
+        assertThat(renewed.serverTime()).isEqualTo(now.plusSeconds(200));
         assertThat(renewed.leaseExpiresAt()).isEqualTo(now.plusSeconds(500)); assertThat(run().getVersion()).isEqualTo(before);
         at(500); assertThatThrownBy(() -> work.renew(identity, result.attemptId())).isInstanceOf(ConnectorWorkNotCurrentException.class);
     }
