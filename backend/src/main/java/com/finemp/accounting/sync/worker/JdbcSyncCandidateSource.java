@@ -17,8 +17,9 @@ public class JdbcSyncCandidateSource implements SyncCandidateSource {
         String exclusionSql = exclusions.isEmpty() ? "" : " AND run.id NOT IN (" + String.join(",", Collections.nCopies(exclusions.size(), "?")) + ") ";
         String sql = """
                 SELECT run.id FROM sync_runs run
+                JOIN accounting_sources source ON source.id = run.accounting_source_id
                 LEFT JOIN sync_attempts attempt ON attempt.sync_run_id = run.id AND attempt.attempt_number = run.attempt_number
-                WHERE run.status IN ('REQUESTED', 'RUNNING') AND (run.status = 'REQUESTED' OR (run.status = 'RUNNING' AND
+                WHERE source.connection_mode = 'DIRECT' AND run.status IN ('REQUESTED', 'RUNNING') AND (run.status = 'REQUESTED' OR (run.status = 'RUNNING' AND
                     (attempt.id IS NULL OR (attempt.status = 'RUNNING' AND attempt.lease_expires_at <= ?)
                     OR (attempt.status IN ('FAILED', 'EXPIRED') AND attempt.next_attempt_at <= ?))))
                 """ + exclusionSql + """

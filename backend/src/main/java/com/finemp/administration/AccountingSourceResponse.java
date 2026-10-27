@@ -10,7 +10,8 @@ public record AccountingSourceResponse(
         UUID companyId,
         AccountingSourceType type,
         String externalReference,
-        boolean active) {
+        boolean active,
+        com.finemp.accounting.source.AccountingConnectionMode connectionMode) {
 
     public static AccountingSourceResponse from(AccountingSource source) {
         return new AccountingSourceResponse(
@@ -18,6 +19,7 @@ public record AccountingSourceResponse(
                 source.getCompany().getId(),
                 source.getType(),
                 source.getExternalReference(),
-                source.isActive());
+                source.isActive(),
+                source.getConnectionMode());
     }
 }

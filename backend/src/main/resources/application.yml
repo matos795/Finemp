@@ -12,6 +12,9 @@ spring:
     locations: classpath:db/migration
 
 finemp:
+  connector:
+    enabled: ${FINEMP_CONNECTOR_ENABLED:false}
+    credential-lifetime-days: ${FINEMP_CONNECTOR_CREDENTIAL_LIFETIME_DAYS:90}
   sync:
     worker:
       enabled: ${FINEMP_SYNC_WORKER_ENABLED:false}

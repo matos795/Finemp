@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @Service
 @Profile("!prod")
-@ConditionalOnExpression("${finemp.integration.questor.enabled:false} && !${finemp.sync.executor.enabled:false}")
+@ConditionalOnExpression("${finemp.integration.questor.enabled:false} && !${finemp.sync.executor.enabled:false} && !${finemp.connector.enabled:false}")
 public class QuestorAccountingImportService {
 
     private final AccountingSourceRepository accountingSourceRepository;
@@ -44,7 +44,8 @@ public class QuestorAccountingImportService {
                 .findForReadingById(accountingSourceId)
                 .orElseThrow(() -> new SaasResourceNotFoundException("Accounting source"));
 
-        if (!accountingSource.isActive() || accountingSource.getType() != AccountingSourceType.QUESTOR)
+        if (!accountingSource.isActive() || accountingSource.getType() != AccountingSourceType.QUESTOR
+                || accountingSource.getConnectionMode() != com.finemp.accounting.source.AccountingConnectionMode.DIRECT)
             throw new QuestorSourceStateException();
 
         var request = new AccountingReadRequest(accountingSource.getId(), accountingSource.getCompany().getId(),
