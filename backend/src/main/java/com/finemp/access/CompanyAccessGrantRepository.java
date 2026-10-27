@@ -24,4 +24,14 @@ public interface CompanyAccessGrantRepository
         Optional<CompanyAccessGrant> findByUserAccountIdAndCompanyId(
                         UUID userAccountId,
                         UUID companyId);
+
+        @org.springframework.data.jpa.repository.Query("""
+                        select case when count(accessGrant) > 0 then true else false end
+                        from CompanyAccessGrant accessGrant
+                        where accessGrant.userAccount.id = :userId
+                          and accessGrant.company.client.accountingFirm.id = :firmId
+                        """)
+        boolean existsWithinAccountingFirm(
+                        @org.springframework.data.repository.query.Param("userId") UUID userId,
+                        @org.springframework.data.repository.query.Param("firmId") UUID firmId);
 }

@@ -80,6 +80,12 @@ public class AccountingFirmAccessGrant {
         this.permissions.addAll(permissions);
     }
 
+    public void replacePermissions(Set<AccountingFirmPermission> permissions) {
+        var requested = Set.copyOf(permissions);
+        this.permissions.clear();
+        this.permissions.addAll(requested);
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
