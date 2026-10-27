@@ -9,6 +9,8 @@ import com.finemp.accounting.sync.execution.SyncAttemptStatus;
 import com.finemp.connector.completion.ConnectorWorkResult;
 import com.finemp.connector.work.ConnectorWorkResponse;
 import com.finemp.integration.questor.QuestorIdentityMapping;
+import com.finemp.integration.questor.QuestorConnectionProvider;
+import java.sql.*;
 import java.io.*;
 import java.net.URI;
 import java.nio.file.*;
@@ -79,6 +81,31 @@ class ConnectorRuntimeTest {
         long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);ConnectorProfileLock reopened=null;
         while(reopened==null&&System.nanoTime()<deadline){try{reopened=ConnectorProfileLock.acquire(directory,source);}catch(ConnectorClientException waiting){java.util.concurrent.locks.LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1));}}
         assertThat(reopened).isNotNull();reopened.close();verify(client,never()).complete(any(),any());
+    }
+    @Test void shouldComposeTheActualVerifiedReaderAndRefuseMovementSqlWhenObservedJdbcIdentityDiffers() throws Exception {
+        for(boolean matches:new boolean[]{false,true}){
+            var profile=profile();var provider=mock(QuestorConnectionProvider.class);var connection=mock(Connection.class);
+            var metadata=mock(DatabaseMetaData.class);var tables=mock(ResultSet.class);var columns=mock(ResultSet.class);
+            var identityStatement=mock(PreparedStatement.class);var movementStatement=mock(PreparedStatement.class);var observed=mock(ResultSet.class);
+            when(provider.openConnection()).thenReturn(connection);when(connection.getMetaData()).thenReturn(metadata);
+            when(metadata.getSearchStringEscape()).thenReturn("\\");
+            when(metadata.getTables(isNull(),isNull(),anyString(),any(String[].class))).thenReturn(tables);
+            when(tables.next()).thenReturn(true,false);when(tables.getString("TABLE_NAME")).thenReturn("SYN_COMPANIES");
+            when(metadata.getColumns(isNull(),isNull(),anyString(),eq("%"))).thenReturn(columns);
+            when(columns.next()).thenReturn(true,true,false);when(columns.getString("TABLE_NAME")).thenReturn("SYN_COMPANIES");
+            when(columns.getString("COLUMN_NAME")).thenReturn("COMPANY_CODE","TAX_ID");when(columns.getInt("DATA_TYPE")).thenReturn(Types.INTEGER,Types.VARCHAR);
+            when(columns.getInt("DECIMAL_DIGITS")).thenReturn(0);when(columns.getInt("COLUMN_SIZE")).thenReturn(14);
+            when(connection.prepareStatement(anyString())).thenAnswer(call->{String sql=call.getArgument(0);return sql.contains("FROM LCTOCTB")?movementStatement:identityStatement;});
+            when(identityStatement.executeQuery()).thenReturn(observed);when(observed.next()).thenReturn(true,false);
+            when(observed.getInt("FINEMP_OBS_REF")).thenReturn(matches?57:58);when(observed.getString("FINEMP_OBS_CNPJ")).thenReturn("57575757000157");
+            when(movementStatement.executeQuery()).thenReturn(mock(ResultSet.class));
+            var request=new AccountingReadRequest(profile.sourceId(),UUID.randomUUID(),AccountingSourceType.QUESTOR,"57","57575757000157",LocalDate.of(2026,7,1),LocalDate.of(2026,7,31));
+            var reader=ConnectorLocalProfile.questorReader(profile,provider);
+            if(matches){var result=reader.readSnapshot(request);assertThat(result.identity().matches(request)).isTrue();assertThat(result.movements()).isEmpty();verify(movementStatement).executeQuery();}
+            else{assertThatThrownBy(()->reader.readSnapshot(request)).isInstanceOf(AccountingIdentityMismatchException.class);verifyNoInteractions(movementStatement);}
+            verify(provider).openConnection();verify(connection).setReadOnly(true);verify(connection).setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+            verify(connection).rollback();verify(connection).close();verify(connection,never()).commit();
+        }
     }
     private ConnectorLocalConfiguration.Profile profile(){return new ConnectorLocalConfiguration.Profile(UUID.randomUUID(),URI.create("https://connector.invalid"),
             "FINEMP_CONNECTOR_TEST_TOKEN","FINEMP_CONNECTOR_TEST_URL","FINEMP_CONNECTOR_TEST_USER","FINEMP_CONNECTOR_TEST_PASSWORD",

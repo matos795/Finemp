@@ -18,9 +18,7 @@ final class ConnectorLocalProfile implements AutoCloseable {
             lock=ConnectorProfileLock.acquire(directory,profile.sourceId());
             transport=new ConnectorHttpsTransport(profile.origin(),()->token(profile,secrets),Duration.ofSeconds(profile.httpSeconds()));
             var provider=new QuestorConnectionProvider(()->connection(profile,secrets));
-            var identities=new FirebirdQuestorCompanyIdentityReader(provider,profile.identity(),profile.querySeconds());
-            var movements=new FirebirdQuestorAccountingReader(provider,profile.maxRecords(),profile.querySeconds());
-            var reader=new VerifiedQuestorSnapshotReader(provider,identities,movements);
+            var reader=questorReader(profile,provider);
             cycle=new ConnectorAgentCycle(new FinempConnectorClient(transport,profile.sourceId(),profile.maxRecords()),reader,Duration.ofSeconds(profile.readSeconds()));
             return new ConnectorLocalProfile(lock,transport,cycle);
         }catch(RuntimeException failure){
@@ -31,6 +29,11 @@ final class ConnectorLocalProfile implements AutoCloseable {
     }
     static void validateSecrets(ConnectorLocalConfiguration.Profile profile,ConnectorSecretSource secrets){
         if(profile==null||secrets==null)throw invalid();token(profile,secrets);connection(profile,secrets);
+    }
+    static VerifiedQuestorSnapshotReader questorReader(ConnectorLocalConfiguration.Profile profile,QuestorConnectionProvider provider){
+        var identities=new FirebirdQuestorCompanyIdentityReader(provider,profile.identity(),profile.querySeconds());
+        var movements=new FirebirdQuestorAccountingReader(provider,profile.maxRecords(),profile.querySeconds());
+        return new VerifiedQuestorSnapshotReader(provider,identities,movements);
     }
     private static String token(ConnectorLocalConfiguration.Profile profile,ConnectorSecretSource secrets){
         String value=secret(secrets,profile.credentialEnv(),43);if(!value.matches("[A-Za-z0-9_-]{43}"))throw invalid();return value;

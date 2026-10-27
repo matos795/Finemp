@@ -30,4 +30,6 @@ Há um poller por perfil com atraso após o ciclo, sem acumular tarefas a taxa f
 
 ## PONTOS ABERTOS OPERACIONAIS
 
+O teste de composição usa JDBC sintético com o reader efetivo do factory: identidade divergente impede SQL de movimentos; identidade correspondente permite a consulta na mesma conexão read-only, com rollback/close e sem commit. Isso verifica o encadeamento do código, sem declarar schema/permissões reais do Firebird homologados.
+
 Distribuição/assinatura do binário, política de atualização, cofre definitivo, conta de serviço, configuração real do schema, permissões Firebird, prazos de socket/login e homologação de rede ainda dependem do ambiente de destino. Nenhuma credencial ou instalação real está embutida. Questor continua somente leitura para o FINEMP. Incremental/retificação/cursor não foram inventados; o ciclo atual executa INITIAL.
