@@ -47,6 +47,8 @@ Com entrega de e-mail configurada, a API também oferece `POST /api/auth/passwor
 
 ### 3.3 Autorização
 
+`GET /api/auth/organization-access` retorna somente permissões de plataforma e vínculos/permissões administrativas do usuário da sessão. Não recebe `userId` como seletor, não lista organizações externas e não concede acesso financeiro. O contrato existente de empresas em `/api/auth/me` permanece separado e inalterado. O campo `active` da contabilidade é metadado; não representa um grant financeiro.
+
 Convites administrativos usam `POST /api/admin/accounting-firms/{firmId}/invitations`, com entrega habilitada, sessão, CSRF e `USER_ACCESS_MANAGE` explícita nessa contabilidade. Corpo: `name`, `email`, `permissions` administrativas. Operação aditiva; resposta 204 vazia e sem segredo. Não concede grant de empresa nem acesso financeiro. Ver [convites por contabilidade](architecture/firm-invitations.md).
 
 O frontend pode ocultar ações indisponíveis para melhorar a experiência, mas isso não substitui a autorização do backend.
