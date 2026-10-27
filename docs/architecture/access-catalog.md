@@ -16,6 +16,7 @@ as fontes do acesso efetivo do usuário autenticado.
 | accounting-dre | DRE_VIEW | indisponível |
 | account-classification | ACCOUNT_CLASSIFICATION_VIEW | VIEW + ACCOUNT_CLASSIFICATION_MANAGE |
 | questor-import | indisponível | QUESTOR_SYNC; exige integração habilitada |
+| sync-history | QUESTOR_SYNC | QUESTOR_SYNC; exige controle de sincronização habilitado |
 
 Os identificadores são de capabilities headless, não nomes definitivos de tela.
 O frontend pode usar os conjuntos como sugestão ao editar explicitamente um

@@ -9,6 +9,21 @@ import java.util.UUID;
 public interface CompanyAccessGrantRepository
                 extends JpaRepository<CompanyAccessGrant, UUID> {
 
+        @org.springframework.data.jpa.repository.Query("""
+                        select case when count(accessGrant) > 0 then true else false end
+                        from CompanyAccessGrant accessGrant join accessGrant.permissions permission
+                        where accessGrant.userAccount.id = :userId
+                          and accessGrant.userAccount.active = true
+                          and accessGrant.company.id = :companyId
+                          and accessGrant.costCenterScope = :scope
+                          and permission = :permission
+                        """)
+        boolean existsCurrentPermission(
+                        @org.springframework.data.repository.query.Param("userId") UUID userId,
+                        @org.springframework.data.repository.query.Param("companyId") UUID companyId,
+                        @org.springframework.data.repository.query.Param("scope") CostCenterScope scope,
+                        @org.springframework.data.repository.query.Param("permission") CompanyPermission permission);
+
         boolean existsByUserAccountIdAndCompanyId(
                         UUID userAccountId,
                         UUID companyId);
