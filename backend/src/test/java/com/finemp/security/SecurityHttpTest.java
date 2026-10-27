@@ -44,6 +44,9 @@ class SecurityHttpTest {
         @MockitoBean
         private SessionAccountStateValidator sessionAccountStateValidator;
 
+        @MockitoBean
+        private QuestorImportAuthorizationManager questorImportAuthorizationManager;
+
         @Test
         void shouldReturnUnauthorizedWhenRequestIsNotAuthenticated()
                         throws Exception {

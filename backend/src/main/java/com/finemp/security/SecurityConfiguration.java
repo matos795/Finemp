@@ -3,6 +3,9 @@ package com.finemp.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
+import com.finemp.accounting.source.AccountingSourceRepository;
+import com.finemp.access.CompanyPermissionAuthorizationService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -30,6 +33,7 @@ public class SecurityConfiguration {
                         SecurityContextRepository securityContextRepository,
                         CompanyRequestAuthorizationManager companyAuthorizationManager,
                         SessionAccountStateValidator sessionAccountStateValidator,
+                        QuestorImportAuthorizationManager questorImportAuthorizationManager,
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
 
@@ -45,6 +49,15 @@ public class SecurityConfiguration {
                                                                 "/api/auth/password-reset/complete",
                                                                 "/actuator/health")
                                                 .permitAll()
+
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/accounting-sources/{accountingSourceId}/questor-import")
+                                                .access(questorImportAuthorizationManager)
+
+                                                .requestMatchers(HttpMethod.PUT,
+                                                                "/api/companies/{companyId}/accounting-accounts/{accountId}/classification")
+                                                .access(permissionAuthorizationManagerFactory.forPermission(
+                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE))
 
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/dre/**")
@@ -76,6 +89,12 @@ public class SecurityConfiguration {
                                                 .deleteCookies("JSESSIONID"));
 
                 return http.build();
+        }
+
+        @Bean
+        QuestorImportAuthorizationManager questorImportAuthorizationManager(
+                        AccountingSourceRepository sources, CompanyPermissionAuthorizationService permissions) {
+                return new QuestorImportAuthorizationManager(sources, permissions);
         }
 
         @Bean
