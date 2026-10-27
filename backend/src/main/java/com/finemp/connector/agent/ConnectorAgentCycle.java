@@ -150,6 +150,13 @@ public final class ConnectorAgentCycle implements AutoCloseable {
     @Override public void close() {
         closed=true;var lease=activeLease;if(lease!=null)lease.close();reads.shutdownNow();heartbeats.shutdownNow();
     }
+    boolean awaitStopped(Duration timeout) throws InterruptedException {
+        if(timeout==null||timeout.isNegative()||timeout.compareTo(Duration.ofMinutes(1))>0)
+            throw new ConnectorClientException(ConnectorClientException.Kind.CONFIGURATION);
+        long nanos=timeout.toNanos(), started=System.nanoTime();
+        if(!reads.awaitTermination(nanos,TimeUnit.NANOSECONDS))return false;
+        return heartbeats.awaitTermination(Math.max(0,nanos-(System.nanoTime()-started)),TimeUnit.NANOSECONDS);
+    }
     private static ThreadFactory threads(String name) {return task->{var thread=new Thread(task,name);thread.setDaemon(true);return thread;};}
     private record Pending(ConnectorWorkResponse work,long expires) { }
     private static final class ReadBudgetExceeded extends RuntimeException { }
