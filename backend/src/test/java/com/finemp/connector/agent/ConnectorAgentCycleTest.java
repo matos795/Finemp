@@ -58,10 +58,12 @@ class ConnectorAgentCycleTest {
         prepare(work);var release=new CountDownLatch(1);var entered=new CountDownLatch(1);var exited=new CountDownLatch(1);
         when(reader.readSnapshot(any())).thenAnswer(call->{entered.countDown();try{while(release.getCount()>0){try{release.await();}catch(InterruptedException ignored){}}return snapshot;}finally{exited.countDown();}});
         when(client.fail(work,SyncFailureCode.RESOURCE_LIMIT)).thenReturn(receipt(SyncAttemptStatus.FAILED));
-        try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofMillis(100))) {
-            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);assertThat(entered.await(1,TimeUnit.SECONDS)).isTrue();
+        var nanos=new AtomicLong();var caller=Executors.newSingleThreadExecutor();
+        try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofMillis(100),nanos::get)) {
+            var result=caller.submit(agent::runOnce);assertThat(entered.await(5,TimeUnit.SECONDS)).isTrue();
+            nanos.set(Duration.ofMillis(100).toNanos());assertThat(result.get(5,TimeUnit.SECONDS)).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.BUSY);verify(client,times(1)).claim();
-        }finally{release.countDown();assertThat(exited.await(2,TimeUnit.SECONDS)).isTrue();}
+        }finally{release.countDown();caller.shutdownNow();assertThat(exited.await(5,TimeUnit.SECONDS)).isTrue();}
         verify(client,never()).complete(any(),any());
     }
     @Test void shouldStopPublicationWhenTheHeartbeatIsLostDuringRead() throws Exception {
