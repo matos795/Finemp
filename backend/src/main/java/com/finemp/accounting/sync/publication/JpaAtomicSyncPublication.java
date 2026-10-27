@@ -18,6 +18,7 @@ public class JpaAtomicSyncPublication implements SyncPublicationPort {
     @Override
     @Transactional(propagation = Propagation.NEVER)
     public void publish(ClaimedSyncRun claim, List<ImportedAccountingMovement> movements) {
+        if (claim.agent().isConnector()) throw new com.finemp.accounting.sync.execution.StaleSyncClaimException();
         transaction.publish(claim, movements);
     }
 }

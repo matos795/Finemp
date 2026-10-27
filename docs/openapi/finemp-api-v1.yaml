@@ -21,6 +21,113 @@ tags:
   - name: Connector administration
   - name: Connector machine protocol
 paths:
+  /api/connector/v1/work/{attemptId}/complete:
+    parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Connector machine protocol]
+      operationId: completeConnectorWork
+      summary: Valida e publica um lote inteiro com autoridade e contexto reconstruídos no servidor.
+      description: Parser fora de transação; publicação revalida credencial/versão/fonte/solicitante/lease/fence sob a mesma trava. Server mede counters. POST já encerrado retorna 409; consultar result para resolver resposta perdida. Identidade observada é declaração do agente, que deverá lê-la realmente no ERP.
+      security:
+        - ConnectorBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ConnectorBatch'}
+      responses:
+        '200':
+          description: Tentativa publicada; contas/movimentos/counters/sucesso/evento confirmados juntos.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorWorkResult'}
+        '202':
+          description: Publicação revertida por falha transitória; tentativa falhou e retry foi agendado pelo lifecycle.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorWorkResult'}
+        '400': {description: Formato/JSON/campos inválidos; não altera a execução.}
+        '401': {description: Credencial/transporte não autorizado.}
+        '404': {description: Tentativa não pertence ao vínculo autenticado.}
+        '409': {description: Tentativa encerrada, lease/fence não atual ou posse alterada; consultar result.}
+        '413': {description: Orçamento de bytes/registros/estrutura excedido; não altera a execução.}
+        '415': {description: Exige application/json sem Content-Encoding comprimido.}
+        '422':
+          description: Identidade/payload/conflito rejeitado ou orçamento de retries esgotado; dados anteriores preservados.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorWorkResult'}
+        '429': {description: Sem capacidade ou limite de autenticação; observar Retry-After.}
+        '503': {description: Infraestrutura indisponível; consultar recibo antes de reenviar.}
+  /api/connector/v1/work/{attemptId}/fail:
+    parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Connector machine protocol]
+      operationId: reportConnectorSourceFailure
+      summary: Reporta código restrito de falha da origem, sem mensagem livre/status/counters.
+      security:
+        - ConnectorBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code]
+              properties:
+                code: {type: string, enum: [READ_FAILED, RESOURCE_LIMIT, IDENTITY_MISMATCH, INVALID_PAYLOAD]}
+      responses:
+        '202':
+          description: Falha da tentativa registrada; retry limitado agendado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorWorkResult'}
+        '422':
+          description: Falha terminal registrada, sem mutar movimentos.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorWorkResult'}
+        '400': {description: Formato/código inválido; não altera a execução.}
+        '401': {description: Credencial/transporte não autorizado.}
+        '404': {description: Tentativa não pertence ao vínculo autenticado.}
+        '409': {description: Tentativa sem posse atual.}
+        '413': {description: Orçamento de metadados excedido.}
+        '415': {description: Exige application/json sem compressão.}
+        '429': {description: Capacidade/limite de autenticação excedido.}
+        '503': {description: Infraestrutura indisponível.}
+  /api/connector/v1/work/{attemptId}/result:
+    parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Connector machine protocol]
+      operationId: getConnectorWorkResult
+      summary: Consulta recibo autoritativo da tentativa sem reenviar o lote.
+      description: Mesmo vínculo e versão da credencial. Counters só são retornados quando esta tentativa teve sucesso; tentativa antiga falhada não recebe os counters de uma posterior. Não retorna linhas contábeis.
+      security:
+        - ConnectorBearer: []
+      responses:
+        '200':
+          description: Estado e counters medidos, no-store.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConnectorWorkResult'}
+        '400': {description: Identificador inválido.}
+        '401': {description: Credencial/transporte não autorizado.}
+        '404': {description: Tentativa não pertence ao vínculo autenticado.}
+        '429': {description: Capacidade/limite de autenticação excedido.}
+        '503': {description: Infraestrutura indisponível.}
   /api/connector/v1/work/claim:
     post:
       tags: [Connector machine protocol]
@@ -1347,6 +1454,54 @@ components:
             items:
               type: array
               items: {$ref: '#/components/schemas/ConnectorCredential'}
+    ConnectorBatch:
+      type: object
+      additionalProperties: false
+      required: [observedIdentity, movements]
+      properties:
+        observedIdentity:
+          type: object
+          additionalProperties: false
+          required: [externalReference, cnpj]
+          properties:
+            externalReference: {type: string, maxLength: 255}
+            cnpj: {type: string, maxLength: 32}
+        movements:
+          type: array
+          maxItems: 100000
+          description: Limite efetivo configurado, padrão 25000; orçamento de bytes também se aplica. Nenhum truncamento.
+          items:
+            type: object
+            additionalProperties: false
+            required: [sourceEntryKey, accountingDate, externalAccountId, accountKey, accountDescription, side, amount]
+            properties:
+              sourceEntryKey: {type: string, minLength: 1, maxLength: 255}
+              accountingDate: {type: string, format: date}
+              externalAccountId: {type: string, minLength: 1, maxLength: 255}
+              accountKey: {type: string, minLength: 1, maxLength: 255}
+              accountDescription: {type: string, maxLength: 255}
+              side: {type: string, enum: [DEBIT, CREDIT]}
+              amount:
+                type: [number, string]
+                description: Decimal exato representável em NUMERIC(19,4); não arredondar nem inverter sinal por side. String decimal aceita até 64 caracteres.
+              history: {type: [string, 'null'], maxLength: 255}
+    ConnectorWorkResult:
+      type: object
+      required: [attemptId, runId, attemptNumber, currentAttempt, attemptStatus, runStatus, leaseExpiresAt, nextAttemptAt, attemptFailureCode, runFailureCode, readCount, importedCount, skippedCount]
+      properties:
+        attemptId: {type: string, format: uuid}
+        runId: {type: string, format: uuid}
+        attemptNumber: {type: integer}
+        currentAttempt: {type: boolean}
+        attemptStatus: {type: string, enum: [RUNNING, SUCCEEDED, FAILED, EXPIRED]}
+        runStatus: {$ref: '#/components/schemas/SyncRunStatus'}
+        leaseExpiresAt: {type: string, format: date-time}
+        nextAttemptAt: {type: [string, 'null'], format: date-time}
+        attemptFailureCode: {$ref: '#/components/schemas/SyncFailureCode'}
+        runFailureCode: {$ref: '#/components/schemas/SyncFailureCode'}
+        readCount: {type: [integer, 'null'], format: int64}
+        importedCount: {type: [integer, 'null'], format: int64}
+        skippedCount: {type: [integer, 'null'], format: int64}
     ConnectorWork:
       type: object
       required: [attemptId, runId, attemptNumber, mode, leaseExpiresAt, context]
