@@ -57,8 +57,11 @@
 - **FATO CONFIRMADO:** #160/PR161 integrada: recorrência mensal interna,
   recibo do conjunto, migração/chave compartilhada e diário oficial ampliado;
   nove contratos mensais e um de migração PostgreSQL passaram.
-- **EM IMPLEMENTAÇÃO:** #39, exclusões relacionadas na #162, antes de expor
-  captura mensal; política monetária #128 permanece aberta.
+- **FATO CONFIRMADO:** #162/PR163 integrada: exclusão relacionada por
+  vencimento/pagamento atuais, versões do conjunto e recibos compatíveis;
+  oito contratos PostgreSQL/HTTP passaram.
+- **EM IMPLEMENTAÇÃO:** #39, captura mensal HTTP e metadados de leitura na
+  #164; política monetária #128 permanece aberta.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo

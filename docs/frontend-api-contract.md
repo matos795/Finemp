@@ -475,7 +475,13 @@ O alvo pode estar pago ou aberto. Havendo série, também são removidas outras 
 
 Lotes e estoque continuam em contratos próprios. Tratar409 por versão ou chave compartilhada com outra ação,403 por acesso atual,404 por alvo ausente/alheio sob Empresa autorizada e400 para header/versão inválidos. O frontend não apaga histórico local como substituto da confirmação do backend.
 
-## 19. Compatibilidade
+## 19. Captura mensal e identificação de séries
+
+POST /api/companies/{companyId}/financial-entry-series/monthly recebe values do contrato financeiro canônico e quantity inteira de2 a120. Reutiliza os mesmos opt-ins, MANAGE ALL atual, sessão/CSRF, Idempotency-Key UUID e gate de corpo das escritas individuais. Não aceita mode ou expectedVersion e não implementa parcelamento. Responde201 com companyId, commandId, seriesId e items ordenados (number, entryId, version); Location aponta ao GET da primeira ocorrência original.
+
+Reenvio recupera o recibo original inclusive após exclusões, sem recriar ocorrências; Location pode então retornar404. Valores, calendário, efeitos e posições pertencem ao backend. GET/lista de lançamentos acrescentam series quando houver vínculo, com id, mode, number e quantity originais. quantity não diminui nem number é renumerado após excluir. O campo é omitido para individuais. Não inferir grupo, posição, total de parcela ou soma financeira no frontend.
+
+## 20. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 
