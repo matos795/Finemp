@@ -27,6 +27,7 @@ public class FinancialEntryCommandService {
         String fingerprint=EntryCommandFingerprint.of(company,actor,EntryCommandAction.CREATED,null,null,data);
         var replay=replay(company,actor,command,fingerprint);if(replay!=null)return replay;
         references.validate(company,data,null);
+        transactions.requireEntryPeriodsOpen(company,data.values(null));
         var row=entries.saveAndFlush(new FinancialEntry(owner,data.values(null),actor));
         var receipt=new FinancialEntryCommandReceipt(company,command,row.getId(),EntryCommandAction.CREATED,row.getVersion());
         journal.append(actor,fingerprint,receipt,null,null,row.getValues());return receipt;
@@ -41,6 +42,7 @@ public class FinancialEntryCommandService {
         var row=entries.findByIdAndCompanyId(entry,company).orElseThrow(()->new SaasResourceNotFoundException("Lançamento financeiro"));
         if(currentVersion!=expectedVersion || row.getVersion()!=currentVersion)throw new FinancialEntryCommandConflictException(FinancialEntryCommandConflictException.Reason.STALE_VERSION);
         var before=row.getValues();long beforeVersion=row.getVersion();references.validate(company,data,before);
+        transactions.requireEntryPeriodsOpen(company,before,data.values(before.actualPaidAmount()));
         row.replace(data.values(before.actualPaidAmount()),actor);entries.flush();
         var receipt=new FinancialEntryCommandReceipt(company,command,entry,EntryCommandAction.UPDATED,row.getVersion());
         journal.append(actor,fingerprint,receipt,beforeVersion,before,row.getValues());return receipt;

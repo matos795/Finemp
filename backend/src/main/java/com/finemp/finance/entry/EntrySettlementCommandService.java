@@ -46,6 +46,7 @@ public class EntrySettlementCommandService {
         // Settlement changes only payment and bank; historical category/party/center are not reclassified.
         if(action==EntryCommandAction.SETTLED)references.validateBank(company,data.bankAccountId());
         var after=action==EntryCommandAction.SETTLED?EntrySettlement.settle(before,data):EntrySettlement.reverse(before);
+        transactions.requirePaymentPeriodsOpen(company,before,after);
         row.replace(after,actor);entries.flush();
         var receipt=new FinancialEntryCommandReceipt(company,command,entry,action,row.getVersion());
         journal.append(actor,fingerprint,receipt,beforeVersion,before,row.getValues());return receipt;

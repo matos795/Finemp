@@ -46,6 +46,7 @@ public class EntryDeletionCommandService {
             results.add(new FinancialEntryCommandReceipt.DeletedEntry(target.entryId(),target.version()));
         }
         var receipt=new FinancialEntryCommandReceipt(company,command,entry,EntryCommandAction.DELETED,version,results);
+        guard.requireEntryPeriodsOpen(company,states.stream().map(EntryCommandJournal.DeletedState::values).toArray(FinancialEntryValues[]::new));
         selection.removeMemberships(company,targets);entries.deleteAll(rows);entries.flush();
         journal.appendDeletion(actor,fingerprint,receipt,states);return receipt;
     }
