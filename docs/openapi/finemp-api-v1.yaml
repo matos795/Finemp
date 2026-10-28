@@ -183,6 +183,84 @@ paths:
         '415': {$ref: '#/components/responses/FinancialEntryUnsupportedEncoding'}
         '429': {$ref: '#/components/responses/FinancialEntryBusy'}
         '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
+  /api/companies/{companyId}/financial-entries/{entryId}/settlements:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: entryId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Financial entries]
+      operationId: settleFinancialEntry
+      summary: Registra baixa financeira individual com data, conta e valor efetivo.
+      description: Exige os dois opt-ins de escrita financeira, MANAGE ALL vigente, sessão/CSRF, chave idempotente e versão esperada. Valor textual positivo já exato em centavos; não decide captura bruta128. Marca o título como pago, mantém nominal e classificadores e atualiza a conta. Valor igual ao nominal remove override; diferença fica no efetivo. Reaplicação autorizada usa versão atual. Corpo64KiB, sem compressão e com orçamento compartilhado de concorrência, inclusive URI codificado. Não movimenta dinheiro por serviço bancário externo nem grava no Questor.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinancialEntrySettlementCommand'}
+      responses:
+        '200':
+          description: Recibo original imutável, inclusive em reenvio; GET fornece o estado atual.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Versão desatualizada, chave com outro conteúdo/ação ou conflito de integridade; sem gravação parcial.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+        '413': {$ref: '#/components/responses/FinancialEntryPayloadTooLarge'}
+        '415': {$ref: '#/components/responses/FinancialEntryUnsupportedEncoding'}
+        '429': {$ref: '#/components/responses/FinancialEntryBusy'}
+        '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
+  /api/companies/{companyId}/financial-entries/{entryId}/settlement-reversals:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: entryId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Financial entries]
+      operationId: reverseFinancialEntrySettlement
+      summary: Estorna a baixa financeira e conserva a última conta selecionada.
+      description: Mesmos opt-ins, autorização, CSRF, idempotência e limites da baixa. Recebe apenas expectedVersion. Limpa pagamento e valor efetivo informado, conservando nominal, conta e classificadores. Registro já aberto pode produzir recibo/evento sem mudança de versão. Reenvio retorna o recibo original e não reaplica alteração, exigindo permissão vigente.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinancialEntrySettlementReversalCommand'}
+      responses:
+        '200':
+          description: Recibo imutável do comando original, inclusive em reenvio.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Versão, chave idempotente ou integridade conflitante; consultar estado atual.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+        '413': {$ref: '#/components/responses/FinancialEntryPayloadTooLarge'}
+        '415': {$ref: '#/components/responses/FinancialEntryUnsupportedEncoding'}
+        '429': {$ref: '#/components/responses/FinancialEntryBusy'}
+        '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
   /api/companies/{companyId}/financial-categories:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2847,6 +2925,33 @@ components:
     FinancialEntryReadStatus:
       type: string
       enum: [OPEN, PAID, OVERDUE]
+    PositiveCanonicalCentAmount:
+      type: string
+      maxLength: 20
+      pattern: '^[0-9]{1,17}(\.[0-9]{1,2})?$'
+      not: {pattern: '^0+(\.0{1,2})?$'}
+      description: Maior que zero, decimal textual sem expoente, sinal negativo ou arredondamento implícito. Persistido com duas casas.
+      examples: ['123.45']
+    FinancialEntrySettlementCommand:
+      type: object
+      additionalProperties: false
+      required: [values, expectedVersion]
+      properties:
+        expectedVersion: {type: integer, format: int64, minimum: 0}
+        values:
+          type: object
+          additionalProperties: false
+          required: [paymentDate, paidAmount, bankAccountId]
+          properties:
+            paymentDate: {type: string, format: date, description: Data ISO entre anos0001 e9999.}
+            paidAmount: {$ref: '#/components/schemas/PositiveCanonicalCentAmount'}
+            bankAccountId: {type: string, format: uuid, description: Conta da mesma Empresa; sem veto universal por inatividade.}
+    FinancialEntrySettlementReversalCommand:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: {type: integer, format: int64, minimum: 0}
     FinancialEntryCreateCommand:
       type: object
       additionalProperties: false
@@ -2869,13 +2974,7 @@ components:
       properties:
         direction: {$ref: '#/components/schemas/FinancialDirection'}
         description: {type: string, minLength: 2, maxLength: 255}
-        nominalAmount:
-          type: string
-          maxLength: 20
-          pattern: '^[0-9]{1,17}(\.[0-9]{1,2})?$'
-          not: {pattern: '^0+(\.0{1,2})?$'}
-          description: Maior que zero; sem expoente, sinal negativo ou arredondamento implícito. Normalizado para duas casas no estado persistido.
-          examples: ['123.45']
+        nominalAmount: {$ref: '#/components/schemas/PositiveCanonicalCentAmount'}
         documentDate: {type: string, format: date}
         entryDate: {type: string, format: date}
         competence: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'}
@@ -2899,7 +2998,7 @@ components:
         companyId: {type: string, format: uuid}
         commandId: {type: string, format: uuid}
         entryId: {type: string, format: uuid}
-        action: {type: string, enum: [CREATED, UPDATED]}
+        action: {type: string, enum: [CREATED, UPDATED, SETTLED, SETTLEMENT_REVERSED]}
         version: {type: integer, format: int64, minimum: 0, description: Versão resultante do comando original; não afirma o estado atual.}
     FinancialEntryCommandRejection:
       type: object

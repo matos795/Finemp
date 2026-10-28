@@ -31,8 +31,10 @@
 - **FATO CONFIRMADO:** #136/PR138 integrada: API individual CREATE/UPDATE,
   sessão/CSRF, autorização antes do corpo, JSON estrito, limites por rota
   autorizada inclusive URI codificado e opt-in separado; nove contratos PG/HTTP.
-- **EM IMPLEMENTAÇÃO:** #39, baixa/estorno internos na #139, com transições
-  canônicas, versão atual/esperada, recibo idempotente e auditoria atômica.
+- **FATO CONFIRMADO:** #139/PR140 integrada: baixa/estorno internos canônicos,
+  versão atual/esperada, recibo idempotente e auditoria atômica; onze contratos PG.
+- **EM IMPLEMENTAÇÃO:** #39, API de baixa/estorno na #141, com JSON estrito,
+  autorização atual, CSRF, corpo limitado por rota autorizada e contrato próprio.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
