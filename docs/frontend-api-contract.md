@@ -457,9 +457,17 @@ GET /api/companies/{companyId}/bank-transfers aceita page zero-based e size de1 
 
 Cada item contém identificadores e nomes atuais de origem/destino, transferDate, amount como texto decimal exato, description e version. Não converter moeda para Number para calcular totais no frontend, nem somar uma página como se fosse saldo completo. Não há cálculo de saldo novo neste bloco. Histórico preservado pode conter zero canônico; o comando de captura positivo é contrato distinto. Ator e estados privados de auditoria não são retornados.
 
-Tratar403 por acesso ausente/revogado,404 por UUID inexistente ou de outra Empresa,400 por paginação/UUID inválido e503 por consulta indisponível. Escritas HTTP de transferências continuam negadas neste incremento; os comandos internos já integrados serão expostos por contrato próprio.
+Tratar403 por acesso ausente/revogado,404 por UUID inexistente ou de outra Empresa,400 por paginação/UUID inválido e503 por consulta indisponível. Escritas HTTP de transferências têm contrato e opt-in adicionais descritos a seguir.
 
-## 17. Compatibilidade
+## 17. Escrita de transferências internas
+
+Ativar FINEMP_FINANCE_TRANSFER_COMMANDS_ENABLED além do opt-in de transferências. POST na coleção recebe values(originBankAccountId, destinationBankAccountId, transferDate, amount, description opcional). amount é texto positivo em centavos exatos. O backend valida referências e precondições da captura. Ator e Empresa não podem ser enviados no corpo.
+
+DELETE no item recebe expectedVersion pela query, sem corpo. Ambos exigem sessão/CSRF, BANK_ACCOUNT_MANAGE ALL vigente e Idempotency-Key UUID. POST responde201 e Location; DELETE responde200. Os recibos possuem companyId, commandId, transferId, action CREATED/DELETED e version. DELETED informa a última versão persistida. Reenvio retorna o mesmo recibo inclusive após exclusão; nesse caso Location pode já retornar404. Não reaplicar efeitos no frontend.
+
+POST tem o mesmo mecanismo de proteção dos lançamentos: autorização antes do corpo, JSON estrito,64KiB inclusive sem Content-Length, sem compressão e até quatro corpos em processamento por instância. DELETE não lê corpo. Tratar409 por chave/versão/estado conflitante,413 por excesso,415 por formato e429 com Retry-After1 por capacidade;503 deve ser repetido com a mesma chave. Os erros não ecoam dados privados. Não há PUT de transferência, envio bancário externo ou alteração de saldo inicial.
+
+## 18. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

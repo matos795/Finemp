@@ -34,7 +34,7 @@ paths:
       tags: [Financial bank transfers]
       operationId: listBankTransfers
       summary: Consulta transferências internas da Empresa com paginação no servidor.
-      description: FINEMP_FINANCE_TRANSFERS_ENABLED e BANK_ACCOUNT_VIEW ou MANAGE ALL vigente. Ordem por data decrescente e UUID. Sem cálculos de saldo; escrita HTTP ainda indisponível.
+      description: FINEMP_FINANCE_TRANSFERS_ENABLED e BANK_ACCOUNT_VIEW ou MANAGE ALL vigente. Ordem por data decrescente e UUID. Sem cálculos de saldo; escrita exige opt-in adicional próprio.
       parameters:
         - $ref: '#/components/parameters/Page'
         - name: size
@@ -54,6 +54,38 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/ProblemDetail'}
+    post:
+      tags: [Financial bank transfers]
+      operationId: createBankTransfer
+      summary: Cria uma transferência interna com recibo idempotente.
+      description: Exige FINEMP_FINANCE_TRANSFERS_ENABLED e FINEMP_FINANCE_TRANSFER_COMMANDS_ENABLED, BANK_ACCOUNT_MANAGE ALL vigente, sessão e CSRF. Corpo limitado64KiB, JSON sem compressão, até quatro corpos em processamento por instância. Referências isoladas e pelo menos duas contas ativas; valor positivo canônico sem arredondamento. Não executa operação bancária externa.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BankTransferCreateCommand'}
+      responses:
+        '201':
+          description: Recibo original da criação, inclusive em reenvio após exclusão.
+          headers:
+            Location: {schema: {type: string}, description: URL do recurso criado; pode retornar404 se já removido posteriormente.}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BankTransferCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/BankTransferConflict'}
+        '413': {$ref: '#/components/responses/BankTransferPayloadTooLarge'}
+        '415': {$ref: '#/components/responses/BankTransferUnsupportedEncoding'}
+        '429': {$ref: '#/components/responses/BankTransferBusy'}
+        '503': {$ref: '#/components/responses/BankTransferUnavailable'}
   /api/companies/{companyId}/bank-transfers/{transferId}:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -81,6 +113,33 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/ProblemDetail'}
+    delete:
+      tags: [Financial bank transfers]
+      operationId: deleteBankTransfer
+      summary: Exclui uma transferência com versão esperada e recibo persistente.
+      description: Mesmos opt-ins, sessão/CSRF e MANAGE ALL da criação. Sem corpo; versão vem da query. Recibo DELETED registra a última versão persistida. Reenvio com a mesma chave/versão devolve o recibo original após exclusão, sem repetir efeitos.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
+        - name: expectedVersion
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Recibo imutável da exclusão; consulta atual é separada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BankTransferCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/BankTransferConflict'}
+        '503': {$ref: '#/components/responses/BankTransferUnavailable'}
   /api/companies/{companyId}/financial-entries:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2311,6 +2370,33 @@ components:
       schema:
         type: string
   responses:
+    BankTransferConflict:
+      description: Versão desatualizada, chave reutilizada com conteúdo/ação diferente, menos de duas contas ativas na criação ou conflito de integridade. Nenhuma alteração parcial.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/BankTransferCommandRejection'}
+    BankTransferPayloadTooLarge:
+      description: Corpo POST excede64KiB, inclusive sem Content-Length; nenhuma alteração.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/BankTransferCommandRejection'}
+    BankTransferUnsupportedEncoding:
+      description: POST aceita application/json sem compressão.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/BankTransferCommandRejection'}
+    BankTransferBusy:
+      description: Capacidade local de corpos em processamento esgotada; repetir com a mesma chave.
+      headers:
+        Retry-After: {schema: {type: string, examples: ['1']}}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/BankTransferCommandRejection'}
+    BankTransferUnavailable:
+      description: Comando temporariamente indisponível; repetir com a mesma chave para recuperar eventual recibo confirmado.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/BankTransferCommandRejection'}
     FinancialEntryPayloadTooLarge:
       description: Corpo excede64KiB inclusive chunked; nenhuma gravação foi realizada.
       content:
@@ -3123,6 +3209,36 @@ components:
             items:
               type: array
               items: {$ref: '#/components/schemas/FinancialEntryRead'}
+    BankTransferCreateCommand:
+      type: object
+      additionalProperties: false
+      required: [values]
+      properties:
+        values:
+          type: object
+          additionalProperties: false
+          required: [originBankAccountId, destinationBankAccountId, transferDate, amount]
+          properties:
+            originBankAccountId: {type: string, format: uuid}
+            destinationBankAccountId: {type: string, format: uuid, description: Deve diferir da origem e pertencer à mesma Empresa.}
+            transferDate: {type: string, format: date, description: Data ISO canônica entre anos1 e9999.}
+            amount: {$ref: '#/components/schemas/PositiveCanonicalCentAmount'}
+            description: {type: [string, 'null'], maxLength: 255, description: Opcional; null ou ausência vira texto vazio. Normalizada sem NUL/UTF-16 inválido.}
+    BankTransferCommandReceipt:
+      type: object
+      required: [companyId, commandId, transferId, action, version]
+      properties:
+        companyId: {type: string, format: uuid}
+        commandId: {type: string, format: uuid}
+        transferId: {type: string, format: uuid}
+        action: {type: string, enum: [CREATED, DELETED]}
+        version: {type: integer, format: int64, minimum: 0, description: Criada com versão0; exclusão informa a última versão persistida.}
+    BankTransferCommandRejection:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string}
+      description: Códigos fixos e sem payload privado. Pode ser ProblemDetail ou rejeição compacta do filtro; não depender de detail para decisões.
     BankTransferRead:
       type: object
       required: [id, companyId, originBankAccountId, originBankAccountName, destinationBankAccountId, destinationBankAccountName, transferDate, amount, description, version]

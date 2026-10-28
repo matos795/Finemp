@@ -1,6 +1,6 @@
 # Exclusão de lançamento financeiro individual
 
-Referências: #39 e #151. Comando interno; não expõe DELETE HTTP neste incremento.
+Referências: #39 e #151. Comando interno; não expõe DELETE HTTP neste incremento. Integração validada sobre a main com o PR150 de transferências, preservando as duas famílias de comandos.
 
 ## FATO CONFIRMADO
 
