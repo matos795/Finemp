@@ -141,6 +141,10 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}")
                                                 .access(financialCommands)
 
+                                                .requestMatchers(HttpMethod.DELETE,
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}")
+                                                .access(financialCommands)
+
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/**")
                                                 .denyAll()

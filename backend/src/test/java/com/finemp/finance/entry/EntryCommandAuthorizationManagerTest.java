@@ -37,6 +37,12 @@ class EntryCommandAuthorizationManagerTest {
         assertThat(manager.authorize(()->UsernamePasswordAuthenticationToken.authenticated("unexpected","",List.of()),context(company.toString())).isGranted()).isFalse();
         assertThat(manager.authorize(this::authentication,context("invalid")).isGranted()).isFalse();verifyNoInteractions(permissions);
     }
+    @Test void authorizedBodylessDeletionMustClearAnyPriorBodyMarker() {
+        var manager=new EntryCommandAuthorizationManager(permissions,true,true);when(permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE)).thenReturn(true);
+        var context=context(company.toString());context.getRequest().setAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE,Boolean.TRUE);
+        ((MockHttpServletRequest)context.getRequest()).setMethod("DELETE");
+        assertThat(manager.authorize(this::authentication,context).isGranted()).isTrue();assertThat(context.getRequest().getAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE)).isNull();
+    }
     private UsernamePasswordAuthenticationToken authentication() {var principal=mock(UserAccountPrincipal.class);when(principal.getUserAccountId()).thenReturn(actor);return UsernamePasswordAuthenticationToken.authenticated(principal,"",List.of());}
     private RequestAuthorizationContext context(String company) {return new RequestAuthorizationContext(new MockHttpServletRequest(),Map.of("companyId",company));}
 }
