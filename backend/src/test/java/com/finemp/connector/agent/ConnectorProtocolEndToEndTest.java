@@ -16,6 +16,8 @@ import com.finemp.accountingfirm.*;
 import com.finemp.client.*;
 import com.finemp.company.*;
 import com.finemp.connector.*;
+import com.finemp.connector.work.ConnectorWorkService;
+import com.finemp.accounting.sync.execution.SyncAttemptRepository;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -43,6 +45,9 @@ class ConnectorProtocolEndToEndTest {
     @Autowired ConnectorCredentialService credentials;
     @Autowired SyncControlService control;
     @Autowired SyncRunRepository runs;
+    @Autowired SyncAttemptRepository attempts;
+    @Autowired ConnectorWorkService workService;
+    @Autowired ConnectorCredentialVerifier verifier;
     @Autowired UserAccountRepository users;
     @Autowired AccountingFirmRepository firms;
     @Autowired ClientRepository clients;
@@ -111,12 +116,28 @@ class ConnectorProtocolEndToEndTest {
         verify(reader,never()).readSnapshot(any());assertThat(count(sourceId)).isZero();assertThat(count(other.getId())).isZero();
         assertThat(runs.findById(otherRun).orElseThrow().getStatus()).isEqualTo(SyncRunStatus.REQUESTED);
     }
-    @Test void shouldRespectCancellationBeforeFencedCommitAndReturnTerminalWithoutAck(){
-        var reader=reader();when(reader.readSnapshot(any())).thenAnswer(call->{control.cancel(actor,sourceId,runId);return snapshot(call.getArgument(0));});
+    @Test void shouldCancelOnlyARequestedRunBeforeClaimAndNeverStartSourceIo(){
+        control.cancel(actor,sourceId,runId);var reader=reader();
         try(var bridge=new Bridge();var transport=bridge.transport(()->token);var cycle=new ConnectorAgentCycle(new FinempConnectorClient(transport,sourceId,25000),reader,Duration.ofSeconds(10))){
-            assertThat(cycle.runOnce()).as("Wire stages: %s",bridge.trace).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);assertThat(bridge.completes).hasValue(1);assertThat(bridge.receipts).hasValue(1);
+            assertThat(cycle.runOnce()).as("Wire stages: %s",bridge.trace).isEqualTo(ConnectorAgentCycle.Outcome.IDLE);assertThat(bridge.completes).hasValue(0);assertThat(bridge.receipts).hasValue(0);
         }
-        assertThat(count(sourceId)).isZero();assertThat(runs.findById(runId).orElseThrow().getStatus()).isEqualTo(SyncRunStatus.CANCELLED);
+        verify(reader,never()).readSnapshot(any());assertThat(count(sourceId)).isZero();assertThat(runs.findById(runId).orElseThrow().getStatus()).isEqualTo(SyncRunStatus.CANCELLED);
+    }
+    @Test void shouldRejectTheOldBatchAfterLeaseRecoveryCreatesANewFence(){
+        var reader=reader();when(reader.readSnapshot(any())).thenAnswer(call->{
+            var original=attempts.findFirstBySyncRunIdOrderByAttemptNumberDesc(runId).orElseThrow();
+            when(clock.instant()).thenReturn(original.getLeaseExpiresAt().plusSeconds(1));
+            var identity=verifier.authenticate(token).orElseThrow();assertThat(workService.claim(identity)).isEmpty();
+            var expired=attempts.findById(original.getId()).orElseThrow();assertThat(expired.getNextAttemptAt()).isNotNull();
+            when(clock.instant()).thenReturn(expired.getNextAttemptAt().plusSeconds(1));
+            var replacement=workService.claim(identity).orElseThrow();assertThat(replacement.attemptNumber()).isEqualTo(2);
+            return snapshot(call.getArgument(0));
+        });
+        try(var bridge=new Bridge();var transport=bridge.transport(()->token);var cycle=new ConnectorAgentCycle(new FinempConnectorClient(transport,sourceId,25000),reader,Duration.ofSeconds(10))){
+            assertThat(cycle.runOnce()).as("Wire stages: %s",bridge.trace).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);
+            assertThat(bridge.completes).hasValue(1);assertThat(bridge.receipts).hasValue(1);
+        }
+        assertThat(count(sourceId)).isZero();var current=runs.findById(runId).orElseThrow();assertThat(current.getAttemptNumber()).isEqualTo(2);assertThat(current.getStatus()).isEqualTo(SyncRunStatus.RUNNING);
     }
     @Test void shouldRefuseOutOfPeriodRowsBeforeSendingAnyBatch(){
         var reader=reader();when(reader.readSnapshot(any())).thenReturn(new AccountingSourceSnapshot(new ExternalCompanyIdentity("57","58585858000158"),
