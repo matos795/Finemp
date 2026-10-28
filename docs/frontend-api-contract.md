@@ -423,7 +423,11 @@ Com `FINEMP_FINANCE_CATALOG_ENABLED`, `/api/companies/{companyId}/bank-accounts`
 
 Com a mesma flag financeira, /api/companies/{companyId}/business-partners oferece GET paginado/POST e /{partnerId} oferece GET/PUT/DELETE. VIEW ou MANAGE explícitos por Empresa e escopo ALL; escrita exige MANAGE, sessão e CSRF. Dados ficam em profile tipado (PF/PJ, documento validado, papéis, nome, contato/endereço); expectedVersion acompanha PUT e version acompanha DELETE. Documento manual é obrigatório; pendentes legados/importações não são criados por este endpoint. CUSTOMER e SUPPLIER incluem BOTH nos filtros; active omitido inclui os dois estados. O consumidor pode manter o padrão visual de ativos enviando active=true. Cadastro manual independe da consulta pública de CNPJ. Ver [contrato e dependências](architecture/business-partners.md) e OpenAPI; agregados financeiros e ficha CRM seguem entregas próprias.
 
-## 11. Compatibilidade
+## 11. Centros de resultado operacionais
+
+/api/companies/{companyId}/result-centers oferece catálogo paginado, busca e subárvore por rootId; GET/POST na coleção, GET/PUT/DELETE no UUID. Código não é alterável; create recebe code/name e inicia ativo, update recebe name/active/expectedVersion. hasChildren é calculado no servidor e não depende de filtros da página. VIEW/MANAGE explícitos ALL, escrita MANAGE com CSRF. /settings recebe requireResultCenter/expectedVersion e inicia false/version=null quando não persistido; não reclassifica legado. POST /suggested-plan é explícito, atômico e exclusivo de plano vazio. Adapter de uso e exigência nas operações financeiras seguem39/42. Ver [hierarquia e dependências](architecture/operational-result-centers.md) e OpenAPI.
+
+## 12. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

@@ -30,8 +30,8 @@ class AccessCatalogHttpIntegrationTest {
         mvc.perform(get("/api/auth/access-catalog")).andExpect(status().isUnauthorized());
         var actor = users.saveAndFlush(new UserAccount("Synthetic", UUID.randomUUID() + "@example.invalid", "hash"));
         mvc.perform(get("/api/auth/access-catalog").with(user(new UserAccountPrincipal(actor))))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.version").value("2026-10-27.3"))
-                .andExpect(jsonPath("$.companyScreenPresets.length()").value(7))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.version").value("2026-10-27.4"))
+                .andExpect(jsonPath("$.companyScreenPresets.length()").value(8))
                 .andExpect(jsonPath("$.companies").doesNotExist()).andExpect(jsonPath("$.userId").doesNotExist());
     }
 }
