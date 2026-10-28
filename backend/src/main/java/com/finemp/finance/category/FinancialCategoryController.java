@@ -30,6 +30,10 @@ public class FinancialCategoryController {
     public FinancialCategoryResponse createGroup(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,@Valid @RequestBody FinancialCategoryGroupRequest request) {
         return service.createGroup(actor.getUserAccountId(),companyId,request);
     }
+    @PostMapping("/standard-plan") @ResponseStatus(HttpStatus.CREATED)
+    public FinancialCategoryService.StandardPlanResult standardPlan(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId) {
+        return service.createStandardPlan(actor.getUserAccountId(),companyId);
+    }
     @PostMapping("/{groupId}/subcategories") @ResponseStatus(HttpStatus.CREATED)
     public FinancialCategoryResponse createSubcategory(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,@PathVariable UUID groupId,@Valid @RequestBody FinancialSubcategoryRequest request) {
         return service.createSubcategory(actor.getUserAccountId(),companyId,groupId,request);

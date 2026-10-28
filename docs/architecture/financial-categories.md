@@ -26,7 +26,15 @@ Feature FINEMP_FINANCE_CATALOG_ENABLED continua desligada por padrão. Erros fix
 
 FinancialCategoryUsageGuard detectará lançamentos na categoria ou em filhos. Adapter real será fornecido pela #39, com FKs tenant-scoped; porta simulada não é integração operacional. Referências físicas posteriores sempre impedem exclusão insegura. Não usar AccountingMovement como substituto.
 
-Plano padrão completo observado é incremento separado, sem aplicar carga retroativa automática a Empresas existentes. Relatórios e overrides de lançamentos continuam nas #39/#41. Mudanças futuras no comportamento de fotografia/herança exigem decisão explícita, não ajuste silencioso de dados existentes. #38 permanece aberta até o restante de seus critérios.
+Plano padrão completo observado é disponibilizado pelo comando explícito standard-plan da #126, somente em plano vazio, sem aplicar carga retroativa automática a Empresas existentes. Relatórios e overrides de lançamentos continuam nas #39/#41. Mudanças futuras no comportamento de fotografia/herança exigem decisão explícita, não ajuste silencioso de dados existentes. #38 permanece aberta até o restante de seus critérios.
+
+## PLANO PADRÃO HOMOLOGADO — ISSUE126
+
+FATO CONFIRMADO: planoPadrao contém onze grupos e sessenta subcategorias de metadados do produto. Na criação padrão, a DRE da subcategoria é sempre explícita (override ou DRE atual do grupo); atividade e custo só têm override quando observados. Isso difere do addSub manual, cuja DRE começa ausente. As exceções de deduções, IR/CSLL, reembolsos, venda de bens, IOF/multas e parcelas de impostos foram preservadas, sem criar regra fiscal ou cálculo novo.
+
+DECISÃO técnica reversível: POST /financial-categories/standard-plan, com MANAGE ALL, sessão/CSRF e flag financeira. Só plano integralmente vazio; não mescla, corrige ou substitui um plano parcial. Companylock e transação READ_COMMITTED protegem a corrida com outro seed ou cadastro manual. Qualquer falha desfaz todos os inserts; repetição recusa PLAN_NOT_EMPTY. Não há migration com seed global, retroatividade automática ou valores de lançamentos.
+
+Comparação automatizada de todos os campos usa fixture TSV independente da implementação Java, extraída estaticamente apenas dos literais da função homologada, sem executar seu código nem reabrir o inventário. A fixture contém somente taxonomia do produto, sem dados operacionais reais. Catálogo e listas internas são imutáveis e identificados como FINEMP_WEB_1. PostgreSQL cobre rollback após inserts, concorrência seed/seed e seed/cadastro, plano parcial, permissão, CSRF e Empresa.
 
 ## VALIDAÇÃO
 
