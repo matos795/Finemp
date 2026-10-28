@@ -451,7 +451,15 @@ POST no mesmo item com /settlement-reversals recebe somente expectedVersion. Lim
 
 Ambos respondem200 com recibo imutável; GET fornece o estado atual. Reenvio de baixa após estorno retorna o recibo original sem reaplicar pagamento. Tratar409 por versão/chave,403 por revogação e400 para campos não permitidos. O recibo público também admite SETTLED e SETTLEMENT_REVERSED. Ator/Empresa, nominal e classificadores são definidos/protegidos pelo backend; não são campos de baixa/estorno. Anexos e captura bruta seguem seus módulos. Ver [estados, evidências e garantias](architecture/financial-entry-settlement.md) e OpenAPI.
 
-## 16. Compatibilidade
+## 16. Consulta de transferências internas
+
+GET /api/companies/{companyId}/bank-transfers aceita page zero-based e size de1 a100 (padrão50). Retorna items e metadados usuais, ordenados por transferDate decrescente e UUID. GET no UUID retorna uma projeção atual da mesma Empresa. FINEMP_FINANCE_TRANSFERS_ENABLED e BANK_ACCOUNT_VIEW ou BANK_ACCOUNT_MANAGE ALL vigente são obrigatórios; papel ADMIN sozinho não libera acesso.
+
+Cada item contém identificadores e nomes atuais de origem/destino, transferDate, amount como texto decimal exato, description e version. Não converter moeda para Number para calcular totais no frontend, nem somar uma página como se fosse saldo completo. Não há cálculo de saldo novo neste bloco. Histórico preservado pode conter zero canônico; o comando de captura positivo é contrato distinto. Ator e estados privados de auditoria não são retornados.
+
+Tratar403 por acesso ausente/revogado,404 por UUID inexistente ou de outra Empresa,400 por paginação/UUID inválido e503 por consulta indisponível. Escritas HTTP de transferências continuam negadas neste incremento; os comandos internos já integrados serão expostos por contrato próprio.
+
+## 17. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

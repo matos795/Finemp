@@ -25,7 +25,62 @@ tags:
   - name: Result centers
   - name: Financial categories
   - name: Financial entries
+  - name: Financial bank transfers
 paths:
+  /api/companies/{companyId}/bank-transfers:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial bank transfers]
+      operationId: listBankTransfers
+      summary: Consulta transferências internas da Empresa com paginação no servidor.
+      description: FINEMP_FINANCE_TRANSFERS_ENABLED e BANK_ACCOUNT_VIEW ou MANAGE ALL vigente. Ordem por data decrescente e UUID. Sem cálculos de saldo; escrita HTTP ainda indisponível.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200':
+          description: Página de transferências com nomes atuais das duas contas.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BankTransferPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503':
+          description: Consulta temporariamente indisponível; mensagem sem detalhes internos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/ProblemDetail'}
+  /api/companies/{companyId}/bank-transfers/{transferId}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: transferId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Financial bank transfers]
+      operationId: getBankTransfer
+      summary: Consulta uma transferência da Empresa autorizada.
+      description: Mesmo opt-in e permissão da coleção. UUID ausente ou pertencente a outra Empresa retorna404; Empresa sem permissão retorna403.
+      responses:
+        '200':
+          description: Projeção atual, sem identidade de usuário ou auditoria privada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BankTransferRead'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503':
+          description: Consulta temporariamente indisponível.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/ProblemDetail'}
   /api/companies/{companyId}/financial-entries:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -3068,6 +3123,29 @@ components:
             items:
               type: array
               items: {$ref: '#/components/schemas/FinancialEntryRead'}
+    BankTransferRead:
+      type: object
+      required: [id, companyId, originBankAccountId, originBankAccountName, destinationBankAccountId, destinationBankAccountName, transferDate, amount, description, version]
+      properties:
+        id: {type: string, format: uuid}
+        companyId: {type: string, format: uuid}
+        originBankAccountId: {type: string, format: uuid}
+        originBankAccountName: {type: string}
+        destinationBankAccountId: {type: string, format: uuid}
+        destinationBankAccountName: {type: string}
+        transferDate: {type: string, format: date}
+        amount: {$ref: '#/components/schemas/NonNegativeCentAmount'}
+        description: {type: string, maxLength: 255}
+        version: {type: integer, format: int64, minimum: 0}
+    BankTransferPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/BankTransferRead'}
     FinancialDirection:
       type: string
       enum: [INCOME, EXPENSE]
