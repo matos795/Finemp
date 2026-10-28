@@ -26,8 +26,10 @@
 - **FATO CONFIRMADO:** #133/PR134 integrada: consulta financeira paginada,
   filtros homologados, projeções atuais, permissão vigente e moeda exata;
   contratos PostgreSQL/HTTP e CI verdes. Não libera escrita.
-- **EM IMPLEMENTAÇÃO:** #39, comandos canônicos internos na #135, com recibo
-  idempotente, versão e auditoria atômica; exposição HTTP é bloco posterior.
+- **FATO CONFIRMADO:** #135/PR137 integrada: comandos internos CREATE/UPDATE,
+  recibo idempotente, versão atual/esperada e auditoria atômica; 13 contratos PG.
+- **EM IMPLEMENTAÇÃO:** #39, exposição individual HTTP na #136, com sessão/CSRF,
+  autorização antes do corpo, JSON estrito, limites de recursos e opt-in separado.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo

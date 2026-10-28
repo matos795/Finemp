@@ -433,9 +433,17 @@ Com a mesma flag financeira, /api/companies/{companyId}/business-partners oferec
 
 ## 13. Consulta de lançamentos financeiros
 
-GET /api/companies/{companyId}/financial-entries e /{entryId} exigem FINANCIAL_ENTRY_VIEW ou MANAGE ALL explícitos e flag de entries. Resposta possui values tipado, rótulos financeiros mínimos, valores/custo/status calculados pelo backend, asOfDate e versão/timestamps. Moeda retorna string decimal exata. Páginas e filtros permanecem no servidor; período usa pagamento se houver, senão vencimento. Grupo de categoria e subárvore de centro são suportados, além de banco/parceiro/tipo/status/custo/busca literal. Não há CPF/CNPJ ou perfil completo do parceiro no resultado, nem nova escrita liberada. Filtros de anexos e comandos seguem módulos próprios. Ver [contrato e limites](architecture/financial-entry-queries.md) e OpenAPI.
+GET /api/companies/{companyId}/financial-entries e /{entryId} exigem FINANCIAL_ENTRY_VIEW ou MANAGE ALL explícitos e flag de entries. Resposta possui values tipado, rótulos financeiros mínimos, valores/custo/status calculados pelo backend, asOfDate e versão/timestamps. Moeda retorna string decimal exata. Páginas e filtros permanecem no servidor; período usa pagamento se houver, senão vencimento. Grupo de categoria e subárvore de centro são suportados, além de banco/parceiro/tipo/status/custo/busca literal. Não há CPF/CNPJ ou perfil completo do parceiro no resultado. A escrita individual tem opt-in e contrato próprios na seção14; anexos e demais operações seguem módulos próprios. Ver [contrato e limites](architecture/financial-entry-queries.md) e OpenAPI.
 
-## 14. Compatibilidade
+## 14. Criação e alteração individual de lançamentos
+
+POST /api/companies/{companyId}/financial-entries e PUT /{entryId} exigem a flag adicional FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED, além da flag de entries, MANAGE ALL vigente, sessão e CSRF. Catálogo2026-10-28.2 traz editAvailabilityCondition como condição extra da edição, somada à base; metadados não concedem acesso. Baixa, exclusão, transferência e séries não são afirmadas prontas por esse preset.
+
+Enviar Idempotency-Key UUID e corpo com values; expectedVersion é obrigatório no PUT e ausente/null no POST. Nominal deve ser texto decimal positivo já exato em centavos, sem números JSON, expoentes ou arredondamento implícito. Esse contrato limitado não resolve os pontos abertos de captura/subcentavos e parcelas da #128. Campos desconhecidos, duplicados e injeção de ator/Empresa/actualPaidAmount são rejeitados. Corpo máximo64KiB, application/json sem compressão.
+
+POST responde201 com Location; PUT responde200. Ambos retornam companyId/commandId/entryId/action/version do recibo imutável, inclusive em reenvio. Usar GET para obter estado atual, rótulos e valores. Preservar a mesma chave ao repetir após resposta perdida; outro conteúdo/ação com a mesma chave é409. Atualização com versão desatualizada também é409; não sobrescrever silenciosamente. Reenvio não restaura permissão revogada. Tratar413/415/429/503 separadamente;429 inclui Retry-After. Ver [garantias e limites](architecture/financial-entry-commands.md) e OpenAPI.
+
+## 15. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

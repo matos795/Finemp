@@ -1,6 +1,6 @@
 # Comandos internos de lançamento financeiro
 
-Referências: #39 e #135. Fase interna: não há controller de escrita neste bloco. A flag FINANCE_ENTRIES_ENABLED continua desabilitada por padrão.
+Referências: #39, #135 e #136. Serviço interno e exposição HTTP são incrementos separados. As flags de leitura e de escrita continuam desabilitadas por padrão.
 
 ## FATO CONFIRMADO — comportamento funcional
 
@@ -18,8 +18,18 @@ A chave UUID é única por Empresa e ator, compartilhada entre operações: reut
 
 Lançamento, evento com estados antes/depois e recibo são gravados na mesma transação. Qualquer falha reverte todos. O recibo contém apenas identificadores, ação e versão resultante; a consulta atual é separada. Evento/recibo não possuem FK para o lançamento, preservando histórico após futura exclusão. Os vínculos de Empresa e ator permanecem protegidos. Estados de auditoria são JSON de valores canônicos e não aparecem em logs, erros ou respostas; contêm informação financeira privada e exigirão política de consulta/retenção na #51. Não há alegação de trilha imutável contra administrador do banco.
 
+## DECISÃO técnica — API individual opt-in
+
+POST na coleção cria e responde201; PUT no UUID altera e responde200. Ambos recebem Idempotency-Key UUID e JSON com values; UPDATE exige expectedVersion, CREATE exige sua ausência ou null. Reenvio retorna o mesmo recibo e status, sem representar o estado atual. POST inclui Location para o GET do lançamento. Alteração sem diferenças pode manter versão, com recibo/evento próprios.
+
+FINEMP_FINANCE_ENTRIES_ENABLED e FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED devem estar explicitamente ativos. O catálogo versão2026-10-28.2 adiciona editAvailabilityCondition: condição adicional, somada à disponibilidade base. Esses metadados não são grants nem comprovam que todas as operações futuras da #39 já estejam prontas.
+
+A sessão/CSRF e MANAGE ALL vigente são validados antes de ler o corpo; o serviço revalida após bloquear a Empresa. Somente as duas rotas POST/PUT recebem o filtro financeiro, após AuthorizationFilter; Connector e outras rotas não mudam. Buffer limitado a64KiB, inclusive sem Content-Length ou com tamanho enganoso, até quatro requisições em processamento por instância. Não aceita compressão. Excesso retorna413; falta de capacidade429 com Retry-After1; encoding/tipo não suportado415. Capacidade é liberada mesmo em falha posterior. Esses limites são escolhas operacionais reversíveis.
+
+JSON rejeita chaves duplicadas, campos desconhecidos, profundidade/token/tamanho excedido e dados não tipados. Nominal é texto decimal positivo com até17 dígitos inteiros e duas casas, sem expoente ou arredondamento. Ator/Empresa/valor efetivamente pago não podem ser injetados pelo corpo. Valores nulos opcionais têm semântica explícita, inclusive paymentDate null retira pagamento na alteração. Erros têm códigos/mensagens fixos, sem payload ou SQL. Rotas de exclusão, baixa, estorno, transferências e séries não são liberadas por esse opt-in.
+
 ## PRÓXIMO PASSO / PONTO ABERTO
 
 UPDATE também bloqueia a linha do lançamento e consulta sua versão atual por SQL antes de usar o estado JPA. Versão esperada, versão atual e versão do objeto devem coincidir; contexto antigo falha de forma segura. O bloqueio mantém essa garantia inclusive em alteração sem diferença de estado.
 
-Exposição HTTP exige contrato, CSRF, autorização, controle de corpo e mapeamento seguro de erros próprios. Baixa/estorno, exclusão, transferências e séries continuam na #39. Valores brutos e efeitos binários legados da #128 não são decididos neste bloco. Consulta/exportação de auditoria e anexos pertencem à #51.
+Baixa/estorno, exclusão, transferências e séries continuam na #39. Valores brutos e efeitos binários legados da #128 não são decididos neste bloco. Consulta/exportação de auditoria e anexos pertencem à #51.

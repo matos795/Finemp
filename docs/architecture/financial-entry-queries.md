@@ -8,7 +8,7 @@ Categoria inclui suas subcategorias; centro inclui a subárvore com limite de se
 
 ## DECISÃO
 
-GET coleção e item em financial-entries são condicionais a FINEMP_FINANCE_ENTRIES_ENABLED. FINANCIAL_ENTRY_VIEW ou MANAGE explícitos ALL, consultados no banco; papel administrativo ou grant de outra Empresa/Cliente/Contabilidade não substitui permissão. Escritas permanecem negadas e não há novo comando nesta entrega.
+GET coleção e item em financial-entries são condicionais a FINEMP_FINANCE_ENTRIES_ENABLED. FINANCIAL_ENTRY_VIEW ou MANAGE explícitos ALL, consultados no banco; papel administrativo ou grant de outra Empresa/Cliente/Contabilidade não substitui permissão. A autorização de leitura não habilita escrita; criação/alteração individuais têm opt-in e contrato adicionais em [comandos](financial-entry-commands.md).
 
 Resposta por item contém identificador/Empresa, values tipado imutável, labels financeiros mínimos, custo e valor efetivos, status e data de referência, versão/timestamps. Valores monetários são strings decimais de duas casas. Rótulos de banco/categoria/parceiro/centro fazem parte do contexto do lançamento sob permissão financeira. Perfil completo do parceiro continua sob permissão própria; não retornar CPF/CNPJ, e-mail, telefone/endereço ou IDs dos atores de auditoria nesta consulta. Busca por documento do parceiro permanece restrita aos lançamentos da Empresa autorizada.
 
@@ -20,7 +20,7 @@ asOfDate explícito permite reproduzir classificação de vencidos. Ausente, usa
 
 ## PENDÊNCIAS ISOLADAS
 
-Anexos e seus filtros dependem da51. CRUD/idempotência/baixa/estorno/transferências e normalização monetária128 seguem os incrementos39; não ficam implicitamente prontos por existir GET. Este módulo não decide distribuição decimal versus efeitos binários legados, nem consulta Excel/Questor para renderizar uma página.
+Anexos e seus filtros dependem da51. Criação/alteração individual e recibos pertencem aos incrementos135/136; baixa/estorno/exclusão/transferências/séries e normalização monetária128 continuam na39. Essas operações não ficam implicitamente prontas por existir GET. Este módulo não decide distribuição decimal versus efeitos binários legados, nem consulta Excel/Questor para renderizar uma página.
 
 ## VALIDAÇÃO
 
