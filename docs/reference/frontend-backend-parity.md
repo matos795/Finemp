@@ -28,8 +28,11 @@
   contratos PostgreSQL/HTTP e CI verdes. Não libera escrita.
 - **FATO CONFIRMADO:** #135/PR137 integrada: comandos internos CREATE/UPDATE,
   recibo idempotente, versão atual/esperada e auditoria atômica; 13 contratos PG.
-- **EM IMPLEMENTAÇÃO:** #39, exposição individual HTTP na #136, com sessão/CSRF,
-  autorização antes do corpo, JSON estrito, limites de recursos e opt-in separado.
+- **FATO CONFIRMADO:** #136/PR138 integrada: API individual CREATE/UPDATE,
+  sessão/CSRF, autorização antes do corpo, JSON estrito, limites por rota
+  autorizada inclusive URI codificado e opt-in separado; nove contratos PG/HTTP.
+- **EM IMPLEMENTAÇÃO:** #39, baixa/estorno internos na #139, com transições
+  canônicas, versão atual/esperada, recibo idempotente e auditoria atômica.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo

@@ -11,8 +11,11 @@ import org.springframework.stereotype.Component;
 public class EntryCommandReferences {
     private final JdbcTemplate jdbc;
     public EntryCommandReferences(JdbcTemplate jdbc) {this.jdbc=jdbc;}
+    void validateBank(UUID company,UUID bank) {
+        require(bank!=null && exists("SELECT EXISTS(SELECT 1 FROM financial_bank_accounts WHERE company_id=? AND id=?)",company,bank));
+    }
     void validate(UUID company,FinancialEntryCommandData data,FinancialEntryValues previous) {
-        require(exists("SELECT EXISTS(SELECT 1 FROM financial_bank_accounts WHERE company_id=? AND id=?)",company,data.bankAccountId()));
+        validateBank(company,data.bankAccountId());
         require(exists("SELECT EXISTS(SELECT 1 FROM financial_categories WHERE company_id=? AND id=? AND kind='SUBCATEGORY' AND direction=?)",
                 company,data.categoryId(),data.direction().name()));
         if(data.partnerId()!=null)require(exists("SELECT EXISTS(SELECT 1 FROM business_partners WHERE company_id=? AND id=? AND role IN ('BOTH',?))",
