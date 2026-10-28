@@ -3582,6 +3582,9 @@ components:
         - FINANCIAL_CATEGORY_MANAGE
         - FINANCIAL_ENTRY_VIEW
         - FINANCIAL_ENTRY_MANAGE
+        - FINANCIAL_PERIOD_VIEW
+        - FINANCIAL_PERIOD_CLOSE
+        - FINANCIAL_PERIOD_REOPEN
     CostCenterScope:
       type: string
       enum: [ALL, RESTRICTED]
