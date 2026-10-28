@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ResultCenterRepository extends JpaRepository<ResultCenter,UUID> {
     Optional<ResultCenter> findByIdAndCompanyId(UUID id,UUID companyId);
+    @Query("select center.code from ResultCenter center where center.company.id=:company and center.id=:id")
+    Optional<String> findCurrentCode(@Param("company") UUID company,@Param("id") UUID id);
     Optional<ResultCenter> findByCompanyIdAndCode(UUID companyId,String code);
     boolean existsByCompanyIdAndCode(UUID companyId,String code);
     boolean existsByCompanyIdAndParentId(UUID companyId,UUID parentId);

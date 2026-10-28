@@ -431,7 +431,11 @@ Com a mesma flag financeira, /api/companies/{companyId}/business-partners oferec
 
 /api/companies/{companyId}/financial-categories expõe lista paginada e item GET/PUT/DELETE; POST /groups cria grupo com uma sub inicial e POST /{groupId}/subcategories cria sub. FINANCIAL_CATEGORY_VIEW/MANAGE ALL explícitos; escrita exige MANAGE com CSRF. O backend gera códigos, controla versões e retorna raw e effective. NULL de atividade/custo na sub herda do grupo; NULL de DRE no PUT fotografa a classificação atual do grupo, preservando o handler homologado. Sub recém-criada sem DRE ainda usa fallback dinâmico. O cliente apenas apresenta essa distinção. Sem desativação: uso impede excluir, e grupo sem uso exclui seus filhos na mesma transação. POST /standard-plan inicializa explicitamente o plano homologado somente quando vazio; não mescla nem sobrescreve cadastros, e sua DRE inicial da sub é explícita conforme referência. Referências operacionais seguem39. Ver [regras e evidências](architecture/financial-categories.md).
 
-## 13. Compatibilidade
+## 13. Consulta de lançamentos financeiros
+
+GET /api/companies/{companyId}/financial-entries e /{entryId} exigem FINANCIAL_ENTRY_VIEW ou MANAGE ALL explícitos e flag de entries. Resposta possui values tipado, rótulos financeiros mínimos, valores/custo/status calculados pelo backend, asOfDate e versão/timestamps. Moeda retorna string decimal exata. Páginas e filtros permanecem no servidor; período usa pagamento se houver, senão vencimento. Grupo de categoria e subárvore de centro são suportados, além de banco/parceiro/tipo/status/custo/busca literal. Não há CPF/CNPJ ou perfil completo do parceiro no resultado, nem nova escrita liberada. Filtros de anexos e comandos seguem módulos próprios. Ver [contrato e limites](architecture/financial-entry-queries.md) e OpenAPI.
+
+## 14. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

@@ -24,7 +24,100 @@ tags:
   - name: Business partners
   - name: Result centers
   - name: Financial categories
+  - name: Financial entries
 paths:
+  /api/companies/{companyId}/financial-entries:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial entries]
+      operationId: listFinancialEntries
+      summary: Consulta lançamentos operacionais autorizados com filtros no servidor.
+      description: FINEMP_FINANCE_ENTRIES_ENABLED e FINANCIAL_ENTRY_VIEW ou MANAGE ALL explícitos. Rótulos financeiros mínimos não concedem acesso ao perfil completo do parceiro. Ordem por pagamento quando presente ou vencimento, depois UUID. Sem somatórios de páginas incompletas no cliente; nenhum writer é habilitado.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: from
+          in: query
+          schema: {type: string, format: date}
+          description: Início inclusivo da data de pagamento, se presente; caso contrário vencimento.
+        - name: to
+          in: query
+          schema: {type: string, format: date}
+          description: Fim inclusivo da mesma data de referência; não pode anteceder from.
+        - name: direction
+          in: query
+          schema: {$ref: '#/components/schemas/FinancialDirection'}
+        - name: status
+          in: query
+          schema: {$ref: '#/components/schemas/FinancialEntryReadStatus'}
+          description: OPEN inclui todos sem pagamento; OVERDUE restringe aos anteriores a asOfDate; PAID exige data de pagamento mesmo se futura.
+        - name: bankId
+          in: query
+          schema: {type: string, format: uuid}
+        - name: categoryId
+          in: query
+          schema: {type: string, format: uuid}
+          description: Categoria ou grupo com suas subcategorias.
+        - name: partnerId
+          in: query
+          schema: {type: string, format: uuid}
+        - name: centerId
+          in: query
+          schema: {type: string, format: uuid}
+          description: Raiz da subárvore da mesma Empresa; desconhecida retorna404 sem remover o filtro.
+        - name: withoutCenter
+          in: query
+          schema: {type: boolean, default: false}
+          description: Somente sem centro; não combinar com centerId.
+        - name: costBehavior
+          in: query
+          schema: {$ref: '#/components/schemas/CostBehavior'}
+          description: Classificação efetiva com override do lançamento antes da categoria/grupo/padrão.
+        - name: search
+          in: query
+          schema: {type: string, maxLength: 100, default: ''}
+          description: Busca literal sem diferença de caixa sobre descrição, rótulo/documento do parceiro, documento, observação e nome da categoria. Acentos são preservados.
+        - $ref: '#/components/parameters/FinancialAsOfDate'
+      responses:
+        '200':
+          description: Página tenant-scoped, com valores e classificação calculados pelo backend.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialEntryPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503':
+          description: Consulta temporariamente indisponível ou excedeu orçamento SQL; sem diagnóstico interno.
+  /api/companies/{companyId}/financial-entries/{entryId}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: entryId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Financial entries]
+      operationId: getFinancialEntry
+      summary: Consulta lançamento operacional da Empresa com VIEW ou MANAGE ALL.
+      parameters:
+        - $ref: '#/components/parameters/FinancialAsOfDate'
+      responses:
+        '200':
+          description: Estado e rótulos financeiros mínimos; não expõe perfil ou atores de auditoria.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialEntryRead'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503':
+          description: Consulta temporariamente indisponível; sem diagnóstico interno.
   /api/companies/{companyId}/financial-categories:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -1942,6 +2035,11 @@ components:
       name: JSESSIONID
       description: Sessão HTTP mantida em cookie HttpOnly.
   parameters:
+    FinancialAsOfDate:
+      name: asOfDate
+      in: query
+      schema: {type: string, format: date}
+      description: Data explícita para classificar vencidos; ausente usa o calendário FINEMP_FINANCE_CALENDAR_ZONE (padrão America/Sao_Paulo). Datas ISO anos1–9999; não altera datas armazenadas.
     AccountingSourceId:
       name: accountingSourceId
       in: path
@@ -2644,6 +2742,74 @@ components:
           type: string
         total:
           $ref: '#/components/schemas/DecimalAmount'
+    NonNegativeCentAmount:
+      type: string
+      pattern: '^[0-9]+[.][0-9]{2}$'
+      maxLength: 20
+      description: Decimal canônico não negativo em duas casas, preservado como string.
+      examples: ['0.00', '210.50']
+    FinancialEntryReadStatus:
+      type: string
+      enum: [OPEN, PAID, OVERDUE]
+    FinancialEntryValues:
+      type: object
+      required: [direction, description, nominalAmount, documentDate, entryDate, competence, dueDate, bankAccountId, categoryId, paymentMethod, documentNumber, notes]
+      properties:
+        direction: {$ref: '#/components/schemas/FinancialDirection'}
+        description: {type: string, minLength: 2, maxLength: 255}
+        nominalAmount: {$ref: '#/components/schemas/NonNegativeCentAmount'}
+        documentDate: {type: string, format: date}
+        entryDate: {type: string, format: date}
+        competence: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', examples: ['2026-06']}
+        dueDate: {type: string, format: date}
+        paymentDate: {type: [string, 'null'], format: date}
+        actualPaidAmount:
+          anyOf:
+            - $ref: '#/components/schemas/NonNegativeCentAmount'
+            - type: 'null'
+        bankAccountId: {type: string, format: uuid}
+        categoryId: {type: string, format: uuid}
+        partnerId: {type: [string, 'null'], format: uuid}
+        resultCenterId: {type: [string, 'null'], format: uuid}
+        costBehaviorOverride:
+          anyOf:
+            - $ref: '#/components/schemas/CostBehavior'
+            - type: 'null'
+        paymentMethod: {type: string, maxLength: 80}
+        documentNumber: {type: string, maxLength: 255}
+        notes: {type: string, maxLength: 4000}
+    FinancialEntryRead:
+      type: object
+      required: [id, companyId, values, labels, effectiveCostBehavior, effectiveAmount, status, asOfDate, createdAt, updatedAt, version]
+      properties:
+        id: {type: string, format: uuid}
+        companyId: {type: string, format: uuid}
+        values: {$ref: '#/components/schemas/FinancialEntryValues'}
+        labels:
+          type: object
+          properties:
+            bankName: {type: string}
+            categoryCode: {type: string}
+            categoryName: {type: string}
+            partnerName: {type: string, description: Rótulo financeiro; sem documento ou perfil completo.}
+            centerCode: {type: string}
+            centerName: {type: string}
+        effectiveCostBehavior: {$ref: '#/components/schemas/CostBehavior'}
+        effectiveAmount: {$ref: '#/components/schemas/NonNegativeCentAmount'}
+        status: {$ref: '#/components/schemas/FinancialEntryReadStatus'}
+        asOfDate: {type: string, format: date}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        version: {type: integer, format: int64, minimum: 0}
+    FinancialEntryPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/FinancialEntryRead'}
     FinancialDirection:
       type: string
       enum: [INCOME, EXPENSE]
@@ -2848,6 +3014,8 @@ components:
         - RESULT_CENTER_MANAGE
         - FINANCIAL_CATEGORY_VIEW
         - FINANCIAL_CATEGORY_MANAGE
+        - FINANCIAL_ENTRY_VIEW
+        - FINANCIAL_ENTRY_MANAGE
     CostCenterScope:
       type: string
       enum: [ALL, RESTRICTED]
