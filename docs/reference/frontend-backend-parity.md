@@ -42,7 +42,8 @@
   transferências com autorização vigente, recibos, auditoria e versão;
   treze contratos PostgreSQL passaram.
 - **EM IMPLEMENTAÇÃO:** #39, consulta paginada de transferências na #147.
-  Escrita HTTP será entregue em incremento próprio.
+  Escrita HTTP na #149, com opt-in adicional, autorização antes do corpo,
+  JSON estrito e proteção compartilhada dos lançamentos.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
