@@ -90,6 +90,11 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(
+                                                                "/api/companies/{companyId}/business-partners",
+                                                                "/api/companies/{companyId}/business-partners/{partnerId}")
+                                                .authenticated()
+
+                                                .requestMatchers(
                                                                 "/api/companies/{companyId}/**")
                                                 .denyAll()
 

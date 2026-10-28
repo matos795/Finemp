@@ -14,7 +14,7 @@ class AccessCatalogTest {
     void shouldExposeOnlyImplementedScreenPresetsWithoutInferringFinancialAccessFromAdministration() {
         var catalog = AccessCatalog.current();
         assertThat(catalog.companyScreenPresets()).extracting(AccessCatalog.ScreenPreset::id)
-                .containsExactly("accounting-ledger", "accounting-dre", "account-classification", "questor-import", "sync-history", "financial-bank-accounts");
+                .containsExactly("accounting-ledger", "accounting-dre", "account-classification", "questor-import", "sync-history", "financial-bank-accounts", "business-partners");
         var dre = catalog.companyScreenPresets().get(1);
         assertThat(dre.viewPermissions()).containsExactly(CompanyPermission.DRE_VIEW);
         assertThat(dre.editAvailable()).isFalse();
