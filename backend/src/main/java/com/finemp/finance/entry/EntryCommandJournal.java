@@ -26,7 +26,7 @@ public class EntryCommandJournal {
         jdbc.update("""
                 INSERT INTO financial_entry_events(id,company_id,actor_id,command_id,entry_id,action,before_version,after_version,before_state,after_state,occurred_at)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?)
-                """,UUID.randomUUID(),receipt.companyId(),actor,receipt.commandId(),receipt.entryId(),receipt.action().name(),beforeVersion,receipt.version(),
+                """,UUID.randomUUID(),receipt.companyId(),actor,receipt.commandId(),receipt.entryId(),receipt.action().name(),beforeVersion,after==null?null:receipt.version(),
                 before==null?null:state(before),state(after),now);
         jdbc.update("""
                 INSERT INTO financial_entry_command_receipts(company_id,actor_id,command_id,fingerprint,entry_id,action,result_version,committed_at)
@@ -34,6 +34,7 @@ public class EntryCommandJournal {
                 """,receipt.companyId(),actor,receipt.commandId(),fingerprint,receipt.entryId(),receipt.action().name(),receipt.version(),now);
     }
     private String state(FinancialEntryValues values) {
+        if(values==null)return null;
         // Persist canonical strings; never rely on locale, binary amounts, or date-module defaults.
         var state=new TreeMap<String,String>();
         state.put("schema","FINEMP_ENTRY_STATE_V1");state.put("direction",values.direction().name());state.put("description",values.description());
