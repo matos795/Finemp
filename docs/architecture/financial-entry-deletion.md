@@ -22,6 +22,10 @@ DELETE no item financeiro recebe expectedVersion pela query e Idempotency-Key UU
 
 O mesmo gerenciador de autorização limpa a marca de corpo para DELETE, mantendo a proteção de POST/PUT/baixa/estorno. Não lê nem exige JSON para excluir; uma URL codificada segue a mesma autorização normalizada. Reenvio mantém a chave/versão originais, inclusive após exclusão. A resposta é recibo de comando e não recurso atual.
 
+FormContentFilter padrão do Spring Boot foi desabilitado explicitamente nesta API JSON (spring.mvc.formcontent.filter.enabled=false). Esse filtro lê formulários de PUT/PATCH/DELETE antes do gate financeiro e poderia transformar expectedVersion do corpo em parâmetro de exclusão. Nenhuma rota implementada depende desse parsing. Os contratos PostgreSQL verificam sua ausência, rejeitam versão apenas no formulário e preservam o registro/auditoria; versão na query continua prevalecendo sobre texto do corpo. Essa configuração deve permanecer desabilitada.
+
+As duas rotas de exclusão também obtêm a versão diretamente de getQueryString, sem acessar o mapa de parâmetros do servlet. O leitor compartilhado limita a query e exige uma única expectedVersion decimal não negativa, sem duplicatas ou ambiguidade de codificação. Isso mantém a origem exclusivamente na URL mesmo se um container ou harness de teste já tiver preenchido parâmetros a partir do corpo. Os testes usam queryParam para expressar a URL real, em vez de injetar parâmetros genéricos.
+
 ## PRÓXIMO PASSO / PONTO ABERTO
 
 Metadados/remoção de séries e exclusão em lote terão incrementos próprios. Estoque e origens vinculadas serão integrados nos módulos dependentes; a referência de exclusão deve ser preservada. A regra monetária bruta/parcelas continua aberta na #128 e não é decidida por este comando.

@@ -31,6 +31,7 @@ class BankTransferCommandHttpIntegrationTest {
     @Autowired BankTransferRepository transfers;@Autowired BankAccountRepository banks;
     @Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;
     @Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;@Autowired JdbcTemplate jdbc;@Autowired MockMvc mvc;
+    @Autowired org.springframework.context.ApplicationContext context;
     Company owner,other;UserAccount manager,viewer,restricted,admin;
     UUID origin,destination,foreignBank,foreignTransfer;
     final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>(),userIds=new ArrayList<>();
@@ -69,7 +70,7 @@ class BankTransferCommandHttpIntegrationTest {
         mvc.perform(post(route()).with(csrf()).contentType("application/json").content(large)).andExpect(status().isUnauthorized());
         mvc.perform(post(route()).with(user(new UserAccountPrincipal(manager))).contentType("application/json").content(large)).andExpect(status().isForbidden());
         for(var actor:List.of(viewer,admin,restricted))mvc.perform(post(route()).with(user(new UserAccountPrincipal(actor))).with(csrf()).contentType("application/json").content(large)).andExpect(status().isForbidden());
-        mvc.perform(delete(route()+"/"+foreignTransfer).with(user(new UserAccountPrincipal(manager))).header("Idempotency-Key",UUID.randomUUID()).param("expectedVersion","0")).andExpect(status().isForbidden());empty();
+        mvc.perform(delete(route()+"/"+foreignTransfer).with(user(new UserAccountPrincipal(manager))).header("Idempotency-Key",UUID.randomUUID()).queryParam("expectedVersion","0")).andExpect(status().isForbidden());empty();
     }
     @Test void revocationMustDenyReplayAndDeleteFromAnExistingPrincipal()throws Exception {
         var key=UUID.randomUUID();var response=create(key,body()).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();var id=UUID.fromString(json.readTree(response).get("transferId").asString());
@@ -107,8 +108,17 @@ class BankTransferCommandHttpIntegrationTest {
         remove(UUID.randomUUID(),UUID.fromString("00000001-0001-0001-0001-000000000001"),0).andExpect(status().isNotFound());
         assertThat(count("financial_bank_transfers")).isEqualTo(1);
     }
+    @Test void formContentFilterMustBeAbsentAndBodyVersionMustNeverDeleteTheTransfer()throws Exception {
+        assertThat(context.getBeansOfType(org.springframework.web.filter.FormContentFilter.class)).isEmpty();
+        var created=create(UUID.randomUUID(),body()).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var id=UUID.fromString(json.readTree(created).get("transferId").asString());
+        mvc.perform(delete(route()+"/"+id).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID())
+                .contentType("application/x-www-form-urlencoded").content("expectedVersion=0"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_BANK_TRANSFER_COMMAND"));
+        assertThat(transfers.findById(id)).isPresent();assertThat(count("financial_bank_transfer_events")).isEqualTo(1);
+    }
     ResultActions create(UUID key,String body)throws Exception {return mvc.perform(post(route()).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body));}
-    ResultActions remove(UUID key,UUID id,long version)throws Exception {return mvc.perform(delete(route()+"/"+id).param("expectedVersion",Long.toString(version)).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",key));}
+    ResultActions remove(UUID key,UUID id,long version)throws Exception {return mvc.perform(delete(route()+"/"+id).queryParam("expectedVersion",Long.toString(version)).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",key));}
     String body() {return "{\"values\":{\"originBankAccountId\":\""+origin+"\",\"destinationBankAccountId\":\""+destination+"\",\"transferDate\":\"2026-07-01\",\"amount\":\"1.23\",\"description\":\"Synthetic HTTP transfer\"}}";}
     String route() {return "/api/companies/"+owner.getId()+"/bank-transfers";}
     void empty() {for(var table:List.of("financial_bank_transfers","financial_bank_transfer_events","financial_bank_transfer_command_receipts"))assertThat(count(table)).isZero();}

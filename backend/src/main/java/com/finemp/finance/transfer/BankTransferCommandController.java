@@ -1,6 +1,8 @@
 package com.finemp.finance.transfer;
 
 import com.finemp.security.UserAccountPrincipal;
+import com.finemp.finance.http.ExpectedVersionQuery;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,7 +25,7 @@ public class BankTransferCommandController {
     }
     @DeleteMapping("/{transferId}")
     public BankTransferCommandReceipt delete(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,@PathVariable UUID transferId,
-            @RequestHeader("Idempotency-Key") UUID command,@RequestParam Long expectedVersion) {
-        return service.delete(actor.getUserAccountId(),companyId,command,transferId,expectedVersion);
+            @RequestHeader("Idempotency-Key") UUID command,HttpServletRequest request) {
+        return service.delete(actor.getUserAccountId(),companyId,command,transferId,ExpectedVersionQuery.required(request.getQueryString()));
     }
 }

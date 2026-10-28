@@ -31,7 +31,7 @@ class BankTransferCommandHttpTest {
         mvc.perform(post(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body()))
                 .andExpect(status().isCreated()).andExpect(header().string("Location",route()+"/"+id)).andExpect(jsonPath("$.transferId").value(id.toString()));
         when(service.delete(actor,company,key,id,0L)).thenReturn(new BankTransferCommandReceipt(company,key,id,BankTransferCommandAction.DELETED,0));
-        mvc.perform(delete(route()+"/"+id).param("expectedVersion","0").with(user(principal())).with(csrf()).header("Idempotency-Key",key))
+        mvc.perform(delete(route()+"/"+id).queryParam("expectedVersion","0").with(user(principal())).with(csrf()).header("Idempotency-Key",key))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("DELETED"));
     }
     @Test void currentDenialOrMissingCsrfMustPrecedeOversizedBodyHandling()throws Exception {
@@ -44,6 +44,11 @@ class BankTransferCommandHttpTest {
         mvc.perform(post(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body().replace("\"amount\":\"1.23\"","\"amount\":1.23")))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_BANK_TRANSFER_COMMAND"));
         mvc.perform(delete(route()+"/"+id).with(user(principal())).with(csrf()).header("Idempotency-Key",key)).andExpect(status().isBadRequest());verifyNoInteractions(service);
+    }
+    @Test void formBodyMustNotSupplyTheVersionMissingFromTheQuery()throws Exception {
+        allow();mvc.perform(delete(route()+"/"+id).with(user(principal())).with(csrf()).header("Idempotency-Key",key)
+                .contentType("application/x-www-form-urlencoded").content("expectedVersion=0"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_BANK_TRANSFER_COMMAND"));verifyNoInteractions(service);
     }
     void allow() {when(sessions.isCurrent(any())).thenReturn(true);when(permissions.hasFreshPermission(actor,company,CompanyPermission.BANK_ACCOUNT_MANAGE)).thenReturn(true);}
     String route() {return "/api/companies/"+company+"/bank-transfers";}

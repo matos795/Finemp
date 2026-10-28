@@ -28,19 +28,24 @@ class EntryDeletionHttpTest {
     final UUID actor=UUID.randomUUID(),company=UUID.randomUUID(),id=UUID.randomUUID(),key=UUID.randomUUID();
     @Test void bodylessDeletionMustReturnTheOriginalReceiptWithoutRequiringJson()throws Exception {
         allow();when(service.delete(actor,company,key,id,0L)).thenReturn(new FinancialEntryCommandReceipt(company,key,id,EntryCommandAction.DELETED,0));
-        mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).param("expectedVersion","0"))
+        mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).queryParam("expectedVersion","0"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("DELETED"));verify(service).delete(actor,company,key,id,0L);
     }
     @Test void missingCsrfAndCurrentPermissionMustFailBeforeServiceInvocation()throws Exception {
-        allow();mvc.perform(delete(route()).with(user(principal())).header("Idempotency-Key",key).param("expectedVersion","0")).andExpect(status().isForbidden());
+        allow();mvc.perform(delete(route()).with(user(principal())).header("Idempotency-Key",key).queryParam("expectedVersion","0")).andExpect(status().isForbidden());
         when(permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE)).thenReturn(false);
-        mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).param("expectedVersion","0")).andExpect(status().isForbidden());verifyNoInteractions(service);
+        mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).queryParam("expectedVersion","0")).andExpect(status().isForbidden());verifyNoInteractions(service);
     }
     @Test void missingOrInvalidVersionAndHeaderMustReturnFixedBadRequest()throws Exception {
         allow();mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_FINANCIAL_ENTRY_COMMAND"));
-        mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).param("expectedVersion","private-invalid"))
+        mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key).queryParam("expectedVersion","private-invalid"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value("Comando financeiro inválido."));
-        mvc.perform(delete(route()).with(user(principal())).with(csrf()).param("expectedVersion","0")).andExpect(status().isBadRequest());verifyNoInteractions(service);
+        mvc.perform(delete(route()).with(user(principal())).with(csrf()).queryParam("expectedVersion","0")).andExpect(status().isBadRequest());verifyNoInteractions(service);
+    }
+    @Test void formBodyMustNotSupplyTheVersionMissingFromTheQuery()throws Exception {
+        allow();mvc.perform(delete(route()).with(user(principal())).with(csrf()).header("Idempotency-Key",key)
+                .contentType("application/x-www-form-urlencoded").content("expectedVersion=0"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_FINANCIAL_ENTRY_COMMAND"));verifyNoInteractions(service);
     }
     void allow() {when(sessions.isCurrent(any())).thenReturn(true);when(permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE)).thenReturn(true);}
     String route() {return "/api/companies/"+company+"/financial-entries/"+id;}

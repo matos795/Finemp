@@ -34,6 +34,10 @@ O incremento #149 adiciona FINEMP_FINANCE_TRANSFER_COMMANDS_ENABLED, desabilitad
 
 A autorização da rota normalizada marca somente o POST com um atributo interno do servidor. O filtro usa essa decisão e o mesmo mecanismo compartilhado dos lançamentos, preservando seus marcadores/códigos existentes:64KiB mesmo sem Content-Length confiável, até quatro corpos por instância, JSON sem compressão e liberação de capacidade em falhas. Não compara URI bruto. As duas famílias têm marcadores e instâncias de filtro distintos. DELETE não marca nem consome corpo. Decoder rejeita campos desconhecidos/duplicados, coerções, expoentes, tipos errados, profundidade/tamanho excessivos, UUID abreviado e texto inválido. Não recebe contexto do ator/Empresa no payload.
 
+O parsing global de formulários de PUT/PATCH/DELETE pelo FormContentFilter está explicitamente desabilitado na configuração da API JSON. Isso impede que expectedVersion em corpo form-urlencoded seja aceito no lugar da query, inclusive em transferências. Há regressões MVC e PostgreSQL para impedir exclusão/auditoria por esse caminho.
+
+O controlador lê expectedVersion exclusivamente da query bruta da URL, por componente compartilhado com exclusão de lançamentos. Nunca usa parâmetros de formulário. Versões duplicadas, ausentes, negativas ou ambíguas são400 antes do comando. O campo continua sendo versão técnica, sem criar regra financeira nova.
+
 ## PONTO ABERTO / PRÓXIMO PASSO
 
 A normalização de valores brutos e os efeitos monetários legados continuam na #128. Não foram resolvidos por uma coluna decimal. Exclusão de lançamentos, séries e conciliação continuam nos incrementos dependentes da #39/#40. Não existe operação de alteração homologada no formulário de transferências; não será inventada.

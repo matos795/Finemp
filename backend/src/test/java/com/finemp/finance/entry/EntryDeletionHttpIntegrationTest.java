@@ -31,6 +31,7 @@ class EntryDeletionHttpIntegrationTest {
     @Autowired FinancialEntryCommandService creator;@Autowired FinancialEntryRepository entries;@Autowired BankAccountRepository banks;@Autowired FinancialCategoryRepository categories;
     @Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;
     @Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;@Autowired JdbcTemplate jdbc;@Autowired MockMvc mvc;
+    @Autowired org.springframework.context.ApplicationContext context;
     Company owner,other;UserAccount manager,viewer,restricted;UUID bank,category,entry,foreignEntry,createKey;
     final LocalDate date=LocalDate.of(2026,7,1);
     final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>(),userIds=new ArrayList<>();
@@ -62,14 +63,14 @@ class EntryDeletionHttpIntegrationTest {
         remove(key,entry,0).andExpect(status().isForbidden());assertThat(count("financial_entry_events")).isEqualTo(2);
     }
     @Test void authenticationCsrfAndExplicitManageAreRequiredBeforeDeletion()throws Exception {
-        mvc.perform(delete(route()+"/"+entry).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).param("expectedVersion","0")).andExpect(status().isUnauthorized());
-        mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(manager))).header("Idempotency-Key",UUID.randomUUID()).param("expectedVersion","0")).andExpect(status().isForbidden());
-        for(var actor:List.of(viewer,restricted))mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(actor))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).param("expectedVersion","0")).andExpect(status().isForbidden());
+        mvc.perform(delete(route()+"/"+entry).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).queryParam("expectedVersion","0")).andExpect(status().isUnauthorized());
+        mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(manager))).header("Idempotency-Key",UUID.randomUUID()).queryParam("expectedVersion","0")).andExpect(status().isForbidden());
+        for(var actor:List.of(viewer,restricted))mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(actor))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).queryParam("expectedVersion","0")).andExpect(status().isForbidden());
         assertThat(entries.findById(entry)).isPresent();assertThat(count("financial_entry_events")).isEqualTo(1);
     }
     @Test void foreignTargetsAndCompaniesMustRemainInvisibleAndUnchanged()throws Exception {
         remove(UUID.randomUUID(),foreignEntry,0).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("FINANCIAL_ENTRY_NOT_FOUND"));
-        mvc.perform(delete("/api/companies/"+other.getId()+"/financial-entries/"+foreignEntry).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).param("expectedVersion","0")).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/companies/"+other.getId()+"/financial-entries/"+foreignEntry).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).queryParam("expectedVersion","0")).andExpect(status().isForbidden());
         assertThat(entries.findById(foreignEntry)).isPresent();assertThat(count("financial_entry_events")).isEqualTo(1);
     }
     @Test void expectedVersionAndSharedActionKeyMustConflictWithoutPartialEffects()throws Exception {
@@ -82,12 +83,22 @@ class EntryDeletionHttpIntegrationTest {
     @Test void invalidVersionOrHeaderAndEncodedRouteMustKeepFixedErrorsWithoutReadingBodies()throws Exception {
         mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID())).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_FINANCIAL_ENTRY_COMMAND"));
         remove(UUID.randomUUID(),entry,-1).andExpect(status().isBadRequest());
-        mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(manager))).with(csrf()).param("expectedVersion","0")).andExpect(status().isBadRequest());
+        mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(manager))).with(csrf()).queryParam("expectedVersion","0")).andExpect(status().isBadRequest());
         var encoded=java.net.URI.create((route()+"/"+entry).replace("financial-entries","%66inancial-entries"));
-        mvc.perform(delete(encoded).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).param("expectedVersion","0").contentType("text/plain").content("Ignored body"))
+        mvc.perform(delete(encoded).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).queryParam("expectedVersion","0").contentType("text/plain").content("Ignored body"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("DELETED"));assertThat(entries.findById(entry)).isEmpty();
     }
-    ResultActions remove(UUID key,UUID id,long version)throws Exception {return mvc.perform(delete(route()+"/"+id).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",key).param("expectedVersion",Long.toString(version)));}
+    @Test void formContentFilterMustBeAbsentAndBodyVersionMustNeverDeleteTheEntry()throws Exception {
+        assertThat(context.getBeansOfType(org.springframework.web.filter.FormContentFilter.class)).isEmpty();
+        mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID())
+                .contentType("application/x-www-form-urlencoded").content("expectedVersion=0"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_FINANCIAL_ENTRY_COMMAND"));
+        assertThat(entries.findById(entry)).isPresent();assertThat(count("financial_entry_events")).isEqualTo(1);assertThat(count("financial_entry_command_receipts")).isEqualTo(1);
+        mvc.perform(delete(route()+"/"+entry).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).queryParam("expectedVersion","1")
+                .contentType("application/x-www-form-urlencoded").content("expectedVersion=0")).andExpect(status().isConflict());
+        assertThat(entries.findById(entry)).isPresent();
+    }
+    ResultActions remove(UUID key,UUID id,long version)throws Exception {return mvc.perform(delete(route()+"/"+id).with(user(new UserAccountPrincipal(manager))).with(csrf()).header("Idempotency-Key",key).queryParam("expectedVersion",Long.toString(version)));}
     String route() {return "/api/companies/"+owner.getId()+"/financial-entries";}
     FinancialEntryCommandData data(LocalDate paid) {return new FinancialEntryCommandData(FinancialDirection.EXPENSE,"Synthetic HTTP deletion",new BigDecimal("1.23"),date,date,YearMonth.of(2026,7),date,paid,bank,category,null,null,null,"","","");}
     long count(String table) {return jdbc.queryForObject("SELECT count(*) FROM "+table+" WHERE company_id=?",Long.class,owner.getId());}
