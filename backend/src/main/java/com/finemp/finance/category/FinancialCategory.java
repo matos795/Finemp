@@ -50,11 +50,8 @@ public class FinancialCategory {
     public EffectiveClassification effective(FinancialCategory parent) {
         if(kind==Kind.GROUP && parent!=null)throw invalid();
         if(kind==Kind.SUBCATEGORY)requireParent(parent);
-        CashActivity activity=cashActivity!=null?cashActivity:parent==null?CashActivity.OPERATING:parent.cashActivity;
-        OperationalDreLine dre=dreLine!=null?dreLine:parent==null?OperationalDreLine.NAO:parent.dreLine;
-        CostBehavior cost=costBehavior!=null?costBehavior:parent==null?null:parent.costBehavior;
-        if(cost==null)cost=direction==FinancialDirection.INCOME?CostBehavior.VARIABLE:CostBehavior.FIXED;
-        return new EffectiveClassification(activity==null?CashActivity.OPERATING:activity,dre==null?OperationalDreLine.NAO:dre,cost);
+        return FinancialCategoryClassification.resolve(direction,cashActivity,dreLine,costBehavior,
+                parent==null?null:parent.cashActivity,parent==null?null:parent.dreLine,parent==null?null:parent.costBehavior);
     }
     private void requireParent(FinancialCategory parent) {
         if(kind!=Kind.SUBCATEGORY || parent==null || parent.kind!=Kind.GROUP || !parentId.equals(parent.id)

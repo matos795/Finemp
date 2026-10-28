@@ -15,7 +15,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.*;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -27,10 +26,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties="finemp.finance.catalog.enabled=true")
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class,CategoryRepositoryTestProbe.class})
 class FinancialCategoryIntegrationTest {
     @Autowired FinancialCategoryService service;
-    @MockitoSpyBean FinancialCategoryRepository categories;
+    @Autowired FinancialCategoryRepository categories;
+    @Autowired CategoryRepositoryTestProbe.Probe probe;
     @Autowired CompanyRepository companies;
     @Autowired ClientRepository clients;
     @Autowired AccountingFirmRepository firms;
@@ -45,6 +45,7 @@ class FinancialCategoryIntegrationTest {
     private UUID groupId,subId,foreignId;
     private final List<UUID> ownUsers=new ArrayList<>(),clientIds=new ArrayList<>(),firmIds=new ArrayList<>();
     @BeforeEach void prepare() {
+        probe.reset();
         owner=company("Owner","67676767000167");other=company("Other","68686868000168");
         actor=createUser("Manager");viewer=createUser("Viewer");admin=createUser("Admin");restricted=createUser("Restricted");
         grant(actor,CompanyAccessRole.CUSTOM,CostCenterScope.ALL,Set.of(CompanyPermission.FINANCIAL_CATEGORY_MANAGE));
@@ -56,6 +57,7 @@ class FinancialCategoryIntegrationTest {
         foreignId=categories.saveAndFlush(FinancialCategory.group(other,FinancialDirection.EXPENSE,1,"Foreign Expense")).getId();
     }
     @AfterEach void cleanOwnedSyntheticFixtures() {
+        probe.reset();
         for(var company:List.of(owner,other)) {
             jdbc.update("DELETE FROM financial_categories WHERE company_id=?",company.getId());
             jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)",company.getId());
@@ -150,19 +152,41 @@ class FinancialCategoryIntegrationTest {
     }
     @Test void deletingAGroupAfterThePageQueryMustNotBreakItsAlreadyReadClassification()throws Exception {
         var loaded=new CountDownLatch(1);var proceed=new CountDownLatch(1);var pool=Executors.newSingleThreadExecutor();
-        doAnswer(call->{
-            Object page=call.callRealMethod();loaded.countDown();
-            if(!proceed.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Synthetic page barrier");
-            return page;
-        }).when(categories).search(eq(owner.getId()),eq(""),isNull(),isNull(),isNull(),any());
+        probe.afterSearch=()->{
+            loaded.countDown();
+            try {if(!proceed.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Synthetic page barrier");}
+            catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IllegalStateException("Synthetic interrupted barrier");}
+        };
         try {
             var reading=pool.submit(()->service.list(actor.getId(),owner.getId(),"",null,null,null,0,100));
-            assertThat(loaded.await(5,TimeUnit.SECONDS)).isTrue();
+            if(!loaded.await(5,TimeUnit.SECONDS)) {
+                if(reading.isDone())reading.get();
+                fail("Real page query did not reach the test barrier");
+            }
             service.delete(actor.getId(),owner.getId(),groupId,0);proceed.countDown();
             var page=reading.get(10,TimeUnit.SECONDS);
             assertThat(page.items()).hasSize(2);
             assertThat(page.items().stream().filter(row->row.id().equals(subId)).findFirst().orElseThrow().effective().dreLine()).isEqualTo(OperationalDreLine.REC);
             assertThat(categories.findById(groupId)).isEmpty();assertThat(categories.findById(subId)).isEmpty();
+        }finally {proceed.countDown();pool.shutdownNow();}
+    }
+    @Test void filteredReadMustUseCurrentScalarValuesEvenWithAnAlreadyManagedParent()throws Exception {
+        var loaded=new CountDownLatch(1);var proceed=new CountDownLatch(1);var pool=Executors.newSingleThreadExecutor();
+        try {
+            var reading=pool.submit(()->new TransactionTemplate(transactions).execute(status->{
+                var old=categories.findByIdAndCompanyId(groupId,owner.getId()).orElseThrow();
+                assertThat(old.getDreLine()).isEqualTo(OperationalDreLine.REC);loaded.countDown();
+                try {if(!proceed.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Synthetic managed-parent barrier");}
+                catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IllegalStateException("Synthetic interrupted barrier");}
+                return service.list(actor.getId(),owner.getId(),"",null,null,groupId,0,100);
+            }));
+            assertThat(loaded.await(5,TimeUnit.SECONDS)).isTrue();
+            service.update(actor.getId(),owner.getId(),groupId,new FinancialCategoryUpdateRequest("Changed",CashActivity.FINANCING,OperationalDreLine.NAO,CostBehavior.FIXED,0L));
+            var child=service.createSubcategory(actor.getId(),owner.getId(),groupId,new FinancialSubcategoryRequest("New Concurrent Child"));
+            proceed.countDown();
+            var page=reading.get(10,TimeUnit.SECONDS);
+            var read=page.items().stream().filter(row->row.id().equals(child.id())).findFirst().orElseThrow();
+            assertThat(read.effective()).isEqualTo(new FinancialCategory.EffectiveClassification(CashActivity.FINANCING,OperationalDreLine.NAO,CostBehavior.FIXED));
         }finally {proceed.countDown();pool.shutdownNow();}
     }
     private Company company(String suffix,String cnpj) {

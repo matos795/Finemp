@@ -67,7 +67,10 @@ public class FinancialCategoryService {
             FinancialCategory.Kind kind,UUID parentId,int page,int size) {
         requireRead(actor,company);
         if(page<0 || size<1 || size>100 || search!=null && search.length()>100)throw invalid();
-        if(parentId!=null)group(company,parentId);
+        if(parentId!=null) {
+            var currentKind=categories.findCurrentKind(company,parentId).orElseThrow(()->new SaasResourceNotFoundException("Categoria financeira"));
+            if(currentKind!=FinancialCategory.Kind.GROUP)throw conflict(FinancialCategoryConflictException.Reason.NOT_A_GROUP);
+        }
         var result=categories.search(company,search==null?"":FinancialCategory.searchKey(search),direction,kind,parentId,
                 PageRequest.of(page,size,Sort.by("sortKey").ascending().and(Sort.by("id"))));
         return PagedResponse.from(result,FinancialCategorySnapshot::response);
