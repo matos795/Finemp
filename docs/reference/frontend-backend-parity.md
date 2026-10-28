@@ -1,6 +1,6 @@
 # FINEMP — matriz integral de paridade funcional
 
-## Checkpoint de implementação — 27/10/2026
+## Checkpoint de implementação — 28/10/2026
 
 - **FATO CONFIRMADO:** #36 e #37 integradas: identidade, sessões, administração
   nos três escopos, grants explícitos e auditoria. RESTRICTED permanece negado
@@ -23,7 +23,12 @@
   sem acoplamento a uma política monetária presumida.
 - **FATO CONFIRMADO:** #131/PR132 integrada: persistência canônica de
   FinancialEntry e consultas reais de uso dos cadastros, sem writer de captura.
-- **EM IMPLEMENTAÇÃO:** #39, leitura financeira autorizada na #133. #128 registra
+- **FATO CONFIRMADO:** #133/PR134 integrada: consulta financeira paginada,
+  filtros homologados, projeções atuais, permissão vigente e moeda exata;
+  contratos PostgreSQL/HTTP e CI verdes. Não libera escrita.
+- **EM IMPLEMENTAÇÃO:** #39, comandos canônicos internos na #135, com recibo
+  idempotente, versão e auditoria atômica; exposição HTTP é bloco posterior.
+  #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
   preserva o baseline do inventário; este checkpoint registra avanços posteriores.
