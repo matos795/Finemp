@@ -62,6 +62,32 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/companies/{companyId}/financial-categories/standard-plan:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    post:
+      tags: [Financial categories]
+      operationId: createStandardFinancialCategoryPlan
+      summary: Inicializa explicitamente os metadados do plano homologado em uma Empresa sem categorias.
+      description: Exige FINANCIAL_CATEGORY_MANAGE ALL, sessão/CSRF e flag financeira. Somente plano integralmente vazio; não mescla nem sobrescreve cadastros. Onze grupos e sessenta subcategorias, sem lançamentos/valores. DRE das subs padrão é explícita na criação, diferente do addSub manual. Comando atômico e serializado com os cadastros; falha desfaz todo o plano.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '201':
+          description: Plano persistido; classificação continua calculada no backend.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, groups, subcategories]
+                properties:
+                  version: {type: string, const: FINEMP_WEB_1}
+                  groups: {type: integer, const: 11}
+                  subcategories: {type: integer, const: 60}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: PLAN_NOT_EMPTY ou conflito de concorrência; não publica plano parcial.
   /api/companies/{companyId}/financial-categories/groups:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
