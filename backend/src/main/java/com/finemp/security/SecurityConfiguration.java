@@ -27,6 +27,8 @@ import com.finemp.finance.entry.EntryCommandAuthorizationManager;
 import com.finemp.finance.entry.FinancialEntryPayloadLimitFilter;
 import com.finemp.finance.transfer.BankTransferCommandAuthorizationManager;
 import com.finemp.finance.transfer.BankTransferPayloadLimitFilter;
+import com.finemp.finance.period.PeriodCommandAuthorizationManager;
+import com.finemp.finance.period.PeriodPayloadLimitFilter;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 @Configuration
@@ -41,6 +43,8 @@ public class SecurityConfiguration {
                         QuestorImportAuthorizationManager questorImportAuthorizationManager,
                         EntryCommandAuthorizationManager financialCommands,
                         BankTransferCommandAuthorizationManager transferCommands,
+                        @org.springframework.beans.factory.annotation.Qualifier("periodCloseAuthorizationManager") PeriodCommandAuthorizationManager periodClose,
+                        @org.springframework.beans.factory.annotation.Qualifier("periodReopenAuthorizationManager") PeriodCommandAuthorizationManager periodReopen,
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
 
@@ -123,6 +127,20 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}")
                                                 .authenticated()
 
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/financial-periods",
+                                                                "/api/companies/{companyId}/financial-periods/{period}",
+                                                                "/api/companies/{companyId}/financial-periods/{period}/history")
+                                                .authenticated()
+
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/companies/{companyId}/financial-periods/{period}/closures")
+                                                .access(periodClose)
+
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/companies/{companyId}/financial-periods/{period}/reopenings")
+                                                .access(periodReopen)
+
                                                 .requestMatchers(HttpMethod.POST,
                                                                 "/api/companies/{companyId}/bank-transfers")
                                                 .access(transferCommands)
@@ -172,6 +190,8 @@ public class SecurityConfiguration {
                         http.addFilterAfter(new FinancialEntryPayloadLimitFilter(65536, 4), AuthorizationFilter.class);
                 if (transferCommands.isEnabled())
                         http.addFilterAfter(new BankTransferPayloadLimitFilter(65536, 4), AuthorizationFilter.class);
+                if (periodClose.isEnabled())
+                        http.addFilterAfter(new PeriodPayloadLimitFilter(65536, 4), AuthorizationFilter.class);
                 return http.build();
         }
 
@@ -189,6 +209,20 @@ public class SecurityConfiguration {
                         @Value("${finemp.finance.transfers.enabled:false}") boolean transfersEnabled,
                         @Value("${finemp.finance.transfers.commands.enabled:false}") boolean commandsEnabled) {
                 return new BankTransferCommandAuthorizationManager(permissions, transfersEnabled, commandsEnabled);
+        }
+
+        @Bean
+        PeriodCommandAuthorizationManager periodCloseAuthorizationManager(CompanyPermissionAuthorizationService permissions,
+                        @Value("${finemp.finance.periods.enabled:false}") boolean enabled,
+                        @Value("${finemp.finance.periods.commands.enabled:false}") boolean commandsEnabled) {
+                return new PeriodCommandAuthorizationManager(permissions,CompanyPermission.FINANCIAL_PERIOD_CLOSE,enabled,commandsEnabled);
+        }
+
+        @Bean
+        PeriodCommandAuthorizationManager periodReopenAuthorizationManager(CompanyPermissionAuthorizationService permissions,
+                        @Value("${finemp.finance.periods.enabled:false}") boolean enabled,
+                        @Value("${finemp.finance.periods.commands.enabled:false}") boolean commandsEnabled) {
+                return new PeriodCommandAuthorizationManager(permissions,CompanyPermission.FINANCIAL_PERIOD_REOPEN,enabled,commandsEnabled);
         }
 
         @Bean

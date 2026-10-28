@@ -19,6 +19,8 @@ finemp:
   finance:
     periods:
       enabled: ${FINEMP_FINANCE_PERIODS_ENABLED:false}
+      commands:
+        enabled: ${FINEMP_FINANCE_PERIOD_COMMANDS_ENABLED:false}
     transfers:
       enabled: ${FINEMP_FINANCE_TRANSFERS_ENABLED:false}
       commands:
