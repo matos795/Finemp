@@ -18,20 +18,34 @@ public class EntryCommandJournal {
     private final JsonMapper json=JsonMapper.builder().build();
     public EntryCommandJournal(JdbcTemplate jdbc,EntryCommandKeyRegistry keys) {this.jdbc=jdbc;this.keys=keys;}
     Optional<StoredReceipt> find(UUID company,UUID actor,UUID command) {
-        var result=jdbc.query("SELECT fingerprint,entry_id,action,result_version FROM financial_entry_command_receipts WHERE company_id=? AND actor_id=? AND command_id=?",
-                (row,index)->new StoredReceipt(row.getString("fingerprint"),new FinancialEntryCommandReceipt(company,command,row.getObject("entry_id",UUID.class),
-                        EntryCommandAction.valueOf(row.getString("action")),row.getLong("result_version"))),company,actor,command).stream().findFirst();
+        var result=jdbc.query("SELECT fingerprint,entry_id,action,result_version,deleted_entries FROM financial_entry_command_receipts WHERE company_id=? AND actor_id=? AND command_id=?",
+                (row,index)->new StoredReceipt(row.getString("fingerprint"),receipt(company,command,row.getObject("entry_id",UUID.class),
+                        EntryCommandAction.valueOf(row.getString("action")),row.getLong("result_version"),row.getString("deleted_entries"))),company,actor,command).stream().findFirst();
         if(result.isEmpty() && keys.exists(company,actor,command))throw new FinancialEntryCommandConflictException(FinancialEntryCommandConflictException.Reason.IDEMPOTENCY_MISMATCH);
         return result;
     }
     void append(UUID actor,String fingerprint,FinancialEntryCommandReceipt receipt,Long beforeVersion,FinancialEntryValues before,FinancialEntryValues after) {
         keys.claim(receipt.companyId(),actor,receipt.commandId(),EntryCommandKeyRegistry.Kind.INDIVIDUAL);
         appendEvent(actor,receipt,beforeVersion,before,after);
+        writeReceipt(actor,fingerprint,receipt);
+    }
+    void appendDeletion(UUID actor,String fingerprint,FinancialEntryCommandReceipt receipt,List<DeletedState> states) {
+        if(receipt.action()!=EntryCommandAction.DELETED || receipt.deletedEntries().size()!=states.size())throw new IllegalArgumentException("Resultado de exclusão inválido.");
+        keys.claim(receipt.companyId(),actor,receipt.commandId(),EntryCommandKeyRegistry.Kind.INDIVIDUAL);
+        for(int index=0;index<states.size();index++) {
+            var state=states.get(index);var result=receipt.deletedEntries().get(index);
+            if(!state.entryId().equals(result.entryId()) || state.version()!=result.version() || state.values()==null)throw new IllegalArgumentException("Resultado de exclusão inválido.");
+            appendEvent(actor,new FinancialEntryCommandReceipt(receipt.companyId(),receipt.commandId(),state.entryId(),EntryCommandAction.DELETED,state.version()),state.version(),state.values(),null);
+        }
+        writeReceipt(actor,fingerprint,receipt);
+    }
+    private void writeReceipt(UUID actor,String fingerprint,FinancialEntryCommandReceipt receipt) {
         var now=Timestamp.from(Instant.now());
         jdbc.update("""
-                INSERT INTO financial_entry_command_receipts(company_id,actor_id,command_id,fingerprint,entry_id,action,result_version,committed_at)
-                VALUES(?,?,?,?,?,?,?,?)
-                """,receipt.companyId(),actor,receipt.commandId(),fingerprint,receipt.entryId(),receipt.action().name(),receipt.version(),now);
+                INSERT INTO financial_entry_command_receipts(company_id,actor_id,command_id,fingerprint,entry_id,action,result_version,committed_at,deleted_entries)
+                VALUES(?,?,?,?,?,?,?,?,?)
+                """,receipt.companyId(),actor,receipt.commandId(),fingerprint,receipt.entryId(),receipt.action().name(),receipt.version(),now,
+                receipt.deletedEntries().isEmpty()?null:json.writeValueAsString(receipt.deletedEntries()));
     }
     void appendEvent(UUID actor,FinancialEntryCommandReceipt receipt,Long beforeVersion,FinancialEntryValues before,FinancialEntryValues after) {
         var now=Timestamp.from(Instant.now());
@@ -41,6 +55,20 @@ public class EntryCommandJournal {
                 """,UUID.randomUUID(),receipt.companyId(),actor,receipt.commandId(),receipt.entryId(),receipt.action().name(),beforeVersion,after==null?null:receipt.version(),
                 before==null?null:state(before),state(after),now);
     }
+    private FinancialEntryCommandReceipt receipt(UUID company,UUID command,UUID entry,EntryCommandAction action,long version,String deleted) {
+        if(deleted==null)return new FinancialEntryCommandReceipt(company,command,entry,action,version);
+        try {
+            var root=json.readTree(deleted);if(!root.isArray() || root.size()<1 || root.size()>120)throw new IllegalArgumentException();
+            var items=new ArrayList<FinancialEntryCommandReceipt.DeletedEntry>(root.size());
+            for(var node:root) {
+                var id=node.get("entryId");var itemVersion=node.get("version");
+                if(id==null || !id.isTextual() || itemVersion==null || !itemVersion.isIntegralNumber() || !itemVersion.canConvertToLong())throw new IllegalArgumentException();
+                items.add(new FinancialEntryCommandReceipt.DeletedEntry(UUID.fromString(id.asString()),itemVersion.longValue()));
+            }
+            return new FinancialEntryCommandReceipt(company,command,entry,action,version,items);
+        }catch(RuntimeException invalid) {throw new IllegalStateException("Recibo persistido de exclusão inválido.");}
+    }
+    record DeletedState(UUID entryId,long version,FinancialEntryValues values) { }
     private String state(FinancialEntryValues values) {
         if(values==null)return null;
         // Persist canonical strings; never rely on locale, binary amounts, or date-module defaults.
