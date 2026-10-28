@@ -26,7 +26,7 @@ public class EntryCommandReferences {
             boolean unchanged=previous!=null && data.resultCenterId().equals(previous.resultCenterId());
             require(exists("""
                     SELECT EXISTS(SELECT 1 FROM operational_result_centers c WHERE c.company_id=? AND c.id=?
-                      AND (? OR c.active) AND NOT EXISTS(SELECT 1 FROM operational_result_centers child WHERE child.company_id=c.company_id AND child.parent_id=c.id))
+                      AND (? OR c.active) AND c.type='ANALYTICAL')
                     """,company,data.resultCenterId(),unchanged));
         }
     }

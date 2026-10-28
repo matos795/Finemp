@@ -127,8 +127,8 @@ class FinancialEntryPersistenceIntegrationTest {
         assertThat(banks.findById(bank).orElseThrow().isActive()).isFalse();assertThat(partners.findById(partner).orElseThrow().getProfile().active()).isFalse();
     }
     @Test void centerWithAnActualEntryMustNotBecomeAGroup() {
-        assertThatThrownBy(()->centerService.create(actor.getId(),owner.getId(),new ResultCenterCreateRequest("1.1","Cannot Become Group")))
-                .isInstanceOfSatisfying(ResultCenterConflictException.class,e->assertThat(e.reason()).isEqualTo(ResultCenterConflictException.Reason.PARENT_HAS_ENTRIES));
+        assertThatThrownBy(()->centerService.update(actor.getId(),owner.getId(),center,new ResultCenterUpdateRequest("Cannot Become Group",true,0L,ResultCenterType.GROUP)))
+                .isInstanceOfSatisfying(ResultCenterConflictException.class,e->assertThat(e.reason()).isEqualTo(ResultCenterConflictException.Reason.HAS_ENTRIES));
     }
     @Test void equalUuidsInDifferentCatalogsMustNotConfuseTheReferenceAdapters() {
         jdbc.update("INSERT INTO financial_bank_accounts(id,company_id,name,type,opening_balance,opening_date,active,version) VALUES (?,?,'Synthetic Shared UUID','CASH',0,DATE '2026-01-01',TRUE,0)",partner,owner.getId());

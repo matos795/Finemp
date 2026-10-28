@@ -79,17 +79,33 @@ class ResultCenterIntegrationTest {
         mvc.perform(get(route()).with(user(principal(actor))).param("search","SAO")).andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(1));
         mvc.perform(get(route()).with(user(principal(actor))).param("search","%")).andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(0));
     }
-    @Test void createMustResolveTheExactParentAndRejectUsedParentsOrDuplicateCodes()throws Exception {
-        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"code\":\" 1 . 2 . 1 \",\"name\":\"Synthetic Grandchild\"}"))
+    @Test void createMustResolveTheExactParentAndKeepExplicitTypeAndRejectDuplicateCodes()throws Exception {
+        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"type\":\"ANALYTICAL\",\"code\":\" 1 . 2 . 1 \",\"name\":\"Synthetic Grandchild\"}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.parentId").value(child.toString()))
                 .andExpect(jsonPath("$.code").value("1.2.1")).andExpect(jsonPath("$.active").value(true)).andExpect(jsonPath("$.version").value(0));
-        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"code\":\"7.1\",\"name\":\"Foreign Parent\"}"))
+        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"type\":\"ANALYTICAL\",\"code\":\"7.1\",\"name\":\"Foreign Parent\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PARENT_NOT_FOUND"));
-        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"code\":\"1\",\"name\":\"Duplicate\"}"))
+        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"type\":\"ANALYTICAL\",\"code\":\"1\",\"name\":\"Duplicate\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DUPLICATE_CODE"));
         when(usage.hasEntries(owner.getId(),child)).thenReturn(true);
-        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"code\":\"1.2.2\",\"name\":\"Used Parent\"}"))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PARENT_HAS_ENTRIES"));
+        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"type\":\"ANALYTICAL\",\"code\":\"1.2.2\",\"name\":\"Used Parent\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.type").value("ANALYTICAL"));
+        assertThat(centers.findById(child).orElseThrow().getType()).isEqualTo(ResultCenterType.ANALYTICAL);
+    }
+    @Test void typeMustBeExplicitOnCreationAndIndependentOfChildrenOnReadAndUpdate()throws Exception {
+        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"code\":\"8\",\"name\":\"Missing type\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"code\":\"8\",\"name\":\"Numeric type\",\"type\":1}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(route()).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"code\":\"8\",\"name\":\"Empty group\",\"type\":\"GROUP\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.type").value("GROUP")).andExpect(jsonPath("$.hasChildren").value(false));
+        mvc.perform(get(route()+"/"+root).with(user(principal(actor))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.type").value("ANALYTICAL")).andExpect(jsonPath("$.hasChildren").value(true));
+        mvc.perform(put(route()+"/"+child).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"name\":\"Explicit group\",\"active\":true,\"expectedVersion\":0,\"type\":\"GROUP\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.type").value("GROUP")).andExpect(jsonPath("$.version").value(1));
+        when(usage.hasEntries(owner.getId(),root)).thenReturn(true);
+        mvc.perform(put(route()+"/"+root).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"name\":\"Keep history\",\"active\":true,\"expectedVersion\":0,\"type\":\"GROUP\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("HAS_ENTRIES"));
     }
     @Test void explicitPermissionAndOwnershipMustProtectBothHierarchyAndSettings()throws Exception {
         mvc.perform(get(route()).with(user(principal(viewer)))).andExpect(status().isOk());
@@ -103,7 +119,7 @@ class ResultCenterIntegrationTest {
         mvc.perform(get(route()+"/"+child+"/unsupported").with(user(principal(actor)))).andExpect(status().isForbidden());
     }
     @Test void updatesMustReturnFlushedVersionAndKeepCodeAndParentImmutable()throws Exception {
-        mvc.perform(put(route()+"/"+child).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"name\":\"Renamed\",\"active\":false,\"expectedVersion\":0,\"code\":\"9\",\"parentId\":\""+foreign+"\"}"))
+        mvc.perform(put(route()+"/"+child).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"name\":\"Renamed\",\"active\":false,\"expectedVersion\":0,\"type\":\"ANALYTICAL\",\"code\":\"9\",\"parentId\":\""+foreign+"\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(1)).andExpect(jsonPath("$.code").value("1.2"))
                 .andExpect(jsonPath("$.parentId").value(root.toString()));
         mvc.perform(put(route()+"/"+child).with(user(principal(actor))).with(csrf()).contentType("application/json").content("{\"name\":\"Stale\",\"active\":true,\"expectedVersion\":0}"))

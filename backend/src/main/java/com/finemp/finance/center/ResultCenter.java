@@ -15,19 +15,25 @@ public class ResultCenter {
     @Column(name="search_name",nullable=false,length=160) private String searchName;
     @Column(name="sort_key",nullable=false,length=300,updatable=false) private String sortKey;
     @Column(nullable=false) private boolean active;
+    @Enumerated(EnumType.STRING) @Column(nullable=false,length=20) private ResultCenterType type;
     @Version private long version;
     protected ResultCenter() { }
     public ResultCenter(Company company,String code,UUID parentId,String name,boolean active) {
-        if(company==null)throw invalid();
+        this(company,code,parentId,name,active,ResultCenterType.ANALYTICAL);
+    }
+    public ResultCenter(Company company,String code,UUID parentId,String name,boolean active,ResultCenterType type) {
+        if(company==null || type==null)throw invalid();
         var parsed=new ResultCenterCode(code);
         if((parsed.parentCode()==null)!=(parentId==null))throw invalid();
-        this.company=company;this.code=parsed.value();this.sortKey=parsed.sortKey();this.parentId=parentId;replace(name,active);
+        this.company=company;this.type=type;this.code=parsed.value();this.sortKey=parsed.sortKey();this.parentId=parentId;replace(name,active);
     }
     public void replace(String name,boolean active) {
         if(name==null || name.trim().length()<2 || name.length()>80)throw invalid();
         this.name=name.trim();this.active=active;this.searchName=searchKey(this.name);
     }
     public void deactivate() {active=false;}
+    public void changeType(ResultCenterType type) {if(type==null)throw invalid();this.type=type;}
+    public ResultCenterType getType() {return type;}
     public UUID getId() {return id;}
     public Company getCompany() {return company;}
     public UUID getParentId() {return parentId;}

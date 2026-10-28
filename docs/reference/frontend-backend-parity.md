@@ -60,8 +60,10 @@
 - **FATO CONFIRMADO:** #162/PR163 integrada: exclusão relacionada por
   vencimento/pagamento atuais, versões do conjunto e recibos compatíveis;
   oito contratos PostgreSQL/HTTP passaram.
-- **EM IMPLEMENTAÇÃO:** #39, captura mensal HTTP e metadados de leitura na
-  #164; política monetária #128 permanece aberta.
+- **FATO CONFIRMADO:** #164/PR165 integrada: captura mensal HTTP e metadados
+  originais opcionais na leitura, com cinco contratos PostgreSQL/HTTP passando.
+- **EM IMPLEMENTAÇÃO:** #157, tipo explícito do Centro de Resultado e preservação
+  do histórico; #39 continua aberta pela política monetária isolada na #128.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
