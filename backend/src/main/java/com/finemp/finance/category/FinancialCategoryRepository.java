@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface FinancialCategoryRepository extends JpaRepository<FinancialCategory,UUID> {
     Optional<FinancialCategory> findByIdAndCompanyId(UUID id,UUID companyId);
+    long countByCompanyId(UUID companyId);
     @Query("""
             select new com.finemp.finance.category.FinancialCategorySnapshot(
                 category.id,category.company.id,category.parentId,category.kind,category.direction,

@@ -28,6 +28,22 @@ public class FinancialCategoryService {
         return categories.findSnapshot(company,id).orElseThrow(()->new SaasResourceNotFoundException("Categoria financeira")).response();
     }
     @Transactional(isolation=Isolation.READ_COMMITTED)
+    public StandardPlanResult createStandardPlan(UUID actor,UUID company) {
+        var owner=writeOwner(actor,company);
+        if(categories.countByCompanyId(company)>0)throw conflict(FinancialCategoryConflictException.Reason.PLAN_NOT_EMPTY);
+        var counters=new EnumMap<FinancialDirection,Long>(FinancialDirection.class);
+        int groups=0,subcategories=0;
+        for(var definition:FinancialCategoryStandardPlan.groups()) {
+            long sequence=counters.merge(definition.direction(),1L,Long::sum);
+            var group=categories.saveAndFlush(definition.create(owner,sequence));groups++;
+            for(int i=0;i<definition.subs().size();i++) {
+                categories.saveAndFlush(definition.subs().get(i).create(group,i+1));subcategories++;
+            }
+        }
+        return new StandardPlanResult(FinancialCategoryStandardPlan.VERSION,groups,subcategories);
+    }
+    public record StandardPlanResult(String version,int groups,int subcategories) { }
+    @Transactional(isolation=Isolation.READ_COMMITTED)
     public FinancialCategoryResponse createGroup(UUID actor,UUID company,FinancialCategoryGroupRequest request) {
         var owner=writeOwner(actor,company);
         if(request==null || request.direction()==null)throw invalid();
