@@ -52,6 +52,17 @@ class FinempConnectorClientTest {
         when(transport.exchange("GET","/session",null)).thenReturn(response(200,session(source)));
         when(transport.exchange("POST","/work/claim",null)).thenReturn(response(204,"")); assertThat(client.claim()).isEmpty();
     }
+    @Test void shouldAcceptInitialCredentialVersionZeroButRefuseMissingNegativeOrNonIntegralVersions() {
+        String initial=session(source).replace("\"credentialVersion\":1","\"credentialVersion\":0");
+        assertThat(codec.session(initial.getBytes(StandardCharsets.UTF_8),source).credentialVersion()).isZero();
+        assertThatThrownBy(()->codec.session(initial.getBytes(StandardCharsets.UTF_8),UUID.randomUUID())).isInstanceOf(ConnectorClientException.class);
+        for(var value:List.of("-1","0.5","9223372036854775808","null"))
+            assertThatThrownBy(()->codec.session(initial.replace("\"credentialVersion\":0","\"credentialVersion\":"+value).getBytes(StandardCharsets.UTF_8),source))
+                    .hasMessage("Connector client: PROTOCOL").hasNoCause();
+        assertThatThrownBy(()->codec.session(initial.replace(",\"credentialVersion\":0","").getBytes(StandardCharsets.UTF_8),source)).hasMessage("Connector client: PROTOCOL");
+        String invalidWork=tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(work).replace("\"attemptNumber\":1","\"attemptNumber\":0");
+        assertThatThrownBy(()->codec.work(invalidWork.getBytes(StandardCharsets.UTF_8),source)).hasMessage("Connector client: PROTOCOL");
+    }
     @Test void shouldResolveLostCompleteResponseThroughReceiptWithoutReplayingThePost() {
         var transport=mock(ConnectorHttpsTransport.class);var client=new FinempConnectorClient(transport,source,25000);
         when(transport.exchange(eq("POST"),eq(path("complete")),any())).thenThrow(new ConnectorClientException(ConnectorClientException.Kind.TIMEOUT));

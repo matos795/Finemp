@@ -90,7 +90,8 @@ class ConnectorProtocolEndToEndTest {
         var reader=reader();when(reader.readSnapshot(any())).thenAnswer(call->snapshot(call.getArgument(0)));
         try(var bridge=new Bridge();var transport=bridge.transport(()->token)){
             bridge.dropCompletion.set(true);var client=new FinempConnectorClient(transport,sourceId,25000);
-            try(var cycle=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(10))){assertThat(cycle.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);}
+            assertThatCode(()->assertThat(client.session().accountingSourceId()).isEqualTo(sourceId)).as("Session contract: %s",bridge.trace).doesNotThrowAnyException();
+            try(var cycle=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(10))){assertThat(cycle.runOnce()).as("Wire stages: %s",bridge.trace).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);}
             assertThat(bridge.completes).hasValue(1);assertThat(bridge.receipts).hasValue(1);assertThat(count(sourceId)).isEqualTo(2);
             var run=runs.findById(runId).orElseThrow();assertThat(run.getStatus()).isEqualTo(SyncRunStatus.SUCCEEDED);
             assertThat(run.getReadCount()).isEqualTo(2);assertThat(run.getImportedCount()).isEqualTo(2);assertThat(run.getSkippedCount()).isZero();
@@ -104,7 +105,8 @@ class ConnectorProtocolEndToEndTest {
         var otherToken=credentials.issue(actor,firmId,new CreateConnectorCredentialRequest(other.getId(),"Other Synthetic Protocol")).secret();
         var otherRun=control.request(actor,other.getId(),UUID.randomUUID(),request()).id();var reader=reader();
         try(var bridge=new Bridge();var transport=bridge.transport(()->otherToken);var cycle=new ConnectorAgentCycle(new FinempConnectorClient(transport,sourceId,25000),reader,Duration.ofSeconds(10))){
-            assertThat(cycle.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);assertThat(bridge.claims).hasValue(0);assertThat(bridge.completes).hasValue(0);
+            assertThat(cycle.runOnce()).as("Wire stages: %s",bridge.trace).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);
+            assertThat(bridge.trace).anyMatch(step->step.contains("/session -> 200"));assertThat(bridge.claims).hasValue(0);assertThat(bridge.completes).hasValue(0);
         }
         verify(reader,never()).readSnapshot(any());assertThat(count(sourceId)).isZero();assertThat(count(other.getId())).isZero();
         assertThat(runs.findById(otherRun).orElseThrow().getStatus()).isEqualTo(SyncRunStatus.REQUESTED);
@@ -112,7 +114,7 @@ class ConnectorProtocolEndToEndTest {
     @Test void shouldRespectCancellationBeforeFencedCommitAndReturnTerminalWithoutAck(){
         var reader=reader();when(reader.readSnapshot(any())).thenAnswer(call->{control.cancel(actor,sourceId,runId);return snapshot(call.getArgument(0));});
         try(var bridge=new Bridge();var transport=bridge.transport(()->token);var cycle=new ConnectorAgentCycle(new FinempConnectorClient(transport,sourceId,25000),reader,Duration.ofSeconds(10))){
-            assertThat(cycle.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);assertThat(bridge.completes).hasValue(1);assertThat(bridge.receipts).hasValue(1);
+            assertThat(cycle.runOnce()).as("Wire stages: %s",bridge.trace).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);assertThat(bridge.completes).hasValue(1);assertThat(bridge.receipts).hasValue(1);
         }
         assertThat(count(sourceId)).isZero();assertThat(runs.findById(runId).orElseThrow().getStatus()).isEqualTo(SyncRunStatus.CANCELLED);
     }
@@ -120,7 +122,7 @@ class ConnectorProtocolEndToEndTest {
         var reader=reader();when(reader.readSnapshot(any())).thenReturn(new AccountingSourceSnapshot(new ExternalCompanyIdentity("57","58585858000158"),
                 List.of(new ImportedAccountingMovement("synthetic",LocalDate.of(2026,8,1),"100","1.100","Synthetic",AccountingMovementSide.DEBIT,BigDecimal.ONE,null))));
         try(var bridge=new Bridge();var transport=bridge.transport(()->token);var cycle=new ConnectorAgentCycle(new FinempConnectorClient(transport,sourceId,25000),reader,Duration.ofSeconds(10))){
-            assertThat(cycle.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);assertThat(bridge.completes).hasValue(0);
+            assertThat(cycle.runOnce()).as("Wire stages: %s",bridge.trace).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);assertThat(bridge.completes).hasValue(0);
         }
         assertThat(count(sourceId)).isZero();
     }
@@ -137,6 +139,7 @@ class ConnectorProtocolEndToEndTest {
         private final ExecutorService executor=Executors.newFixedThreadPool(2);
         private final AtomicBoolean dropCompletion=new AtomicBoolean();
         private final AtomicInteger completes=new AtomicInteger(),receipts=new AtomicInteger(),claims=new AtomicInteger();
+        private final List<String> trace=new CopyOnWriteArrayList<>();
         private volatile String completedPath;
         private volatile byte[] completedBody;
         @SuppressWarnings({"unchecked","rawtypes"})
@@ -157,7 +160,9 @@ class ConnectorProtocolEndToEndTest {
                 if(path.endsWith("/complete")){completes.incrementAndGet();completedPath=path;completedBody=body;}
                 var builder=org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(org.springframework.http.HttpMethod.valueOf(request.method()),path).secure(true).content(body);
                 request.headers().map().forEach((name,values)->builder.header(name,values.toArray()));
-                var result=mvc.perform(builder).andReturn();assertThat(result.getRequest().getSession(false)).isNull();
+                var result=mvc.perform(builder).andReturn();
+                trace.add(request.method()+" "+path+" -> "+result.getResponse().getStatus()+" type="+result.getResponse().getContentType()+" session="+(result.getRequest().getSession(false)!=null));
+                assertThat(result.getRequest().getSession(false)).isNull();
                 if(path.endsWith("/complete")&&dropCompletion.compareAndSet(true,false))throw new IOException("Synthetic lost response after commit");
                 var response=result.getResponse();var values=new HashMap<String,List<String>>();
                 for(var name:response.getHeaderNames())values.put(name,new ArrayList<>(response.getHeaders(name)));
@@ -168,7 +173,7 @@ class ConnectorProtocolEndToEndTest {
                 var reply=mock(HttpResponse.class);when(reply.statusCode()).thenReturn(response.getStatus());when(reply.headers()).thenReturn(headers);
                 when(reply.body()).thenReturn(subscriber.getBody().toCompletableFuture().get(5,TimeUnit.SECONDS));return reply;
             }catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new CompletionException(interrupted);}
-            catch(Exception failure){throw new CompletionException(failure);}
+            catch(Exception failure){trace.add("Bridge failure: "+failure.getClass().getSimpleName());throw new CompletionException(failure);}
         }
         private byte[] body(HttpRequest request)throws Exception{
             if(request.bodyPublisher().isEmpty())return new byte[0];var bytes=new ByteArrayOutputStream();var complete=new CompletableFuture<byte[]>();

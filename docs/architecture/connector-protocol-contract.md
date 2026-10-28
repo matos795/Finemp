@@ -8,6 +8,8 @@ Cenários: resposta perdida depois do commit é resolvida por receipt sem segund
 
 ## DECISÃO TÉCNICA
 
+Credenciais novas usam versão técnica zero no contrato persistido e na sessão emitida pelo servidor. O decoder aceita inteiro não negativo obrigatório, preservando a conferência de origem. Valores ausentes, negativos, fracionários e fora de int64 são recusados. Isso não altera o número da tentativa, que continua começando em um, nem a revalidação de credencial/fencing no servidor.
+
 Recibo com execução CANCELLED é terminal sem ACK, inclusive quando a tentativa ainda aparece RUNNING. O ciclo encerra essa pendência sem lote repetido ou POST de falha. SUCCEEDED continua exigindo mesma tentativa/run/número e contadores coerentes; cancelamento não é convertido em sucesso. Regra descoberta por teste RED e corrigida com teste GREEN do ciclo.
 
 ## LIMITES
