@@ -471,7 +471,9 @@ POST tem o mesmo mecanismo de proteção dos lançamentos: autorização antes d
 
 DELETE /api/companies/{companyId}/financial-entries/{entryId}?expectedVersion=... usa os mesmos opt-ins de lançamentos, sessão/CSRF, FINANCIAL_ENTRY_MANAGE ALL vigente e Idempotency-Key UUID. Não recebe corpo. Responde200 com recibo DELETED e última versão persistida. GET posterior retorna404; repetir DELETE com a mesma chave/versão retorna o recibo original, exigindo permissão atual.
 
-O alvo pode estar pago ou aberto. Não confundir esse contrato com remoção de séries, lotes ou itens: essas origens ainda não estão disponibilizadas e terão integração própria. Tratar409 por versão ou chave compartilhada com outra ação,403 por acesso atual,404 por alvo ausente/alheio sob Empresa autorizada e400 para header/versão inválidos. O frontend não calcula efeitos nem apaga histórico local como substituto da confirmação do backend.
+O alvo pode estar pago ou aberto. Havendo série, também são removidas outras ocorrências ainda abertas e com vencimento atual estritamente maior que o do alvo. Pagas futuras, vencimento igual/anterior e outras séries são preservadas; posições originais não são renumeradas. deletedEntries acrescenta os IDs/versões efetivamente removidos, com raiz primeiro. Usar esse resultado para informar efeitos; não deduzi-los no frontend. Recibo legado é compatível como exclusão somente da raiz.
+
+Lotes e estoque continuam em contratos próprios. Tratar409 por versão ou chave compartilhada com outra ação,403 por acesso atual,404 por alvo ausente/alheio sob Empresa autorizada e400 para header/versão inválidos. O frontend não apaga histórico local como substituto da confirmação do backend.
 
 ## 19. Compatibilidade
 

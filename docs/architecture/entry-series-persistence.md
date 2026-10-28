@@ -14,10 +14,10 @@ FinancialEntrySeries guarda Empresa, modo de criação MONTHLY/INSTALLMENTS, qua
 
 O grupo não determina valor, vencimento atual ou situação de pagamento. Esses dados pertencem aos lançamentos. Posições não são renumeradas quando um vínculo é removido; quantidade original não é quantidade restante. Preservar o modo de criação é metadado técnico, não promessa de executar automaticamente recorrências futuras.
 
-As FKs de membro para grupo e lançamento usam RESTRICT, sem cascade automático. Até integrar a exclusão coordenada homologada, um comando individual anterior não pode apagar silenciosamente parte de uma série. Esse gate é temporário e técnico, não regra definitiva de negócio. Não há criação operacional de séries ou nova API neste incremento. O repositório interno não substitui autorização, idempotência ou auditoria dos comandos seguintes.
+As FKs de membro para grupo e lançamento usam RESTRICT, sem cascade automático. A exclusão coordenada #162 remove os vínculos correspondentes antes dos registros, mantendo posições restantes e auditoria. Exclusões diretas dos pais continuam protegidas pelo banco. O repositório interno não substitui autorização, idempotência ou auditoria dos comandos.
 
 ## PRÓXIMO PASSO / PONTO ABERTO
 
-Entregar comando mensal atômico com recibo do conjunto, autorização atual e auditoria; integrar exclusão coordenada antes de expor a captura. Entrada canônica positiva em centavos pode ser repetida mensalmente sem decidir normalização bruta. INSTALLMENTS continua sem comando de geração até resolver a política da #128. Não introduzir scheduler ou cadastro automático futuro sem evidência funcional.
+O comando mensal interno #160 e a exclusão coordenada #162 precedem a captura HTTP. Entrada canônica positiva em centavos pode ser repetida mensalmente sem decidir normalização bruta. INSTALLMENTS continua sem comando de geração até resolver a política da #128. Não introduzir scheduler ou cadastro automático futuro sem evidência funcional.
 
 Testes sintéticos cobrem posição/quantidade, modo, referências, unicidade, isolamento de duas Contabilidades/Clientes/Empresas, versão e bloqueio de exclusão parcial pelos serviços existentes. A fundação não afirma fechar a #39.

@@ -301,7 +301,7 @@ paths:
       tags: [Financial entries]
       operationId: deleteFinancialEntry
       summary: Exclui lançamento financeiro individual com versão e recibo idempotente.
-      description: Exige os dois opt-ins de lançamentos, FINANCIAL_ENTRY_MANAGE ALL vigente, sessão/CSRF e chave UUID. Sem corpo. Recibo DELETED informa a última versão persistida; estado/versão posteriores de auditoria são ausentes. Reenvio após exclusão exige permissão atual e recupera o recibo original. Abrange individuais atuais, sem séries/lotes/itens ainda.
+      description: Exige os dois opt-ins de lançamentos, FINANCIAL_ENTRY_MANAGE ALL vigente, sessão/CSRF e chave UUID. Sem corpo. Remove a raiz e futuras ocorrências da mesma série ainda sem pagamento e com vencimento atual estritamente maior que o alvo; preserva pagas futuras e posições originais. Recibo DELETED mantém última versão da raiz e deletedEntries efetivas. Reenvio recupera o conjunto original. Lotes/estoque têm contratos próprios.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/FinancialCommandKey'
@@ -3169,6 +3169,18 @@ components:
         entryId: {type: string, format: uuid}
         action: {type: string, enum: [CREATED, UPDATED, SETTLED, SETTLEMENT_REVERSED, DELETED]}
         version: {type: integer, format: int64, minimum: 0, description: Versão resultante do comando original; para DELETED é a última versão persistida. Não afirma o estado atual.}
+        deletedEntries:
+          type: array
+          minItems: 1
+          maxItems: 120
+          description: Presente em DELETED. Raiz primeiro, depois ocorrências relacionadas por posição original; lista imutável do comando, não consulta atual.
+          items: {$ref: '#/components/schemas/DeletedFinancialEntry'}
+    DeletedFinancialEntry:
+      type: object
+      required: [entryId, version]
+      properties:
+        entryId: {type: string, format: uuid}
+        version: {type: integer, format: int64, minimum: 0}
     FinancialEntryCommandRejection:
       type: object
       required: [code]
