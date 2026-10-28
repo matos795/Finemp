@@ -107,6 +107,11 @@ class FinancialEntryReadIntegrationTest {
         assertThat(result.getResponse().getContentAsString()).doesNotContain("12ABC34501DE35","private-phone","private@synthetic.invalid","private-street");
     }
     @Test void referencePeriodMustUsePaymentDateInsteadOfDueDateForPaidEntries()throws Exception {
+        // PostgreSQL must type each optional date even when only one boundary is supplied.
+        mvc.perform(get(route()).with(user(principal(viewer))).param("from","2026-07-01"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(4));
+        mvc.perform(get(route()).with(user(principal(viewer))).param("to","2026-07-10"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(3));
         mvc.perform(get(route()).with(user(principal(viewer))).param("from","2026-07-01").param("to","2026-07-10").param("asOfDate","2026-07-10"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(2));
         mvc.perform(get(route()).with(user(principal(viewer))).param("status","PAID").param("from","2026-07-01").param("to","2026-07-10"))

@@ -33,8 +33,8 @@ public interface FinancialEntryReadRepository extends Repository<FinancialEntry,
     Optional<FinancialEntryReadRow> find(@Param("company") UUID company,@Param("id") UUID id);
     @Query(SELECT+FROM+"""
             where entry.company.id=:company
-              and (:from is null or coalesce(entry.values.paymentDate,entry.values.dueDate)>=:from)
-              and (:to is null or coalesce(entry.values.paymentDate,entry.values.dueDate)<=:to)
+              and (cast(:from as date) is null or coalesce(entry.values.paymentDate,entry.values.dueDate)>=:from)
+              and (cast(:to as date) is null or coalesce(entry.values.paymentDate,entry.values.dueDate)<=:to)
               and (:direction is null or entry.values.direction=:direction)
               and (:status is null
                 or (:status='PAID' and entry.values.paymentDate is not null)
