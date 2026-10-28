@@ -1,0 +1,35 @@
+CREATE TABLE business_partners (
+    id UUID PRIMARY KEY,
+    company_id UUID NOT NULL REFERENCES companies(id),
+    person_type VARCHAR(20) NOT NULL CHECK(person_type IN ('INDIVIDUAL','LEGAL_ENTITY')),
+    document VARCHAR(14) NOT NULL,
+    name VARCHAR(255) NOT NULL CHECK(length(trim(name)) >= 2),
+    trade_name VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK(role IN ('CUSTOMER','SUPPLIER','BOTH')),
+    phone VARCHAR(80) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    contact_name VARCHAR(255) NOT NULL,
+    city VARCHAR(150) NOT NULL,
+    state_code VARCHAR(2) NOT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    street VARCHAR(255) NOT NULL,
+    street_number VARCHAR(40) NOT NULL,
+    complement VARCHAR(255) NOT NULL,
+    district VARCHAR(150) NOT NULL,
+    municipality_code VARCHAR(20) NOT NULL,
+    state_registration VARCHAR(80) NOT NULL,
+    municipal_registration VARCHAR(80) NOT NULL,
+    notes VARCHAR(4000) NOT NULL,
+    active BOOLEAN NOT NULL,
+    search_text VARCHAR(700) NOT NULL,
+    display_name_key VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    version BIGINT NOT NULL DEFAULT 0 CHECK(version >= 0),
+    CONSTRAINT uq_partner_company_id UNIQUE(company_id,id),
+    CONSTRAINT uq_partner_company_document UNIQUE(company_id,document),
+    CONSTRAINT ck_partner_document_shape CHECK(
+        (person_type='INDIVIDUAL' AND document ~ '^[0-9]{11}$' AND trade_name='')
+        OR (person_type='LEGAL_ENTITY' AND document ~ '^[0-9A-Z]{12}[0-9]{2}$'))
+);
+CREATE INDEX idx_partner_company_display ON business_partners(company_id,display_name_key,id);
