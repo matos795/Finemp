@@ -28,8 +28,10 @@ A sessão/CSRF e MANAGE ALL vigente são validados antes de ler o corpo; o servi
 
 JSON rejeita chaves duplicadas, campos desconhecidos, profundidade/token/tamanho excedido e dados não tipados. Nominal é texto decimal positivo com até17 dígitos inteiros e duas casas, sem expoente ou arredondamento. Ator/Empresa/valor efetivamente pago não podem ser injetados pelo corpo. Valores nulos opcionais têm semântica explícita, inclusive paymentDate null retira pagamento na alteração. Erros têm códigos/mensagens fixos, sem payload ou SQL. Rotas de exclusão, baixa, estorno, transferências e séries não são liberadas por esse opt-in.
 
-## PRÓXIMO PASSO / PONTO ABERTO
+A seleção do filtro reutiliza a autorização de rota do Spring e uma marca interna da requisição; não repete comparação com o URI bruto. URLs codificadas e aliases de binding recebem os mesmos limites. A marca é definida apenas pelo servidor após permissão vigente, nunca por cabeçalho/corpo, e removida a cada reautorização. O gerenciador é construído pela própria configuração de segurança, inclusive nos testes isolados de MVC.
 
 UPDATE também bloqueia a linha do lançamento e consulta sua versão atual por SQL antes de usar o estado JPA. Versão esperada, versão atual e versão do objeto devem coincidir; contexto antigo falha de forma segura. O bloqueio mantém essa garantia inclusive em alteração sem diferença de estado.
+
+## PRÓXIMO PASSO / PONTO ABERTO
 
 Baixa/estorno, exclusão, transferências e séries continuam na #39. Valores brutos e efeitos binários legados da #128 não são decididos neste bloco. Consulta/exportação de auditoria e anexos pertencem à #51.

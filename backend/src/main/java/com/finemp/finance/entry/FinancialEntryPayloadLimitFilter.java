@@ -6,16 +6,11 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.concurrent.Semaphore;
-import java.util.regex.Pattern;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /** Installed after authorization, only for the two opt-in financial writer routes. */
 public class FinancialEntryPayloadLimitFilter extends OncePerRequestFilter {
-    // Match the route shape, not only canonical UUID spelling: binding accepts abbreviated UUIDs too.
-    // Otherwise a permitted noncanonical path could bypass buffering before MVC rejects/normalizes it.
-    private static final Pattern COLLECTION=Pattern.compile("/api/companies/[^/]+/financial-entries");
-    private static final Pattern ITEM=Pattern.compile("/api/companies/[^/]+/financial-entries/[^/]+");
     private final int maxBytes;
     private final Semaphore capacity;
     public FinancialEntryPayloadLimitFilter(int maxBytes,int concurrency) {
@@ -23,8 +18,8 @@ public class FinancialEntryPayloadLimitFilter extends OncePerRequestFilter {
         this.maxBytes=maxBytes;capacity=new Semaphore(concurrency);
     }
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
-        var path=request.getRequestURI().substring(request.getContextPath().length());
-        return !("POST".equals(request.getMethod()) && COLLECTION.matcher(path).matches() || "PUT".equals(request.getMethod()) && ITEM.matcher(path).matches());
+        // Reuse the route decision, not a second URI matcher: encoded paths and binding aliases cannot skip the gate.
+        return !Boolean.TRUE.equals(request.getAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE));
     }
     @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain)throws ServletException,IOException {
         var encodings=Collections.list(request.getHeaders("Content-Encoding"));

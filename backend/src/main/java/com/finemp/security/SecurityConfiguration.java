@@ -1,6 +1,7 @@
 package com.finemp.security;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpMethod;
@@ -147,6 +148,14 @@ public class SecurityConfiguration {
                 if (financialCommands.isEnabled())
                         http.addFilterAfter(new FinancialEntryPayloadLimitFilter(65536, 4), AuthorizationFilter.class);
                 return http.build();
+        }
+
+        @Bean
+        EntryCommandAuthorizationManager financialEntryCommandAuthorizationManager(
+                        CompanyPermissionAuthorizationService permissions,
+                        @Value("${finemp.finance.entries.enabled:false}") boolean entriesEnabled,
+                        @Value("${finemp.finance.entries.commands.enabled:false}") boolean commandsEnabled) {
+                return new EntryCommandAuthorizationManager(permissions, entriesEnabled, commandsEnabled);
         }
 
         @Bean

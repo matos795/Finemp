@@ -23,8 +23,11 @@ class EntryCommandAuthorizationManagerTest {
     @Test void authorizationMustUseFreshManagePermissionForTheRouteCompanyEveryTime() {
         var manager=new EntryCommandAuthorizationManager(permissions,true,true);
         when(permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE)).thenReturn(true,false);
-        assertThat(manager.authorize(this::authentication,context(company.toString())).isGranted()).isTrue();
-        assertThat(manager.authorize(this::authentication,context(company.toString())).isGranted()).isFalse();
+        var context=context(company.toString());
+        assertThat(manager.authorize(this::authentication,context).isGranted()).isTrue();
+        assertThat(context.getRequest().getAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE)).isEqualTo(Boolean.TRUE);
+        assertThat(manager.authorize(this::authentication,context).isGranted()).isFalse();
+        assertThat(context.getRequest().getAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE)).isNull();
         verify(permissions,times(2)).hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE);
     }
     @Test void unauthenticatedUnexpectedPrincipalAndMalformedRouteMustFailBeforeDataAccess() {

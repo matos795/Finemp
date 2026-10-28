@@ -17,9 +17,10 @@ class FinancialEntryPayloadLimitFilterTest {
             assertThat(response.getStatus()).isEqualTo(413);assertThat(chain.getRequest()).isNull();
         }
     }
-    @Test void abbreviatedOrInvalidPathIdentifiersMustNotBypassTheBodyBudget()throws Exception {
-        // Binding aliases must receive the same resource gate as canonical UUID paths.
+    @Test void everyAuthorizedPathSpellingMustReceiveTheSameBodyBudget()throws Exception {
+        // Authorization already selected the normalized writer route; raw URI spelling must not matter.
         for(var route:new String[]{"/api/companies/1-1-1-1-1/financial-entries",
+                "/api/companies/00000000-0000-0000-0000-000000000001/%66inancial-entries",
                 "/api/companies/00000000-0000-0000-0000-000000000001/financial-entries/1-1-1-1-1",
                 "/api/companies/00000000-0000-0000-0000-000000000001/financial-entries/invalid"}) {
             var raw=request();raw.setRequestURI(route);if(route.contains("/financial-entries/"))raw.setMethod("PUT");raw.setContent(new byte[1025]);
@@ -46,13 +47,13 @@ class FinancialEntryPayloadLimitFilterTest {
     }
     @Test void readsConnectorAndUnrelatedRoutesMustNotBeBufferedOrRejectedByThisFilter()throws Exception {
         for(var route:new String[]{"/api/connector/v1/claim","/api/companies/a/other","/api/companies/00000000-0000-0000-0000-000000000001/financial-entries/other/extra"}) {
-            var raw=request();raw.setRequestURI(route);raw.setContentType("text/plain");var chain=new MockFilterChain();filter.doFilter(raw,new MockHttpServletResponse(),chain);assertThat(chain.getRequest()).isSameAs(raw);
+            var raw=request();raw.removeAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE);raw.setRequestURI(route);raw.setContentType("text/plain");var chain=new MockFilterChain();filter.doFilter(raw,new MockHttpServletResponse(),chain);assertThat(chain.getRequest()).isSameAs(raw);
         }
-        var raw=request();raw.setMethod("GET");raw.setContentType("text/plain");var chain=new MockFilterChain();filter.doFilter(raw,new MockHttpServletResponse(),chain);assertThat(chain.getRequest()).isSameAs(raw);
+        var raw=request();raw.removeAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE);raw.setMethod("GET");raw.setContentType("text/plain");var chain=new MockFilterChain();filter.doFilter(raw,new MockHttpServletResponse(),chain);assertThat(chain.getRequest()).isSameAs(raw);
     }
     private void reject415(MockHttpServletRequest request)throws Exception {
         var response=new MockHttpServletResponse();var chain=new MockFilterChain();filter.doFilter(request,response,chain);
         assertThat(response.getStatus()).isEqualTo(415);assertThat(chain.getRequest()).isNull();
     }
-    private MockHttpServletRequest request() {var request=new MockHttpServletRequest("POST","/api/companies/00000000-0000-0000-0000-000000000001/financial-entries");request.setContentType("application/json");return request;}
+    private MockHttpServletRequest request() {var request=new MockHttpServletRequest("POST","/api/companies/00000000-0000-0000-0000-000000000001/financial-entries");request.setAttribute(EntryCommandAuthorizationManager.AUTHORIZED_WRITER_ATTRIBUTE,Boolean.TRUE);request.setContentType("application/json");return request;}
 }

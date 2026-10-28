@@ -10,6 +10,7 @@ import com.finemp.finance.category.*;
 import com.finemp.security.UserAccountPrincipal;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,9 @@ class FinancialEntryCommandHttpIntegrationTest {
     @Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;
     @Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;
     @Autowired BankAccountRepository banks;@Autowired FinancialCategoryRepository categories;
+    @Autowired FinancialEntryRepository entries;
     @Autowired JdbcTemplate jdbc;@Autowired MockMvc mvc;
-    Company owner,other;UserAccount manager,viewer,admin,restricted;UUID bank,category,foreignBank;
+    Company owner,other;UserAccount manager,viewer,admin,restricted;UUID bank,category,foreignBank,foreignId;
     final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>(),userIds=new ArrayList<>();
     @BeforeEach void prepare() {
         owner=company("Owner","77777777000177");other=company("Other","78787878000178");
@@ -42,6 +44,10 @@ class FinancialEntryCommandHttpIntegrationTest {
         grant(admin,CompanyAccessRole.ADMIN,CostCenterScope.ALL,Set.of());grant(restricted,CompanyAccessRole.CUSTOM,CostCenterScope.RESTRICTED,Set.of(CompanyPermission.FINANCIAL_ENTRY_MANAGE));
         bank=bank(owner);foreignBank=bank(other);var group=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.EXPENSE,1,"Synthetic Group"));
         category=categories.saveAndFlush(FinancialCategory.subcategory(group,1,"Synthetic Category")).getId();
+        var foreignGroup=categories.saveAndFlush(FinancialCategory.group(other,FinancialDirection.EXPENSE,1,"Foreign Group"));
+        var foreignCategory=categories.saveAndFlush(FinancialCategory.subcategory(foreignGroup,1,"Foreign Category"));var date=LocalDate.of(2026,7,1);
+        foreignId=entries.saveAndFlush(new FinancialEntry(other,new FinancialEntryValues(FinancialDirection.EXPENSE,"Foreign confidential",new BigDecimal("10.00"),
+                date,date,YearMonth.of(2026,7),date,null,null,foreignBank,foreignCategory.getId(),null,null,null,"","FOREIGN",""),manager.getId())).getId();
     }
     @AfterEach void cleanSyntheticFixturesOnly() {
         for(var company:List.of(owner,other)) {
@@ -113,6 +119,22 @@ class FinancialEntryCommandHttpIntegrationTest {
                 .andExpect(status().isUnsupportedMediaType());
         mvc.perform(post(route()).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("text/plain").content(body())).andExpect(status().isUnsupportedMediaType());
         mvc.perform(delete(route()+"/"+UUID.randomUUID()).with(user(principal(manager))).with(csrf())).andExpect(status().isForbidden());empty();
+    }
+    @Test void aRealForeignEntryUuidMustRemainInvisibleAndUnchangedAcrossWriterRoutes()throws Exception {
+        var change=body().replace("{\"values\":","{\"expectedVersion\":0,\"values\":");
+        var response=mvc.perform(put(route()+"/"+foreignId).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(change))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("FINANCIAL_ENTRY_NOT_FOUND")).andReturn().getResponse().getContentAsString();
+        assertThat(response).doesNotContain("Foreign confidential",other.getId().toString());
+        mvc.perform(put("/api/companies/"+other.getId()+"/financial-entries/"+foreignId).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(change))
+                .andExpect(status().isForbidden());empty();
+        assertThat(entries.findById(foreignId).orElseThrow().getValues().nominalAmount()).isEqualByComparingTo("10.00");
+    }
+    @Test void percentEncodedWriterRoutesMustUseTheSameAuthorizationAndBodyBudget()throws Exception {
+        var encoded=java.net.URI.create(route().replace("financial-entries","%66inancial-entries"));
+        mvc.perform(post(encoded).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(" ".repeat(65537)))
+                .andExpect(status().isPayloadTooLarge());empty();
+        mvc.perform(post(encoded).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body()))
+                .andExpect(status().isCreated());assertThat(count("financial_entries")).isEqualTo(1);assertThat(count("financial_entry_events")).isEqualTo(1);
     }
     ResultActions postCommand(UUID key,String body)throws Exception {return mvc.perform(post(route()).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",key).contentType("application/json").content(body));}
     String body() {return EntryCommandJsonDecoderTest.valid().replace("00000000-0000-0000-0000-000000000001",bank.toString()).replace("00000000-0000-0000-0000-000000000002",category.toString());}
