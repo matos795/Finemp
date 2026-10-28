@@ -48,8 +48,11 @@
   lançamentos; sete contratos PG/HTTP passaram.
 - **FATO CONFIRMADO:** #151/PR152 integrada: exclusão interna individual,
   recibo persistente, estado anterior e auditoria atômica; oito contratos PG.
-- **EM IMPLEMENTAÇÃO:** #39, exclusão HTTP individual na #153. Séries/lotes
-  continuam em incrementos próprios, sem antecipar a política monetária #128.
+- **FATO CONFIRMADO:** #153/PR154 integrada: exclusão individual HTTP, versão
+  exclusivamente na URL e regressão de formulário corrigida também nas
+  transferências. CI/revisão no mesmo SHA; nenhuma exclusão por versão só no corpo.
+- **EM IMPLEMENTAÇÃO:** #39, metadados de séries/posições na #155. Recorrência e
+  exclusões relacionadas seguem depois; política monetária #128 permanece aberta.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
