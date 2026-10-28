@@ -5,13 +5,19 @@
 - **FATO CONFIRMADO:** #36 e #37 integradas: identidade, sessões, administração
   nos três escopos, grants explícitos e auditoria. RESTRICTED permanece negado
   até haver filtro real; não é funcionalidade afirmada pronta.
-- **FATO CONFIRMADO:** porta canônica ERP (#81 / PR #84) e persistência SyncRun
-  (#83 / PR #86) integradas. A API de controle #85 / PR #87 foi integrada e é
-  condicionada a feature flag. O executor #88 acrescenta coordenação e fencing;
-  seus ports obrigatórios não equivalem a publicação concreta, Connector ou
-  integração operacional homologada.
-- **PONTO ABERTO:** comprovação da identidade externa e provisionamento scoped
-  continuam gates de produção. A #50 e os demais módulos permanecem abertos.
+- **FATO CONFIRMADO:** controle/executor SyncRun, publicação atômica, leases,
+  retries e credenciais scoped foram integrados. PRs #97–#117 acrescentam
+  protocolo HTTPS, identidade observada/snapshot verificado, cliente/ciclo
+  outbound e runtime opt-in. #117 validou contrato composto com PostgreSQL,
+  resposta perdida, fonte errada, cancelamento REQUESTED, fence substituído e
+  período inválido; não é homologação de Firebird/rede operacional.
+- **EM IMPLEMENTAÇÃO:** #118, filha #38, entrega contas financeiras operacionais
+  com acesso explícito, paginação, versão e trava da última conta. Referências
+  reais de lançamentos/transferências dependem da #39. A matriz original abaixo
+  preserva o baseline do inventário; este checkpoint registra avanços posteriores.
+- **PONTO ABERTO:** ambiente/mapeamento/permissões Firebird, distribuição/cofre
+  definitivos e contratos incremental/retificação/cursor. #50 permanece aberta;
+  essas dependências isoladas não bloqueiam os módulos independentes.
 
 ## Autoridade da referência
 

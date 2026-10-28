@@ -415,7 +415,11 @@ O cliente a ser gerado a partir do OpenAPI deve:
 - preservar valores de classificação desconhecidos;
 - formatar, mas não recalcular, valores financeiros.
 
-## 9. Compatibilidade
+## 9. Contas financeiras operacionais
+
+Com `FINEMP_FINANCE_CATALOG_ENABLED`, `/api/companies/{companyId}/bank-accounts` oferece GET paginado/POST e `/{bankId}` oferece GET/PUT/DELETE. Exige permissões financeiras explícitas por Empresa e escopo ALL; administração não as substitui. PUT recebe expectedVersion, DELETE recebe version; ambos aceitam a versão inicial zero e recusam estado divergente. Saldo inicial retorna string decimal exata de duas casas. Dados cadastrais não são saldo calculado nem plano contábil. Ver [contrato e dependências operacionais](architecture/financial-bank-accounts.md) e OpenAPI.
+
+## 10. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 
