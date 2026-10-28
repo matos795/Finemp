@@ -21,7 +21,142 @@ tags:
   - name: Connector administration
   - name: Connector machine protocol
   - name: Financial bank accounts
+  - name: Business partners
 paths:
+  /api/companies/{companyId}/business-partners:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Business partners]
+      operationId: listBusinessPartners
+      summary: Lista parceiros comerciais da empresa autorizada.
+      description: Condicional a FINEMP_FINANCE_CATALOG_ENABLED. Exige BUSINESS_PARTNER_VIEW ou MANAGE e escopo ALL. Parceiros comerciais não são Clients SaaS. Ordem por nome de exibição normalizado e UUID; filtros omitidos incluem ativos e inativos.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: search
+          in: query
+          schema: {type: string, maxLength: 100, default: ''}
+          description: Nome/fantasia/cidade sem acentos ou diferença de caixa. Documento normalizado a partir de três caracteres. Busca literal; percentual não é wildcard.
+        - name: role
+          in: query
+          schema: {$ref: '#/components/schemas/BusinessPartnerRole'}
+          description: CUSTOMER e SUPPLIER incluem BOTH. BOTH retorna somente os dois papéis.
+        - name: active
+          in: query
+          schema: {type: boolean}
+      responses:
+        '200':
+          description: Página da empresa.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BusinessPartnerPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [Business partners]
+      operationId: createBusinessPartner
+      summary: Cadastra parceiro PF/PJ com documento validado.
+      description: Exige BUSINESS_PARTNER_MANAGE ALL, sessão e CSRF. Documento obrigatório e único por Empresa inclusive inativos; expectedVersion ausente ou null. Não consulta serviço externo. Cadastros pendentes legados/importação não são criados por esta operação.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BusinessPartnerWrite'}
+      responses:
+        '201':
+          description: Parceiro criado com versão zero e datas do servidor.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BusinessPartner'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: Documento duplicado ou conflito de estado; resposta não inclui dados pessoais.
+  /api/companies/{companyId}/business-partners/{partnerId}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: partnerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Business partners]
+      operationId: getBusinessPartner
+      summary: Consulta parceiro da empresa com VIEW ou MANAGE ALL.
+      responses:
+        '200':
+          description: Parceiro autorizado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BusinessPartner'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Business partners]
+      operationId: updateBusinessPartner
+      summary: Substitui cadastro sem sobrescrever uma versão posterior.
+      description: Exige MANAGE ALL. expectedVersion obrigatório; zero é válido. Documento é revalidado e mantém unicidade na Empresa. Timestamps e versão são controlados pelo servidor.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/BusinessPartnerWrite'
+                - type: object
+                  required: [expectedVersion]
+                  properties:
+                    expectedVersion: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Estado e versão após persistência.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BusinessPartner'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: STALE_VERSION, DUPLICATE_DOCUMENT ou conflito concorrente.
+    delete:
+      tags: [Business partners]
+      operationId: deleteBusinessPartner
+      summary: Exclui parceiro sem uso ou desativa histórico referenciado.
+      description: Exige MANAGE ALL. Integração com referências reais dos módulos operacionais depende da entrega39. Não há mínimo de parceiros. Constraint física protege referências existentes.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: version
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Ação realizada; se desativado, consulte GET para a versão atual.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, action]
+                properties:
+                  id: {type: string, format: uuid}
+                  action: {type: string, enum: [DELETED, DEACTIVATED]}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Versão divergente ou referência/conflito concorrente.
   /api/companies/{companyId}/bank-accounts:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2089,6 +2224,62 @@ components:
           type: string
         total:
           $ref: '#/components/schemas/DecimalAmount'
+    BusinessPartnerRole:
+      type: string
+      enum: [CUSTOMER, SUPPLIER, BOTH]
+    BusinessPartnerProfile:
+      type: object
+      required: [personType, document, name, role, active]
+      description: Cadastro manual. Textos opcionais ausentes/null tornam-se vazios. Campos são aparados; PF limpa fantasia. Limites são de representação técnica. Sem dados bancários ou credenciais.
+      properties:
+        personType: {type: string, enum: [INDIVIDUAL, LEGAL_ENTITY]}
+        document:
+          type: string
+          maxLength: 64
+          description: CPF ou CNPJ com DV válido; normalizado para maiúsculas sem pontuação. CNPJ alfanumérico aceito. Resposta tem 11 ou 14 caracteres.
+        name: {type: string, minLength: 2, maxLength: 255}
+        tradeName: {type: [string, 'null'], maxLength: 255}
+        role: {$ref: '#/components/schemas/BusinessPartnerRole'}
+        active: {type: boolean}
+        phone: {type: [string, 'null'], maxLength: 80}
+        email: {type: [string, 'null'], maxLength: 255, description: E-mail opcional validado quando não vazio.}
+        contactName: {type: [string, 'null'], maxLength: 255}
+        city: {type: [string, 'null'], maxLength: 150}
+        stateCode: {type: [string, 'null'], maxLength: 80, description: 'Normalizado para maiúsculas e primeiros dois caracteres, conforme referência.'}
+        postalCode: {type: [string, 'null'], maxLength: 20}
+        street: {type: [string, 'null'], maxLength: 255}
+        streetNumber: {type: [string, 'null'], maxLength: 40}
+        complement: {type: [string, 'null'], maxLength: 255}
+        district: {type: [string, 'null'], maxLength: 150}
+        municipalityCode: {type: [string, 'null'], maxLength: 80, description: Somente dígitos são persistidos; até20 após normalização.}
+        stateRegistration: {type: [string, 'null'], maxLength: 80}
+        municipalRegistration: {type: [string, 'null'], maxLength: 80}
+        notes: {type: [string, 'null'], maxLength: 4000}
+    BusinessPartnerWrite:
+      type: object
+      required: [profile]
+      properties:
+        profile: {$ref: '#/components/schemas/BusinessPartnerProfile'}
+        expectedVersion: {type: [integer, 'null'], format: int64, minimum: 0}
+    BusinessPartner:
+      type: object
+      required: [id, companyId, profile, version, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        companyId: {type: string, format: uuid}
+        profile: {$ref: '#/components/schemas/BusinessPartnerProfile'}
+        version: {type: integer, format: int64, minimum: 0}
+        createdAt: {type: string, format: date-time, readOnly: true}
+        updatedAt: {type: string, format: date-time, readOnly: true}
+    BusinessPartnerPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/BusinessPartner'}
     FinancialBankAccountType:
       type: string
       enum: [CURRENT, SAVINGS, CASH, INVESTMENT, DIGITAL, OTHER]
@@ -2149,6 +2340,8 @@ components:
         - QUESTOR_SYNC
         - BANK_ACCOUNT_VIEW
         - BANK_ACCOUNT_MANAGE
+        - BUSINESS_PARTNER_VIEW
+        - BUSINESS_PARTNER_MANAGE
     CostCenterScope:
       type: string
       enum: [ALL, RESTRICTED]
