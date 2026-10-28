@@ -11,9 +11,11 @@
   outbound e runtime opt-in. #117 validou contrato composto com PostgreSQL,
   resposta perdida, fonte errada, cancelamento REQUESTED, fence substituído e
   período inválido; não é homologação de Firebird/rede operacional.
-- **EM IMPLEMENTAÇÃO:** #118, filha #38, entrega contas financeiras operacionais
-  com acesso explícito, paginação, versão e trava da última conta. Referências
-  reais de lançamentos/transferências dependem da #39. A matriz original abaixo
+- **FATO CONFIRMADO:** #118/PR119 e #120/PR121 integradas: contas financeiras e
+  parceiros comerciais por Empresa, permissões explícitas, versões, concorrência
+  e contratos PostgreSQL/HTTP. Referências operacionais reais dependem da #39.
+- **EM IMPLEMENTAÇÃO:** #122, filha #38, centros hierárquicos e exigência para
+  novos lançamentos. Categorias seguem outro incremento. A matriz original abaixo
   preserva o baseline do inventário; este checkpoint registra avanços posteriores.
 - **PONTO ABERTO:** ambiente/mapeamento/permissões Firebird, distribuição/cofre
   definitivos e contratos incremental/retificação/cursor. #50 permanece aberta;

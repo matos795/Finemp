@@ -22,7 +22,216 @@ tags:
   - name: Connector machine protocol
   - name: Financial bank accounts
   - name: Business partners
+  - name: Result centers
 paths:
+  /api/companies/{companyId}/result-centers:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Result centers]
+      operationId: listResultCenters
+      summary: Consulta centros operacionais em ordem hierárquica.
+      description: Exige RESULT_CENTER_VIEW ou MANAGE ALL e FINEMP_FINANCE_CATALOG_ENABLED. Ordem numérica por segmentos, sem confundir 1.1 com 1.10. hasChildren considera todos os filhos, independentemente dos filtros.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: search
+          in: query
+          schema: {type: string, maxLength: 100, default: ''}
+          description: Nome sem acentos/caixa ou código, de forma literal.
+        - name: active
+          in: query
+          schema: {type: boolean}
+        - name: rootId
+          in: query
+          schema: {type: string, format: uuid}
+          description: Centro da mesma Empresa; inclui a raiz e toda sua subárvore.
+      responses:
+        '200':
+          description: Página de centros da Empresa.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResultCenterPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [Result centers]
+      operationId: createResultCenter
+      summary: Cria centro ativo com código hierárquico imutável.
+      description: MANAGE ALL. Remove espaços do código; até20 caracteres numéricos separados por ponto. Pai exato deve existir na Empresa e não pode ter lançamentos. Não reclassifica dados anteriores.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: {type: string, maxLength: 100, description: Até20 caracteres após remover espaços.}
+                name: {type: string, minLength: 2, maxLength: 80}
+      responses:
+        '201':
+          description: Centro criado com versão zero.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResultCenter'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: DUPLICATE_CODE, PARENT_NOT_FOUND, PARENT_HAS_ENTRIES ou conflito concorrente.
+  /api/companies/{companyId}/result-centers/{centerId}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: centerId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Result centers]
+      operationId: getResultCenter
+      summary: Consulta centro da Empresa com VIEW ou MANAGE ALL.
+      responses:
+        '200':
+          description: Centro autorizado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResultCenter'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Result centers]
+      operationId: updateResultCenter
+      summary: Atualiza nome e estado ativo sem alterar código ou pai.
+      description: Exige MANAGE ALL. expectedVersion obrigatório e não negativo; zero é válido.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, active, expectedVersion]
+              properties:
+                name: {type: string, minLength: 2, maxLength: 80}
+                active: {type: boolean}
+                expectedVersion: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Estado e versão após flush.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResultCenter'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: STALE_VERSION ou conflito concorrente.
+    delete:
+      tags: [Result centers]
+      operationId: deleteResultCenter
+      summary: Desativa centro usado ou exclui folha sem uso.
+      description: MANAGE ALL. Uso por lançamento/contrato desativa; sem uso e com filhos recusa. Guardas reais dependem39/42. Não existe quantidade mínima.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: version
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: DELETED ou DEACTIVATED; se desativado, consulte GET para nova versão.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, action]
+                properties:
+                  id: {type: string, format: uuid}
+                  action: {type: string, enum: [DELETED, DEACTIVATED]}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: STALE_VERSION, HAS_CHILDREN ou conflito físico/concorrente.
+  /api/companies/{companyId}/result-centers/suggested-plan:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    post:
+      tags: [Result centers]
+      operationId: createSuggestedResultCenterPlan
+      summary: Cria explicitamente os sete centros sugeridos da referência.
+      description: MANAGE ALL, sessão e CSRF. Somente plano vazio; transação atômica. Não é carga automática nem mescla de planos.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '201':
+          description: Plano sugerido persistido.
+          content:
+            application/json:
+              schema:
+                type: array
+                minItems: 7
+                maxItems: 7
+                items: {$ref: '#/components/schemas/ResultCenter'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: PLAN_NOT_EMPTY ou conflito concorrente; nenhuma inclusão parcial.
+  /api/companies/{companyId}/result-centers/settings:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Result centers]
+      operationId: getResultCenterSettings
+      summary: Consulta exigência de centro para futuros lançamentos.
+      description: VIEW ou MANAGE ALL. Antes de persistir, false e version=null. Não altera histórico nem afirma enforcement dos módulos ainda pendentes.
+      responses:
+        '200':
+          description: Configuração da Empresa.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResultCenterSettings'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    put:
+      tags: [Result centers]
+      operationId: updateResultCenterSettings
+      summary: Persiste exigência com controle de versão.
+      description: MANAGE ALL e CSRF. Primeiro PUT usa expectedVersion omitido/null; atualizações exigem versão persistida exata, inclusive zero. Não reclassifica lançamentos.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requireResultCenter]
+              properties:
+                requireResultCenter: {type: boolean}
+                expectedVersion: {type: [integer, 'null'], format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Configuração e versão após persistência.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ResultCenterSettings'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: STALE_VERSION ou conflito concorrente.
   /api/companies/{companyId}/business-partners:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2224,6 +2433,34 @@ components:
           type: string
         total:
           $ref: '#/components/schemas/DecimalAmount'
+    ResultCenter:
+      type: object
+      required: [id, companyId, code, name, active, hasChildren, version]
+      properties:
+        id: {type: string, format: uuid}
+        companyId: {type: string, format: uuid}
+        parentId: {type: [string, 'null'], format: uuid}
+        code: {type: string, maxLength: 20}
+        name: {type: string, maxLength: 80}
+        active: {type: boolean}
+        hasChildren: {type: boolean}
+        version: {type: integer, format: int64, minimum: 0}
+    ResultCenterSettings:
+      type: object
+      required: [companyId, requireResultCenter]
+      properties:
+        companyId: {type: string, format: uuid}
+        requireResultCenter: {type: boolean}
+        version: {type: [integer, 'null'], format: int64, minimum: 0}
+    ResultCenterPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/ResultCenter'}
     BusinessPartnerRole:
       type: string
       enum: [CUSTOMER, SUPPLIER, BOTH]
@@ -2342,6 +2579,8 @@ components:
         - BANK_ACCOUNT_MANAGE
         - BUSINESS_PARTNER_VIEW
         - BUSINESS_PARTNER_MANAGE
+        - RESULT_CENTER_VIEW
+        - RESULT_CENTER_MANAGE
     CostCenterScope:
       type: string
       enum: [ALL, RESTRICTED]
