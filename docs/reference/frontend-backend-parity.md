@@ -35,9 +35,12 @@
   versão atual/esperada, recibo idempotente e auditoria atômica; onze contratos PG.
 - **FATO CONFIRMADO:** #141/PR142 integrada: API de baixa/estorno com JSON
   estrito, autorização atual, CSRF e corpo limitado; sete contratos PG/HTTP.
-- **EM IMPLEMENTAÇÃO:** #39, persistência independente de transferências na
-  #143, com referências reais às duas contas e proteção do histórico. Comandos
-  e API de transferências serão entregues em incrementos próprios.
+- **FATO CONFIRMADO:** #143/PR144 integrada: persistência independente de
+  transferências, referências reais às duas contas e proteção do histórico;
+  oito contratos PostgreSQL passaram.
+- **EM IMPLEMENTAÇÃO:** #39, comandos internos de transferências na #145,
+  com autorização vigente, recibos, auditoria e exclusão por versão. A API será
+  entregue em incremento próprio.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo

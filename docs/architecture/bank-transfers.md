@@ -1,6 +1,6 @@
 # Transferências internas entre contas financeiras
 
-Referências: #39 e #143. Este incremento entrega persistência e integridade das referências; comandos, autorização operacional, recibos e API serão entregues antes de disponibilizar a escrita.
+Referências: #39, #143 e #145. Persistência e integridade foram integradas no PR144. Os comandos internos têm recibos e auditoria próprios; a exposição HTTP permanece em incremento separado.
 
 ## FATO CONFIRMADO
 
@@ -14,8 +14,18 @@ Valores são decimais exatos NUMERIC(19,2), sem arredondamento na entrada canôn
 
 O adaptador real de referências de contas consulta origem OU destino por Empresa em SQL atual, sem confiar no estado antigo de um objeto JPA. Permanece ativo mesmo se os produtores operacionais estiverem desabilitados. A exclusão de uma conta usada segue a política já existente do catálogo: desativar e preservar o histórico. Versão otimista protege também a exclusão de um estado desatualizado. O repositório não é uma superfície pública nem substitui a autorização dos próximos comandos.
 
+## DECISÃO técnica — comandos internos opt-in
+
+FINEMP_FINANCE_TRANSFERS_ENABLED é desabilitado por padrão e ativa somente o serviço interno. BANK_ACCOUNT_MANAGE ALL explícito e vigente é exigido antes e depois do bloqueio por Empresa, conforme a matriz funcional da tela de contas. Nenhum papel recebe acesso implícito. A transação exige READ COMMITTED, com espera de bloqueio limitada a cinco segundos. A criação recebe somente valor positivo já exato em centavos; valida as duas contas em SQL atual e a precondição de pelo menos duas contas ativas, sem transformar isso em veto universal a uma seleção histórica inativa.
+
+Excluir exige versão esperada não negativa. A linha é bloqueada e sua versão atual é comparada à versão esperada e ao objeto gerenciado; contexto JPA antigo falha de forma segura. Não revalida a precondição de captura nem altera bancos. O recibo DELETED informa a última versão persistida, e não uma versão nova de recurso já removido.
+
+O namespace de comandos de transferência possui chave UUID por Empresa e ator, compartilhada entre criar e excluir. SHA-256 com esquema versionado e comprimentos prefixados inclui contexto, ação, alvo, versão e dados canônicos. Reenvio exige permissão atual e retorna o recibo original antes de consultar bancos ou alvo, inclusive após exclusão. Conteúdo/ação diferente com a mesma chave conflita. O namespace é independente dos comandos de lançamentos.
+
+Registro/exclusão, evento e recibo são uma transação. Criar registra estado posterior; excluir registra estado anterior e estado posterior ausente. Não há FK para a transferência no diário: excluir não elimina o histórico. Empresa e ator têm FKs. Estados são JSON canônico privado e não aparecem em logs/respostas; consulta e retenção da auditoria continuam na #51. Não é uma alegação de imutabilidade contra administrador do banco.
+
 ## PONTO ABERTO / PRÓXIMO PASSO
 
-A normalização de valores brutos e os efeitos monetários legados continuam na #128. Não foram resolvidos por uma coluna decimal. O próximo incremento terá comandos de criar/excluir, permissão vigente, bloqueio por Empresa, contrato positivo em centavos, versão esperada para excluir, evento e recibo idempotente na mesma transação. Só depois será exposta API limitada e documentada. Não existe operação de alteração homologada no formulário de transferências; não será inventada.
+A normalização de valores brutos e os efeitos monetários legados continuam na #128. Não foram resolvidos por uma coluna decimal. O próximo incremento exporá API limitada e documentada. Não existe operação de alteração homologada no formulário de transferências; não será inventada.
 
 Os testes usam somente dados sintéticos: precisão e limites, persistência PostgreSQL, isolamento das duas pontas, proteção real de contas, referências atuais sem cache, identificadores iguais em tipos diferentes e conflito de versão. PostgreSQL é validado no CI com Testcontainers.
