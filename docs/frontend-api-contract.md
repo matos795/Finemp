@@ -485,9 +485,17 @@ Reenvio recupera o recibo original inclusive após exclusões, sem recriar ocorr
 
 O backend verifica todos os meses afetados por cada comando sob a trava da Company. Captura/edição/exclusão conferem competências anterior/nova e meses dos pagamentos existentes; baixa/estorno conferem meses dos pagamentos anterior/novo, permitindo competência fechada com pagamento em mês aberto. Transferências conferem sua data. Recorrência e exclusão relacionada validam o conjunto inteiro antes de persistir efeitos. Período fechado retorna409 FINANCIAL_PERIOD_CLOSED nas rotas existentes, com mensagem fixa e sem dados de outro tenant. O frontend não deve refazer essa decisão localmente. Reenvio autorizado recupera recibo sem reaplicar efeitos, inclusive após fechamento posterior.
 
-A API de fechar/reabrir e o histórico ainda serão expostos em incremento próprio; isto não é fechamento automático ou alteração do Questor.
+A #171 acrescenta o contrato de fechar/reabrir e o histórico descrito abaixo; isto não é fechamento automático ou alteração do Questor.
 
-## 21. Compatibilidade
+## 21. API de fechamento e histórico
+
+FINEMP_FINANCE_PERIODS_ENABLED habilita leituras/comandos internos; FINEMP_FINANCE_PERIOD_COMMANDS_ENABLED é um opt-in adicional para POST, ambos false por padrão. GET /companies/{companyId}/financial-periods lista apenas meses com estado persistido, por mês descendente, com from/to inclusivos, closed, page/size1–100. GET /{period} representa mês inexistente como aberto com id/version/atualização nulos. GET /{period}/history pagina eventos do diário oficial e devolve vazio quando não há histórico. Leitura exige FINANCIAL_PERIOD_VIEW, CLOSE ou REOPEN ALL vigente.
+
+POST /{period}/closures exige FINANCIAL_PERIOD_CLOSE, corpo com expectedVersion explícito (null só no primeiro fechamento). POST /{period}/reopenings exige FINANCIAL_PERIOD_REOPEN, expectedVersion inteiro e reason não vazio até1000 caracteres. Ambas exigem sessão/CSRF e Idempotency-Key UUID e respondem200 com FinancialPeriodReceipt, incluindo ID do evento oficial. JSON estrito rejeita campos extras, duplicados, versões textuais/fracionárias, conteúdo após o documento e motivo ausente na reabertura. Mês deve ser YYYY-MM entre0001-01 e9999-12.
+
+Permissão é verificada na rota normalizada antes do corpo64KiB; serviços verificam novamente antes e depois da trava. Fechar e reabrir não concedem a permissão um do outro.409 distingue versão obsoleta, chave com conteúdo diferente ou estado já fechado/aberto. Reabrir preserva recurso/histórico e incrementa versão. Histórico inclui ator, comando, instante, estados anterior/novo e motivo; o primeiro fechamento tem beforeState nulo. Não há edição/exclusão de histórico.
+
+## 22. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

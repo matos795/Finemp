@@ -20,7 +20,7 @@ AccessAuditRecorder/Event foi ampliado com recurso, comando, estado anterior/nov
 
 ## PRÓXIMO PASSO / PONTO ABERTO
 
-#167 fornece comandos internos sob FINEMP_FINANCE_PERIODS_ENABLED=false por padrão. Ainda não libera endpoints de fechamento. A #169 integra o guard a cada mutação, incluindo todas as ocorrências mensais e todas as exclusões relacionadas, antes de disponibilizar API de fechar/reabrir. As verificações ocorrem depois do replay idempotente e antes dos efeitos: replay não reaplica mutação em mês fechado. Consulta/histórico paginados e documentação HTTP seguem depois dos bloqueios.
+#167 fornece comandos internos sob FINEMP_FINANCE_PERIODS_ENABLED=false por padrão. Ainda não libera endpoints de fechamento. A #169 integra o guard a cada mutação, incluindo todas as ocorrências mensais e todas as exclusões relacionadas, antes de disponibilizar API de fechar/reabrir. As verificações ocorrem depois do replay idempotente e antes dos efeitos: replay não reaplica mutação em mês fechado. Consulta/histórico paginados e comandos HTTP são acrescentados na #171, depois dos bloqueios.
 
 Uma política cumulativa, de datas de corte ou de calendário fiscal não foi informada e permanece aberta; não é presumida pelo estado mensal. Nada aqui fecha ou modifica o Questor.
 
@@ -34,3 +34,12 @@ Oito contratos PostgreSQL sintéticos cobrem fechar/reabrir com histórico ofici
 EntryWriteTransactionGuard e BankTransferWriteGuard delegam ao guard de período sempre após a trava Company e o replay. Criação/edição/exclusão validam as competências de todos os estados envolvidos; um lançamento pago também afeta o respectivo mês de pagamento, inclusive ao remover ou mudar sua data, impedindo contorno pelo formulário de edição. Baixa/estorno verificam somente os meses de pagamento anterior/novo; não bloqueiam uma baixa em mês aberto apenas porque sua competência está fechada. Transferência verifica o mês de sua data tanto na criação quanto na exclusão.
 
 Todos os meses são consultados em conjunto. Recorrência valida o calendário inteiro antes de persistir o grupo; exclusão relacionada valida os estados atuais de todos os alvos antes de remover vínculos/linhas. Qualquer mês fechado recusa o comando inteiro com409 FINANCIAL_PERIOD_CLOSED, sem recibo ou auditoria parcial. Recibos já existentes não mudam. O teste de concorrência mantém o fechamento sem commit enquanto um writer aguarda a trava; após commit, o writer lê o bloqueio e não persiste efeitos.
+
+
+## Contrato HTTP — #171
+
+Leitura por mês inclui estado virtual aberto quando não persistido; a coleção contém somente estados existentes e aceita intervalo inclusivo/status/paginação1–100. Histórico consulta exclusivamente eventos oficiais FINANCIAL_PERIOD vinculados ao recurso e à Company, ordenados por instante e UUID e com paginação no SQL. As consultas têm transação com timeout5s e não carregam fontes externas ou dados de acesso de outros recursos.
+
+CLOSE e REOPEN têm autorizações separadas antes do consumo de corpo, por rota normalizada. O filtro reutiliza a infraestrutura de limites financeiros com marcador próprio,64KiB/4 comandos concorrentes, sem reinterpretar URI. O controller fica sob opt-in adicional de comandos, desligado por padrão. JSON privado/estrito recebe somente expectedVersion e, na reabertura, reason. O actor/Company vêm da sessão/rota. Serviços revalidam permissão após trava, sem confiar no controller ou frontend.
+
+Três testes locais de decoder cobrem precondições, ambiguidades e calendário; seis contratos PostgreSQL/HTTP cobrem os dois grants, estado/diário real, paginação/filtros, replay/conflito, corpo normalizado antes/depois da autorização, CSRF e validação. Captura/transferência e bloqueios já são cobertos na #169; essa matriz não é duplicada aqui.
