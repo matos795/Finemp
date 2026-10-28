@@ -687,7 +687,7 @@ paths:
       tags: [Result centers]
       operationId: createResultCenter
       summary: Cria centro ativo com código hierárquico imutável.
-      description: MANAGE ALL. Remove espaços do código; até20 caracteres numéricos separados por ponto. Pai exato deve existir na Empresa e não pode ter lançamentos. Não reclassifica dados anteriores.
+      description: MANAGE ALL. Remove espaços do código; até20 caracteres numéricos separados por ponto. Pai exato deve existir na Empresa. type GROUP ou ANALYTICAL obrigatório; filhos não alteram o tipo do pai. Não reclassifica dados anteriores.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
@@ -696,10 +696,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [code, name]
+              required: [code, name, type]
               properties:
                 code: {type: string, maxLength: 100, description: Até20 caracteres após remover espaços.}
                 name: {type: string, minLength: 2, maxLength: 80}
+                type: {type: string, enum: [GROUP, ANALYTICAL]}
       responses:
         '201':
           description: Centro criado com versão zero.
@@ -710,7 +711,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '409':
-          description: DUPLICATE_CODE, PARENT_NOT_FOUND, PARENT_HAS_ENTRIES ou conflito concorrente.
+          description: DUPLICATE_CODE, PARENT_NOT_FOUND ou conflito concorrente.
   /api/companies/{companyId}/result-centers/{centerId}:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -734,8 +735,8 @@ paths:
     put:
       tags: [Result centers]
       operationId: updateResultCenter
-      summary: Atualiza nome e estado ativo sem alterar código ou pai.
-      description: Exige MANAGE ALL. expectedVersion obrigatório e não negativo; zero é válido.
+      summary: Atualiza nome, estado ativo e tipo sem alterar código ou pai.
+      description: Exige MANAGE ALL. expectedVersion obrigatório e não negativo; zero é válido. type omitido preserva o tipo atual. Mudança para GROUP com lançamentos é recusada com HAS_ENTRIES, preservando o histórico.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
@@ -747,6 +748,7 @@ paths:
               required: [name, active, expectedVersion]
               properties:
                 name: {type: string, minLength: 2, maxLength: 80}
+                type: {type: string, enum: [GROUP, ANALYTICAL]}
                 active: {type: boolean}
                 expectedVersion: {type: integer, format: int64, minimum: 0}
       responses:
@@ -3429,7 +3431,7 @@ components:
               items: {$ref: '#/components/schemas/FinancialCategory'}
     ResultCenter:
       type: object
-      required: [id, companyId, code, name, active, hasChildren, version]
+      required: [id, companyId, code, name, active, hasChildren, version, type]
       properties:
         id: {type: string, format: uuid}
         companyId: {type: string, format: uuid}
@@ -3438,6 +3440,7 @@ components:
         name: {type: string, maxLength: 80}
         active: {type: boolean}
         hasChildren: {type: boolean}
+        type: {type: string, enum: [GROUP, ANALYTICAL]}
         version: {type: integer, format: int64, minimum: 0}
     ResultCenterSettings:
       type: object
