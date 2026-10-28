@@ -26,7 +26,230 @@ tags:
   - name: Financial categories
   - name: Financial entries
   - name: Financial bank transfers
+  - name: Financial periods
 paths:
+  /api/companies/{companyId}/financial-periods:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags:
+        - Financial periods
+      operationId: listFinancialPeriods
+      summary: Lista somente meses persistidos; não precria estados abertos.
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$
+            description: Mês ISO entre0001-01 e9999-12.
+        - name: to
+          in: query
+          schema:
+            type: string
+            pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$
+            description: Mês ISO entre0001-01 e9999-12.
+        - name: closed
+          in: query
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Estado autorizado da Company.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialPeriodPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: Indisponível; mensagem fixa sem SQL ou dados privados.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/companies/{companyId}/financial-periods/{period}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/FinancialPeriodMonth'
+    get:
+      tags:
+        - Financial periods
+      operationId: getFinancialPeriod
+      summary: Consulta mês; ausência significa aberto, id/version/atualização nulos.
+      parameters: []
+      responses:
+        '200':
+          description: Estado autorizado da Company.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialPeriod'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: Indisponível; mensagem fixa sem SQL ou dados privados.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/companies/{companyId}/financial-periods/{period}/history:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/FinancialPeriodMonth'
+    get:
+      tags:
+        - Financial periods
+      operationId: listFinancialPeriodHistory
+      summary: Histórico oficial do mês, paginado e restrito à Company.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Estado autorizado da Company.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialPeriodHistoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: Indisponível; mensagem fixa sem SQL ou dados privados.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/companies/{companyId}/financial-periods/{period}/closures:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/FinancialPeriodMonth'
+    post:
+      tags:
+        - Financial periods
+      operationId: closeFinancialPeriod
+      summary: Fecha mês com FINANCIAL_PERIOD_CLOSE e versão esperada.
+      description: >-
+        Exige os dois opt-ins de períodos, sessão/CSRF, permissão específica ALL vigente e Idempotency-Key UUID. Autorização da rota normalizada precede o corpo
+        limitado a64KiB, sem compressão, com concorrência4 compartilhada entre as duas ações. Estado, auditoria oficial e recibo são atômicos. Reenvio
+        autorizado não repete efeitos.
+      parameters:
+        - $ref: '#/components/parameters/FinancialCommandKey'
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialPeriodCloseCommand'
+      responses:
+        '200':
+          description: Recibo imutável do comando; reenvio retorna o original.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialPeriodReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: STALE_VERSION, IDEMPOTENCY_MISMATCH, ALREADY_CLOSED, ALREADY_OPEN ou conflito concorrente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '413':
+          description: Corpo autorizado excede64KiB.
+        '415':
+          description: Conteúdo não JSON ou codificação não suportada.
+        '429':
+          description: Orçamento concorrente esgotado.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+        '503':
+          description: Indisponível; mensagem fixa sem SQL ou dados privados.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/companies/{companyId}/financial-periods/{period}/reopenings:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/FinancialPeriodMonth'
+    post:
+      tags:
+        - Financial periods
+      operationId: reopenFinancialPeriod
+      summary: Reabre mês com FINANCIAL_PERIOD_REOPEN e motivo obrigatório.
+      description: >-
+        Exige os dois opt-ins de períodos, sessão/CSRF, permissão específica ALL vigente e Idempotency-Key UUID. Autorização da rota normalizada precede o corpo
+        limitado a64KiB, sem compressão, com concorrência4 compartilhada entre as duas ações. Estado, auditoria oficial e recibo são atômicos. Reenvio
+        autorizado não repete efeitos.
+      parameters:
+        - $ref: '#/components/parameters/FinancialCommandKey'
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialPeriodReopenCommand'
+      responses:
+        '200':
+          description: Recibo imutável do comando; reenvio retorna o original.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialPeriodReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: STALE_VERSION, IDEMPOTENCY_MISMATCH, ALREADY_CLOSED, ALREADY_OPEN ou conflito concorrente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '413':
+          description: Corpo autorizado excede64KiB.
+        '415':
+          description: Conteúdo não JSON ou codificação não suportada.
+        '429':
+          description: Orçamento concorrente esgotado.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+        '503':
+          description: Indisponível; mensagem fixa sem SQL ou dados privados.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /api/companies/{companyId}/financial-entry-series/monthly:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2358,6 +2581,14 @@ components:
       name: JSESSIONID
       description: Sessão HTTP mantida em cookie HttpOnly.
   parameters:
+    FinancialPeriodMonth:
+      name: period
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$
+        description: Mês ISO entre0001-01 e9999-12.
     FinancialCommandKey:
       name: Idempotency-Key
       in: header
@@ -2498,6 +2729,222 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    FinancialPeriod:
+      type: object
+      required:
+        - id
+        - companyId
+        - period
+        - closed
+        - version
+        - updatedBy
+        - updatedAt
+      properties:
+        id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        period:
+          type: string
+          pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$
+          description: Mês ISO entre0001-01 e9999-12.
+        closed:
+          type: boolean
+        version:
+          type:
+            - integer
+            - 'null'
+          format: int64
+          minimum: 0
+        updatedBy:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        updatedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    FinancialPeriodPage:
+      type: object
+      required:
+        - items
+        - page
+        - size
+        - totalItems
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialPeriod'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    FinancialPeriodCloseCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type:
+            - integer
+            - 'null'
+          format: int64
+          minimum: 0
+          description: null apenas para o primeiro fechamento de mês sem estado.
+    FinancialPeriodReopenCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Motivo não vazio após remover espaços externos; preservado na auditoria oficial.
+    FinancialPeriodReceipt:
+      type: object
+      required:
+        - companyId
+        - commandId
+        - periodId
+        - period
+        - closed
+        - version
+        - auditEventId
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        commandId:
+          type: string
+          format: uuid
+        periodId:
+          type: string
+          format: uuid
+        period:
+          type: string
+          pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$
+          description: Mês ISO entre0001-01 e9999-12.
+        closed:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        auditEventId:
+          type: string
+          format: uuid
+    FinancialPeriodAuditState:
+      type: object
+      required:
+        - id
+        - period
+        - closed
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        period:
+          type: string
+          pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$
+          description: Mês ISO entre0001-01 e9999-12.
+        closed:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+    FinancialPeriodHistory:
+      type: object
+      required:
+        - id
+        - action
+        - actorId
+        - occurredAt
+        - beforeState
+        - afterState
+        - reason
+        - commandId
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum:
+            - FINANCIAL_PERIOD_CLOSED
+            - FINANCIAL_PERIOD_REOPENED
+        actorId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+        beforeState:
+          anyOf:
+            - $ref: '#/components/schemas/FinancialPeriodAuditState'
+            - type: 'null'
+        afterState:
+          $ref: '#/components/schemas/FinancialPeriodAuditState'
+        reason:
+          type: string
+          maxLength: 1000
+        commandId:
+          type: string
+          format: uuid
+    FinancialPeriodHistoryPage:
+      type: object
+      required:
+        - items
+        - page
+        - size
+        - totalItems
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialPeriodHistory'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
     PlatformPermission:
       type: string
       enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]

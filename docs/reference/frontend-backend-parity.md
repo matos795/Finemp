@@ -62,8 +62,15 @@
   oito contratos PostgreSQL/HTTP passaram.
 - **FATO CONFIRMADO:** #164/PR165 integrada: captura mensal HTTP e metadados
   originais opcionais na leitura, com cinco contratos PostgreSQL/HTTP passando.
-- **EM IMPLEMENTAÇÃO:** #157, tipo explícito do Centro de Resultado e preservação
-  do histórico; #39 continua aberta pela política monetária isolada na #128.
+- **FATO CONFIRMADO:** #157/PR166 integrada: tipo GROUP/ANALYTICAL explícito,
+  migração que preserva histórico e validações atuais; CI803/0 falhas/2 skips.
+- **FATO CONFIRMADO:** #167/PR168 integrada: estados de fechamento por Company,
+  comandos internos idempotentes e ampliação da auditoria oficial; oito contratos PG.
+- **FATO CONFIRMADO:** #169/PR170 integrada: guard dos períodos efetivos de
+  todas as mutações, sete contratos PG/HTTP e CI818/0 falhas/2 skips.
+- **EM IMPLEMENTAÇÃO:** #171 acrescenta API de fechamento/reabertura/diário;
+  #158 continua aberta até sua conclusão.
+  #39 continua aberta pela política monetária isolada na #128.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
