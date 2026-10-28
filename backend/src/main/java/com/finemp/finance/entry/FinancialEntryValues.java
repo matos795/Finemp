@@ -6,19 +6,20 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.*;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 /** Canonical persisted state; capture/rounding and authorization belong to command services. */
 @Embeddable
 public record FinancialEntryValues(
         @Enumerated(EnumType.STRING) @Column(nullable=false,length=20) FinancialDirection direction,
         @Column(nullable=false,length=255) String description,
-        @Column(name="nominal_amount",nullable=false,precision=19,scale=2) BigDecimal nominalAmount,
+        @JsonFormat(shape=JsonFormat.Shape.STRING) @Column(name="nominal_amount",nullable=false,precision=19,scale=2) BigDecimal nominalAmount,
         @Column(name="document_date",nullable=false) LocalDate documentDate,
         @Column(name="entry_date",nullable=false) LocalDate entryDate,
-        @Convert(converter=EntryCompetenceConverter.class) @Column(nullable=false,length=7) YearMonth competence,
+        @JsonFormat(shape=JsonFormat.Shape.STRING) @Convert(converter=EntryCompetenceConverter.class) @Column(nullable=false,length=7) YearMonth competence,
         @Column(name="due_date",nullable=false) LocalDate dueDate,
         @Column(name="payment_date") LocalDate paymentDate,
-        @Column(name="actual_paid_amount",precision=19,scale=2) BigDecimal actualPaidAmount,
+        @JsonFormat(shape=JsonFormat.Shape.STRING) @Column(name="actual_paid_amount",precision=19,scale=2) BigDecimal actualPaidAmount,
         @Column(name="bank_account_id",nullable=false) UUID bankAccountId,
         @Column(name="category_id",nullable=false) UUID categoryId,
         @Column(name="partner_id") UUID partnerId,
