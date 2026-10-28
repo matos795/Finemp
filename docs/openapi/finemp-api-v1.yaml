@@ -20,7 +20,141 @@ tags:
   - name: Accounting synchronization
   - name: Connector administration
   - name: Connector machine protocol
+  - name: Financial bank accounts
 paths:
+  /api/companies/{companyId}/bank-accounts:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial bank accounts]
+      operationId: listFinancialBankAccounts
+      summary: Lista contas financeiras operacionais da empresa autorizada.
+      description: Condicional a FINEMP_FINANCE_CATALOG_ENABLED. Exige BANK_ACCOUNT_VIEW ou BANK_ACCOUNT_MANAGE e escopo ALL. Não é plano contábil nem consulta Questor. Ordem estável por nome e UUID.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: search
+          in: query
+          schema: {type: string, maxLength: 100, default: ''}
+          description: Busca literal no nome, sem diferenciar maiúsculas. Percentual não é wildcard.
+        - name: type
+          in: query
+          schema: {$ref: '#/components/schemas/FinancialBankAccountType'}
+        - name: active
+          in: query
+          schema: {type: boolean}
+      responses:
+        '200':
+          description: Página restrita à empresa.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialBankAccountPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [Financial bank accounts]
+      operationId: createFinancialBankAccount
+      summary: Cria conta operacional sem conceder acesso financeiro por papel administrativo.
+      description: Exige BANK_ACCOUNT_MANAGE ALL, sessão e CSRF. Data e valores explícitos; saldo inicial não é saldo calculado. expectedVersion deve ser ausente ou null na criação.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinancialBankAccountWrite'}
+      responses:
+        '201':
+          description: Conta criada, com versão inicial zero.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialBankAccount'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: Conflito de estado ou recurso ocupado; nenhuma escrita parcial.
+  /api/companies/{companyId}/bank-accounts/{bankId}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: bankId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Financial bank accounts]
+      operationId: getFinancialBankAccount
+      summary: Consulta uma conta dentro da empresa autorizada.
+      responses:
+        '200':
+          description: Conta financeira; abertura monetária como string decimal exata.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialBankAccount'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Financial bank accounts]
+      operationId: updateFinancialBankAccount
+      summary: Substitui dados cadastrais sem alterar a empresa proprietária.
+      description: Exige BANK_ACCOUNT_MANAGE ALL e expectedVersion atual. Resposta inclui a versão após flush; versão divergente retorna 409 STALE_VERSION.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/FinancialBankAccountWrite'
+                - type: object
+                  required: [expectedVersion]
+                  properties:
+                    expectedVersion: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Dados persistidos e versão atualizada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialBankAccount'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Versão divergente, integridade ou transação incompatível; consultar estado atual.
+    delete:
+      tags: [Financial bank accounts]
+      operationId: deleteFinancialBankAccount
+      summary: Remove conta sem uso ou desativa histórico referenciado.
+      description: Exige BANK_ACCOUNT_MANAGE ALL, versão atual e CSRF. Não remove a última linha sem referências, mesmo se inativa. Guardas de referências são fornecidas pelos módulos operacionais; integração real com lançamentos/transferências acompanha a entrega desses módulos. Nunca usa AccountingMovement como substituto.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: version
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Ação aplicada; após DEACTIVATED consultar a conta para obter a nova versão.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, action]
+                properties:
+                  id: {type: string, format: uuid}
+                  action: {type: string, enum: [DELETED, DEACTIVATED]}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: STALE_VERSION, LAST_ACCOUNT, TRANSACTION_NOT_SUPPORTED ou BANK_ACCOUNT_CONFLICT.
   /api/connector/v1/work/{attemptId}/complete:
     parameters:
       - name: attemptId
@@ -1540,7 +1674,7 @@ components:
         credentialId: {type: string, format: uuid}
         accountingFirmId: {type: string, format: uuid}
         accountingSourceId: {type: string, format: uuid}
-        credentialVersion: {type: integer, format: int64, minimum: 0, description: Versão técnica inicial zero; não confundir com attemptNumber, que começa em um.}
+        credentialVersion: {type: integer, format: int64, minimum: 0, description: 'Versão técnica inicial zero; não confundir com attemptNumber, que começa em um.'}
     ConnectorProtocolError:
       type: object
       required: [code]
@@ -1955,6 +2089,44 @@ components:
           type: string
         total:
           $ref: '#/components/schemas/DecimalAmount'
+    FinancialBankAccountType:
+      type: string
+      enum: [CURRENT, SAVINGS, CASH, INVESTMENT, DIGITAL, OTHER]
+      description: Conta corrente, Poupança, Caixa, Aplicação, Conta digital e Outra, respectivamente.
+    FinancialBankAccountWrite:
+      type: object
+      required: [name, type, openingBalance, openingDate, active]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        type: {$ref: '#/components/schemas/FinancialBankAccountType'}
+        openingBalance:
+          type: [number, string]
+          description: Decimal exato representável em NUMERIC(19,2), negativo permitido. Não há arredondamento; frações menores que centavo são recusadas. Zeros finais são normalizados.
+          examples: ['-1.23']
+        openingDate: {type: string, format: date, description: Data cadastral explícita entre os anos 1 e 9999; não implica cálculo de vigência.}
+        active: {type: boolean}
+        expectedVersion: {type: [integer, 'null'], format: int64, minimum: 0}
+    FinancialBankAccount:
+      type: object
+      required: [id, companyId, name, type, openingBalance, openingDate, active, version]
+      properties:
+        id: {type: string, format: uuid}
+        companyId: {type: string, format: uuid}
+        name: {type: string}
+        type: {$ref: '#/components/schemas/FinancialBankAccountType'}
+        openingBalance: {type: string, description: 'Saldo inicial em string decimal de duas casas, para preservar precisão no consumidor.', examples: ['-1.23']}
+        openingDate: {type: string, format: date}
+        active: {type: boolean}
+        version: {type: integer, format: int64, minimum: 0}
+    FinancialBankAccountPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/FinancialBankAccount'}
     DecimalAmount:
       type: number
       description: Decimal calculado em BigDecimal no backend. O consumidor apenas formata.
@@ -1975,6 +2147,8 @@ components:
         - ACCOUNT_CLASSIFICATION_MANAGE
         - MANUAL_ENTRY_MANAGE
         - QUESTOR_SYNC
+        - BANK_ACCOUNT_VIEW
+        - BANK_ACCOUNT_MANAGE
     CostCenterScope:
       type: string
       enum: [ALL, RESTRICTED]
