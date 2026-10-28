@@ -14,8 +14,10 @@
 - **FATO CONFIRMADO:** #118/PR119 e #120/PR121 integradas: contas financeiras e
   parceiros comerciais por Empresa, permissões explícitas, versões, concorrência
   e contratos PostgreSQL/HTTP. Referências operacionais reais dependem da #39.
-- **EM IMPLEMENTAÇÃO:** #122, filha #38, centros hierárquicos e exigência para
-  novos lançamentos. Categorias seguem outro incremento. A matriz original abaixo
+- **FATO CONFIRMADO:** #122/PR123 integrada: centros hierárquicos e exigência
+  configurável para novos lançamentos, com contratos PostgreSQL e concorrência.
+- **EM IMPLEMENTAÇÃO:** #124, filha #38, grupos/subcategorias e classificação
+  efetiva; plano padrão completo segue incremento próprio. A matriz original abaixo
   preserva o baseline do inventário; este checkpoint registra avanços posteriores.
 - **PONTO ABERTO:** ambiente/mapeamento/permissões Firebird, distribuição/cofre
   definitivos e contratos incremental/retificação/cursor. #50 permanece aberta;

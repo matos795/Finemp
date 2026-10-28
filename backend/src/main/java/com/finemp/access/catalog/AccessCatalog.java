@@ -26,7 +26,7 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
     }
 
     public static AccessCatalog current() {
-        return new AccessCatalog("2026-10-27.4", Set.of(PlatformPermission.values()),
+        return new AccessCatalog("2026-10-27.5", Set.of(PlatformPermission.values()),
                 Set.of(AccountingFirmPermission.values()), Set.of(CompanyPermission.values()), List.of(
                 new ScreenPreset("accounting-ledger", "Razão contábil", true, false,
                         Set.of(CompanyPermission.ACCOUNTING_MOVEMENT_VIEW), Set.of(), null),
@@ -47,6 +47,9 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
                         Set.of(CompanyPermission.BUSINESS_PARTNER_VIEW, CompanyPermission.BUSINESS_PARTNER_MANAGE), "FINANCE_CATALOG_ENABLED"),
                 new ScreenPreset("result-centers", "Centros de resultado", true, true,
                         Set.of(CompanyPermission.RESULT_CENTER_VIEW),
-                        Set.of(CompanyPermission.RESULT_CENTER_VIEW, CompanyPermission.RESULT_CENTER_MANAGE), "FINANCE_CATALOG_ENABLED")));
+                        Set.of(CompanyPermission.RESULT_CENTER_VIEW, CompanyPermission.RESULT_CENTER_MANAGE), "FINANCE_CATALOG_ENABLED"),
+                new ScreenPreset("financial-categories", "Categorias financeiras", true, true,
+                        Set.of(CompanyPermission.FINANCIAL_CATEGORY_VIEW),
+                        Set.of(CompanyPermission.FINANCIAL_CATEGORY_VIEW, CompanyPermission.FINANCIAL_CATEGORY_MANAGE), "FINANCE_CATALOG_ENABLED")));
     }
 }
