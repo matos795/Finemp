@@ -82,6 +82,13 @@ public class SecurityConfiguration {
                                                                                 .forPermission(
                                                                                                 CompanyPermission.DRE_VIEW))
 
+                                                // Financial services enforce fresh company permissions and ownership.
+                                                // Keep this route explicit: unrelated company paths remain denied.
+                                                .requestMatchers(
+                                                                "/api/companies/{companyId}/bank-accounts",
+                                                                "/api/companies/{companyId}/bank-accounts/{bankId}")
+                                                .authenticated()
+
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/**")
                                                 .denyAll()

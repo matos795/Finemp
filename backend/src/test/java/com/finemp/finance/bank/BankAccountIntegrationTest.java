@@ -135,11 +135,20 @@ class BankAccountIntegrationTest{
     }
     @Test void shouldProvideACompositeTenantKeyForFutureOperationalReferences(){
         new TransactionTemplate(transactions).executeWithoutResult(status->{
-            jdbc.execute("CREATE TEMP TABLE synthetic_bank_reference(company_id UUID,bank_id UUID,FOREIGN KEY(company_id,bank_id) REFERENCES financial_bank_accounts(company_id,id)) ON COMMIT DROP");
+            // PostgreSQL disallows a temporary table referencing a permanent table.
+            // Transactional DDL is rolled back with this synthetic probe.
+            jdbc.execute("CREATE TABLE synthetic_bank_reference(company_id UUID,bank_id UUID,FOREIGN KEY(company_id,bank_id) REFERENCES financial_bank_accounts(company_id,id))");
             assertThat(jdbc.update("INSERT INTO synthetic_bank_reference(company_id,bank_id) VALUES (?,?)",owner.getId(),bankId)).isEqualTo(1);
             assertThatThrownBy(()->jdbc.update("INSERT INTO synthetic_bank_reference(company_id,bank_id) VALUES (?,?)",other.getId(),bankId)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
             status.setRollbackOnly();
         });
+    }
+    @Test void shouldRequireAuthenticationAndCsrfAndKeepUnimplementedCompanyRoutesDenied()throws Exception{
+        mvc.perform(get(route())).andExpect(status().isUnauthorized());
+        mvc.perform(post(route()).with(user(new UserAccountPrincipal(actor))).contentType("application/json").content(body("No CSRF","0.00",null)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get(route()+"/"+bankId+"/unsupported").with(user(new UserAccountPrincipal(actor)))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/companies/"+other.getId()+"/bank-accounts").with(user(new UserAccountPrincipal(actor)))).andExpect(status().isForbidden());
     }
     private boolean removeAfter(CountDownLatch start,CountDownLatch ready,UUID bank)throws Exception{
         ready.countDown();if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Synthetic concurrency timeout");
