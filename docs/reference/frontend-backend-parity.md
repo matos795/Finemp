@@ -16,8 +16,12 @@
   e contratos PostgreSQL/HTTP. Referências operacionais reais dependem da #39.
 - **FATO CONFIRMADO:** #122/PR123 integrada: centros hierárquicos e exigência
   configurável para novos lançamentos, com contratos PostgreSQL e concorrência.
-- **EM IMPLEMENTAÇÃO:** #124, filha #38, grupos/subcategorias e classificação
-  efetiva; plano padrão completo segue incremento próprio. A matriz original abaixo
+- **FATO CONFIRMADO:** #124/PR125 e #126/PR127 integradas: classificação bruta
+  e efetiva consistente e plano padrão com paridade integral, rollback e concorrência.
+  #38 concluída; uso operacional dos cadastros continua nos módulos dependentes.
+- **EM IMPLEMENTAÇÃO:** #39, calendário confirmado na #129. #128 registra
+  diferenças binárias em parcelas antes de decidir a política monetária.
+  A matriz original abaixo
   preserva o baseline do inventário; este checkpoint registra avanços posteriores.
 - **PONTO ABERTO:** ambiente/mapeamento/permissões Firebird, distribuição/cofre
   definitivos e contratos incremental/retificação/cursor. #50 permanece aberta;
