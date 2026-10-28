@@ -45,6 +45,13 @@ public class AccessAuditEvent {
     @Column(name = "occurred_at", nullable = false, updatable = false)
     private Instant occurredAt;
 
+    @Column(name="resource_type",length=80,updatable=false) private String resourceType;
+    @Column(name="resource_id",updatable=false) private UUID resourceId;
+    @Column(name="command_id",updatable=false) private UUID commandId;
+    @Column(name="before_state",columnDefinition="TEXT",updatable=false) private String beforeState;
+    @Column(name="after_state",columnDefinition="TEXT",updatable=false) private String afterState;
+    @Column(length=1000,updatable=false) private String reason;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "access_audit_event_permissions", joinColumns = @JoinColumn(name = "event_id"))
     @Column(name = "permission", nullable = false, length = 80)
@@ -65,5 +72,9 @@ public class AccessAuditEvent {
                 .collect(Collectors.toCollection(HashSet::new));
     }
 
+    void resource(String type,UUID id,UUID command,String before,String after,String reason) {
+        this.resourceType=Objects.requireNonNull(type);this.resourceId=Objects.requireNonNull(id);
+        this.commandId=Objects.requireNonNull(command);this.beforeState=before;this.afterState=Objects.requireNonNull(after);this.reason=reason;
+    }
     public UUID getId() { return id; }
 }
