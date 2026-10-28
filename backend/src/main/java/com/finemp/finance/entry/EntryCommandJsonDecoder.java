@@ -21,18 +21,36 @@ public class EntryCommandJsonDecoder {
                     .maxTokenCount(128).maxDocumentLength(65536).build()).build()).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
     public Request decode(byte[] body) {
         try {
-            if(body==null || body.length==0 || body.length>65536)throw invalid();
-            var root=mapper.readTree(body);fields(root,Set.of("values","expectedVersion"));var values=root.get("values");fields(values,FIELDS);
-            var amount=text(values,"nominalAmount",true);if(!amount.matches("[0-9]{1,17}(\\.[0-9]{1,2})?"))throw invalid();
-            var data=new FinancialEntryCommandData(FinancialDirection.valueOf(text(values,"direction",true)),text(values,"description",true),new BigDecimal(amount),
+            var root=root(body);fields(root,Set.of("values","expectedVersion"));var values=root.get("values");fields(values,FIELDS);
+            var data=new FinancialEntryCommandData(FinancialDirection.valueOf(text(values,"direction",true)),text(values,"description",true),money(values,"nominalAmount"),
                     date(values,"documentDate",true),date(values,"entryDate",true),YearMonth.parse(text(values,"competence",true)),date(values,"dueDate",true),date(values,"paymentDate",false),
                     uuid(values,"bankAccountId",true),uuid(values,"categoryId",true),uuid(values,"partnerId",false),uuid(values,"resultCenterId",false),
                     nullable(values,"costBehaviorOverride")?null:CostBehavior.valueOf(text(values,"costBehaviorOverride",true)),
                     text(values,"paymentMethod",false),text(values,"documentNumber",false),text(values,"notes",false));
-            Long version=null;
-            if(!nullable(root,"expectedVersion")) {var node=root.get("expectedVersion");if(!node.isIntegralNumber() || !node.canConvertToLong() || node.longValue()<0)throw invalid();version=node.longValue();}
-            return new Request(data,version);
+            return new Request(data,version(root,false));
         }catch(RuntimeException invalid) {throw invalid();}
+    }
+    public SettlementRequest decodeSettlement(byte[] body) {
+        try {
+            var root=root(body);fields(root,Set.of("values","expectedVersion"));var values=root.get("values");
+            fields(values,Set.of("paymentDate","paidAmount","bankAccountId"));
+            var data=new EntrySettlementData(date(values,"paymentDate",true),money(values,"paidAmount"),uuid(values,"bankAccountId",true));
+            return new SettlementRequest(data,version(root,true));
+        }catch(RuntimeException invalid) {throw invalid();}
+    }
+    public Long decodeReversal(byte[] body) {
+        try {var root=root(body);fields(root,Set.of("expectedVersion"));return version(root,true);}
+        catch(RuntimeException invalid) {throw invalid();}
+    }
+    private JsonNode root(byte[] body) {
+        if(body==null || body.length==0 || body.length>65536)throw invalid();return mapper.readTree(body);
+    }
+    private BigDecimal money(JsonNode root,String key) {
+        var value=text(root,key,true);if(!value.matches("[0-9]{1,17}(\\.[0-9]{1,2})?"))throw invalid();return new BigDecimal(value);
+    }
+    private Long version(JsonNode root,boolean required) {
+        if(nullable(root,"expectedVersion")) {if(required)throw invalid();return null;}
+        var node=root.get("expectedVersion");if(!node.isIntegralNumber() || !node.canConvertToLong() || node.longValue()<0)throw invalid();return node.longValue();
     }
     private void fields(JsonNode node,Set<String> allowed) {
         if(node==null || !node.isObject())throw invalid();
@@ -56,5 +74,8 @@ public class EntryCommandJsonDecoder {
     private static IllegalArgumentException invalid() {return new IllegalArgumentException("Corpo do comando financeiro inválido.");}
     public record Request(FinancialEntryCommandData values,Long expectedVersion) {
         @Override public String toString() {return "FinancialEntryCommandRequest[redacted]";}
+    }
+    public record SettlementRequest(EntrySettlementData values,Long expectedVersion) {
+        @Override public String toString() {return "EntrySettlementRequest[redacted]";}
     }
 }
