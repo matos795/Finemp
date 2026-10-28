@@ -111,14 +111,14 @@ class FinancialEntryCommandHttpIntegrationTest {
         postCommand(UUID.randomUUID(),body().replace("{\"values\":","{\"expectedVersion\":0,\"values\":")).andExpect(status().isBadRequest());
         mvc.perform(put(route()+"/"+UUID.randomUUID()).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body())).andExpect(status().isBadRequest());empty();
     }
-    @Test void oversizedCompressedOrUnsupportedBodiesMustFailBeforePersistenceAndDeleteMustRemainDenied()throws Exception {
+    @Test void oversizedCompressedOrUnsupportedBodiesAndIncompleteDeletionMustFailBeforePersistence()throws Exception {
         postCommand(UUID.randomUUID()," ".repeat(65537)).andExpect(status().isPayloadTooLarge());
         mvc.perform(put(route()+"/1-1-1-1-1").with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID())
                 .contentType("application/json").content(" ".repeat(65537))).andExpect(status().isPayloadTooLarge());
         mvc.perform(post(route()).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).header("Content-Encoding","gzip").contentType("application/json").content(body()))
                 .andExpect(status().isUnsupportedMediaType());
         mvc.perform(post(route()).with(user(principal(manager))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("text/plain").content(body())).andExpect(status().isUnsupportedMediaType());
-        mvc.perform(delete(route()+"/"+UUID.randomUUID()).with(user(principal(manager))).with(csrf())).andExpect(status().isForbidden());empty();
+        mvc.perform(delete(route()+"/"+UUID.randomUUID()).with(user(principal(manager))).with(csrf())).andExpect(status().isBadRequest());empty();
     }
     @Test void aRealForeignEntryUuidMustRemainInvisibleAndUnchangedAcrossWriterRoutes()throws Exception {
         var change=body().replace("{\"values\":","{\"expectedVersion\":0,\"values\":");

@@ -27,7 +27,7 @@ public class EntryCommandAuthorizationManager implements AuthorizationManager<Re
         try {
             boolean granted=permissions.hasFreshPermission(actor.getUserAccountId(),UUID.fromString(company),CompanyPermission.FINANCIAL_ENTRY_MANAGE);
             // This is a server-only request attribute, set only by successful normalized route authorization.
-            if(granted)context.getRequest().setAttribute(AUTHORIZED_WRITER_ATTRIBUTE,Boolean.TRUE);
+            if(granted && !"DELETE".equals(context.getRequest().getMethod()))context.getRequest().setAttribute(AUTHORIZED_WRITER_ATTRIBUTE,Boolean.TRUE);
             return new AuthorizationDecision(granted);
         }
         catch(IllegalArgumentException invalid) {return new AuthorizationDecision(false);}

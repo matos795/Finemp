@@ -43,8 +43,13 @@
   treze contratos PostgreSQL passaram.
 - **FATO CONFIRMADO:** #147/PR148 integrada: consulta paginada de transferências,
   projeções atuais das duas contas e acesso vigente; seis contratos PG/HTTP.
-- **EM IMPLEMENTAÇÃO:** #39, escrita HTTP na #149, com opt-in adicional, autorização antes do corpo,
-  JSON estrito e proteção compartilhada dos lançamentos.
+- **FATO CONFIRMADO:** #149/PR150 integrada: criação/exclusão HTTP de transferências,
+  opt-in adicional, autorização antes do corpo e proteção compartilhada dos
+  lançamentos; sete contratos PG/HTTP passaram.
+- **FATO CONFIRMADO:** #151/PR152 integrada: exclusão interna individual,
+  recibo persistente, estado anterior e auditoria atômica; oito contratos PG.
+- **EM IMPLEMENTAÇÃO:** #39, exclusão HTTP individual na #153. Séries/lotes
+  continuam em incrementos próprios, sem antecipar a política monetária #128.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo

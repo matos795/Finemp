@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** Fixed client messages only; never return source JSON, SQL or private financial text. */
-@RestControllerAdvice(assignableTypes={FinancialEntryCommandController.class,EntrySettlementController.class})
+@RestControllerAdvice(assignableTypes={FinancialEntryCommandController.class,EntrySettlementController.class,EntryDeletionController.class})
 public class FinancialEntryCommandExceptionHandler {
-    @ExceptionHandler({IllegalArgumentException.class,HttpMessageNotReadableException.class,MissingRequestHeaderException.class,MethodArgumentTypeMismatchException.class})
+    @ExceptionHandler({IllegalArgumentException.class,HttpMessageNotReadableException.class,MissingRequestHeaderException.class,MissingServletRequestParameterException.class,MethodArgumentTypeMismatchException.class})
     ProblemDetail invalid(Exception ignored) {return problem(HttpStatus.BAD_REQUEST,"Comando financeiro inválido.","INVALID_FINANCIAL_ENTRY_COMMAND");}
     @ExceptionHandler(OrganizationAccessDeniedException.class)
     ProblemDetail denied() {return problem(HttpStatus.FORBIDDEN,"Sem permissão financeira para esta empresa.","FINANCIAL_ENTRY_ACCESS_DENIED");}

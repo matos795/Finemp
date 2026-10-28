@@ -1,4 +1,8 @@
 spring:
+  mvc:
+    formcontent:
+      filter:
+        enabled: false
   application:
     name: finemp-api
 
