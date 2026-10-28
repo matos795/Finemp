@@ -34,7 +34,7 @@ paths:
       tags: [Financial entries]
       operationId: createMonthlyEntrySeries
       summary: Cria um conjunto mensal canônico e retorna seu recibo ordenado.
-      description: Mesmos opt-ins, MANAGE ALL vigente, sessão/CSRF, chave UUID e limite de corpo da escrita individual. Reutiliza valores positivos exatos; repete valor, preserva datas homologadas e pagamento apenas na primeira ocorrência. Não é parcelamento nem agendamento automático. Reenvio retorna o conjunto original, mesmo após exclusões.
+      description: Mesmos opt-ins, MANAGE ALL vigente, sessão/CSRF, chave UUID e limite de corpo da escrita individual. Reutiliza valores positivos exatos; repete valor, preserva datas homologadas e pagamento apenas na primeira ocorrência. Não é parcelamento nem agendamento automático. Reenvio retorna o conjunto original, mesmo após exclusões. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/FinancialCommandKey'
@@ -94,7 +94,7 @@ paths:
       tags: [Financial bank transfers]
       operationId: createBankTransfer
       summary: Cria uma transferência interna com recibo idempotente.
-      description: Exige FINEMP_FINANCE_TRANSFERS_ENABLED e FINEMP_FINANCE_TRANSFER_COMMANDS_ENABLED, BANK_ACCOUNT_MANAGE ALL vigente, sessão e CSRF. Corpo limitado64KiB, JSON sem compressão, até quatro corpos em processamento por instância. Referências isoladas e pelo menos duas contas ativas; valor positivo canônico sem arredondamento. Não executa operação bancária externa.
+      description: Exige FINEMP_FINANCE_TRANSFERS_ENABLED e FINEMP_FINANCE_TRANSFER_COMMANDS_ENABLED, BANK_ACCOUNT_MANAGE ALL vigente, sessão e CSRF. Corpo limitado64KiB, JSON sem compressão, até quatro corpos em processamento por instância. Referências isoladas e pelo menos duas contas ativas; valor positivo canônico sem arredondamento. Não executa operação bancária externa. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - name: Idempotency-Key
@@ -153,7 +153,7 @@ paths:
       tags: [Financial bank transfers]
       operationId: deleteBankTransfer
       summary: Exclui uma transferência com versão esperada e recibo persistente.
-      description: Mesmos opt-ins, sessão/CSRF e MANAGE ALL da criação. Sem corpo; versão vem da query. Recibo DELETED registra a última versão persistida. Reenvio com a mesma chave/versão devolve o recibo original após exclusão, sem repetir efeitos.
+      description: Mesmos opt-ins, sessão/CSRF e MANAGE ALL da criação. Sem corpo; versão vem da query. Recibo DELETED registra a última versão persistida. Reenvio com a mesma chave/versão devolve o recibo original após exclusão, sem repetir efeitos. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - name: Idempotency-Key
@@ -247,7 +247,7 @@ paths:
       tags: [Financial entries]
       operationId: createFinancialEntry
       summary: Cria um lançamento individual canônico com recibo idempotente.
-      description: Exige FINEMP_FINANCE_ENTRIES_ENABLED e FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED, MANAGE ALL vigente, sessão e CSRF. Contrato limitado a valor positivo já exato em centavos, enviado como texto; não decide normalização bruta/subcentavo ou séries da Issue128. Chave por Empresa/ator, compartilhada entre ações. Replay autorizado retorna recibo original e status201; estado atual é consultado por GET. Corpo JSON estrito até64KiB, sem compressão, inclusive chunked. Gravação do lançamento, recibo e evento antes/depois é atômica.
+      description: Exige FINEMP_FINANCE_ENTRIES_ENABLED e FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED, MANAGE ALL vigente, sessão e CSRF. Contrato limitado a valor positivo já exato em centavos, enviado como texto; não decide normalização bruta/subcentavo ou séries da Issue128. Chave por Empresa/ator, compartilhada entre ações. Replay autorizado retorna recibo original e status201; estado atual é consultado por GET. Corpo JSON estrito até64KiB, sem compressão, inclusive chunked. Gravação do lançamento, recibo e evento antes/depois é atômica. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/FinancialCommandKey'
@@ -305,7 +305,7 @@ paths:
       tags: [Financial entries]
       operationId: updateFinancialEntry
       summary: Altera lançamento individual com versão esperada e recibo idempotente.
-      description: Mesmos opt-ins, MANAGE ALL vigente, sessão/CSRF e limites do POST. Subcategoria e referências pertencem à Empresa. Valor efetivamente pago é preservado se continuar pago e limpo se paymentDate for null; não é recebido do cliente. Centro obrigatório configurável se aplica somente à criação. Reenvio autorizado retorna o recibo original antes de revalidar referências alteradas posteriormente. Versão esperada divergente é409, inclusive zero é versão válida.
+      description: Mesmos opt-ins, MANAGE ALL vigente, sessão/CSRF e limites do POST. Subcategoria e referências pertencem à Empresa. Valor efetivamente pago é preservado se continuar pago e limpo se paymentDate for null; não é recebido do cliente. Centro obrigatório configurável se aplica somente à criação. Reenvio autorizado retorna o recibo original antes de revalidar referências alteradas posteriormente. Versão esperada divergente é409, inclusive zero é versão válida. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/FinancialCommandKey'
@@ -337,7 +337,7 @@ paths:
       tags: [Financial entries]
       operationId: deleteFinancialEntry
       summary: Exclui lançamento financeiro individual com versão e recibo idempotente.
-      description: Exige os dois opt-ins de lançamentos, FINANCIAL_ENTRY_MANAGE ALL vigente, sessão/CSRF e chave UUID. Sem corpo. Remove a raiz e futuras ocorrências da mesma série ainda sem pagamento e com vencimento atual estritamente maior que o alvo; preserva pagas futuras e posições originais. Recibo DELETED mantém última versão da raiz e deletedEntries efetivas. Reenvio recupera o conjunto original. Lotes/estoque têm contratos próprios.
+      description: Exige os dois opt-ins de lançamentos, FINANCIAL_ENTRY_MANAGE ALL vigente, sessão/CSRF e chave UUID. Sem corpo. Remove a raiz e futuras ocorrências da mesma série ainda sem pagamento e com vencimento atual estritamente maior que o alvo; preserva pagas futuras e posições originais. Recibo DELETED mantém última versão da raiz e deletedEntries efetivas. Reenvio recupera o conjunto original. Lotes/estoque têm contratos próprios. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/FinancialCommandKey'
@@ -372,7 +372,7 @@ paths:
       tags: [Financial entries]
       operationId: settleFinancialEntry
       summary: Registra baixa financeira individual com data, conta e valor efetivo.
-      description: Exige os dois opt-ins de escrita financeira, MANAGE ALL vigente, sessão/CSRF, chave idempotente e versão esperada. Valor textual positivo já exato em centavos; não decide captura bruta128. Marca o título como pago, mantém nominal e classificadores e atualiza a conta. Valor igual ao nominal remove override; diferença fica no efetivo. Reaplicação autorizada usa versão atual. Corpo64KiB, sem compressão e com orçamento compartilhado de concorrência, inclusive URI codificado. Não movimenta dinheiro por serviço bancário externo nem grava no Questor.
+      description: Exige os dois opt-ins de escrita financeira, MANAGE ALL vigente, sessão/CSRF, chave idempotente e versão esperada. Valor textual positivo já exato em centavos; não decide captura bruta128. Marca o título como pago, mantém nominal e classificadores e atualiza a conta. Valor igual ao nominal remove override; diferença fica no efetivo. Reaplicação autorizada usa versão atual. Corpo64KiB, sem compressão e com orçamento compartilhado de concorrência, inclusive URI codificado. Não movimenta dinheiro por serviço bancário externo nem grava no Questor. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/FinancialCommandKey'
@@ -411,7 +411,7 @@ paths:
       tags: [Financial entries]
       operationId: reverseFinancialEntrySettlement
       summary: Estorna a baixa financeira e conserva a última conta selecionada.
-      description: Mesmos opt-ins, autorização, CSRF, idempotência e limites da baixa. Recebe apenas expectedVersion. Limpa pagamento e valor efetivo informado, conservando nominal, conta e classificadores. Registro já aberto pode produzir recibo/evento sem mudança de versão. Reenvio retorna o recibo original e não reaplica alteração, exigindo permissão vigente.
+      description: Mesmos opt-ins, autorização, CSRF, idempotência e limites da baixa. Recebe apenas expectedVersion. Limpa pagamento e valor efetivo informado, conservando nominal, conta e classificadores. Registro já aberto pode produzir recibo/evento sem mudança de versão. Reenvio retorna o recibo original e não reaplica alteração, exigindo permissão vigente. Meses financeiros afetados são validados no servidor; fechado retorna409 FINANCIAL_PERIOD_CLOSED. Replay autorizado retorna o recibo sem repetir efeitos.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
         - $ref: '#/components/parameters/FinancialCommandKey'

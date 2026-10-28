@@ -20,10 +20,17 @@ AccessAuditRecorder/Event foi ampliado com recurso, comando, estado anterior/nov
 
 ## PRÓXIMO PASSO / PONTO ABERTO
 
-#167 fornece comandos internos sob FINEMP_FINANCE_PERIODS_ENABLED=false por padrão. Ainda não libera endpoints nem afirma que writers já respeitam o fechamento. O próximo incremento integra o guard a cada mutação, incluindo todas as ocorrências mensais e todas as exclusões relacionadas, antes de disponibilizar API de fechar/reabrir. As verificações ocorrem depois do replay idempotente e antes dos efeitos: replay não reaplica mutação em mês fechado. Consulta/histórico paginados e documentação HTTP seguem depois dos bloqueios.
+#167 fornece comandos internos sob FINEMP_FINANCE_PERIODS_ENABLED=false por padrão. Ainda não libera endpoints de fechamento. A #169 integra o guard a cada mutação, incluindo todas as ocorrências mensais e todas as exclusões relacionadas, antes de disponibilizar API de fechar/reabrir. As verificações ocorrem depois do replay idempotente e antes dos efeitos: replay não reaplica mutação em mês fechado. Consulta/histórico paginados e documentação HTTP seguem depois dos bloqueios.
 
 Uma política cumulativa, de datas de corte ou de calendário fiscal não foi informada e permanece aberta; não é presumida pelo estado mensal. Nada aqui fecha ou modifica o Questor.
 
 ## Validação
 
-Oito contratos PostgreSQL sintéticos cobrem fechar/reabrir com histórico oficial, permissão/revogação/tenant, motivo/versão, identidade do comando, rollback no recibo, concorrência de reenvios, guard de todos os meses atuais e isolamento incompatível. Compilação local não substitui sua execução PostgreSQL na CI. Corrida com os writers e contratos HTTP serão validados na integração correspondente.
+Oito contratos PostgreSQL sintéticos cobrem fechar/reabrir com histórico oficial, permissão/revogação/tenant, motivo/versão, identidade do comando, rollback no recibo, concorrência de reenvios, guard de todos os meses atuais e isolamento incompatível. Compilação local não substitui sua execução PostgreSQL na CI. A #169 acrescenta sete contratos PostgreSQL/HTTP para competência anterior/nova, pagamento independente da competência, captura já paga, mudança da data de pagamento, conjuntos mensais/exclusões atômicos, transferências, replay, resposta409 e writer bloqueado atrás de fechamento concorrente.
+
+
+## Integração das mutações — #169
+
+EntryWriteTransactionGuard e BankTransferWriteGuard delegam ao guard de período sempre após a trava Company e o replay. Criação/edição/exclusão validam as competências de todos os estados envolvidos; um lançamento pago também afeta o respectivo mês de pagamento, inclusive ao remover ou mudar sua data, impedindo contorno pelo formulário de edição. Baixa/estorno verificam somente os meses de pagamento anterior/novo; não bloqueiam uma baixa em mês aberto apenas porque sua competência está fechada. Transferência verifica o mês de sua data tanto na criação quanto na exclusão.
+
+Todos os meses são consultados em conjunto. Recorrência valida o calendário inteiro antes de persistir o grupo; exclusão relacionada valida os estados atuais de todos os alvos antes de remover vínculos/linhas. Qualquer mês fechado recusa o comando inteiro com409 FINANCIAL_PERIOD_CLOSED, sem recibo ou auditoria parcial. Recibos já existentes não mudam. O teste de concorrência mantém o fechamento sem commit enquanto um writer aguarda a trava; após commit, o writer lê o bloqueio e não persiste efeitos.
