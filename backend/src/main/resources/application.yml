@@ -15,6 +15,8 @@ finemp:
   finance:
     catalog:
       enabled: ${FINEMP_FINANCE_CATALOG_ENABLED:false}
+    entries:
+      enabled: ${FINEMP_FINANCE_ENTRIES_ENABLED:false}
   connector:
     enabled: ${FINEMP_CONNECTOR_ENABLED:false}
     credential-lifetime-days: ${FINEMP_CONNECTOR_CREDENTIAL_LIFETIME_DAYS:90}
