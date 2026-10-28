@@ -33,7 +33,7 @@ class FinancialCategoryServiceTest {
     }
     @Test void mustNeverFallbackToGlobalLookupForAnotherCompany() {
         when(permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_CATEGORY_VIEW)).thenReturn(true);
-        when(categories.findByIdAndCompanyId(id,company)).thenReturn(Optional.empty());
+        when(categories.findSnapshot(company,id)).thenReturn(Optional.empty());
         assertThatThrownBy(()->service.find(actor,company,id)).isInstanceOf(SaasResourceNotFoundException.class);
         verify(categories,never()).findById(any());
     }

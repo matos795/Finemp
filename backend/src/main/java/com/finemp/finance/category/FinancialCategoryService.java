@@ -4,7 +4,6 @@ import com.finemp.access.*;
 import com.finemp.company.*;
 import com.finemp.administration.*;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.*;
@@ -24,7 +23,10 @@ public class FinancialCategoryService {
             CompanyPermissionAuthorizationService permissions,ObjectProvider<FinancialCategoryUsageGuard> usage,CategoryWriteTransactionGuard transactions) {
         this.categories=categories;this.companies=companies;this.permissions=permissions;this.usage=usage;this.transactions=transactions;
     }
-    public FinancialCategoryResponse find(UUID actor,UUID company,UUID id) {requireRead(actor,company);return response(owned(company,id));}
+    public FinancialCategoryResponse find(UUID actor,UUID company,UUID id) {
+        requireRead(actor,company);
+        return categories.findSnapshot(company,id).orElseThrow(()->new SaasResourceNotFoundException("Categoria financeira")).response();
+    }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public FinancialCategoryResponse createGroup(UUID actor,UUID company,FinancialCategoryGroupRequest request) {
         var owner=writeOwner(actor,company);
@@ -68,12 +70,7 @@ public class FinancialCategoryService {
         if(parentId!=null)group(company,parentId);
         var result=categories.search(company,search==null?"":FinancialCategory.searchKey(search),direction,kind,parentId,
                 PageRequest.of(page,size,Sort.by("sortKey").ascending().and(Sort.by("id"))));
-        var ids=result.getContent().stream().map(FinancialCategory::getParentId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Map<UUID,FinancialCategory> parents=ids.isEmpty()?Map.of():categories.findAllByCompanyIdAndIdIn(company,ids).stream().collect(Collectors.toMap(FinancialCategory::getId,x->x));
-        return PagedResponse.from(result,row->FinancialCategoryResponse.from(row,row.getParentId()==null?null:parents.get(row.getParentId())));
-    }
-    private FinancialCategoryResponse response(FinancialCategory row) {
-        return FinancialCategoryResponse.from(row,row.getParentId()==null?null:group(row.getCompany().getId(),row.getParentId()));
+        return PagedResponse.from(result,FinancialCategorySnapshot::response);
     }
     private Company writeOwner(UUID actor,UUID company) {
         requireManage(actor,company);transactions.requireReadCommitted();

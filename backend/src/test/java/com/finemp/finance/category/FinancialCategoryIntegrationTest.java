@@ -15,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.*;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -29,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(TestcontainersConfiguration.class)
 class FinancialCategoryIntegrationTest {
     @Autowired FinancialCategoryService service;
-    @Autowired FinancialCategoryRepository categories;
+    @MockitoSpyBean FinancialCategoryRepository categories;
     @Autowired CompanyRepository companies;
     @Autowired ClientRepository clients;
     @Autowired AccountingFirmRepository firms;
@@ -146,6 +147,23 @@ class FinancialCategoryIntegrationTest {
                     .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
             status.setRollbackOnly();
         });
+    }
+    @Test void deletingAGroupAfterThePageQueryMustNotBreakItsAlreadyReadClassification()throws Exception {
+        var loaded=new CountDownLatch(1);var proceed=new CountDownLatch(1);var pool=Executors.newSingleThreadExecutor();
+        doAnswer(call->{
+            Object page=call.callRealMethod();loaded.countDown();
+            if(!proceed.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Synthetic page barrier");
+            return page;
+        }).when(categories).search(eq(owner.getId()),eq(""),isNull(),isNull(),isNull(),any());
+        try {
+            var reading=pool.submit(()->service.list(actor.getId(),owner.getId(),"",null,null,null,0,100));
+            assertThat(loaded.await(5,TimeUnit.SECONDS)).isTrue();
+            service.delete(actor.getId(),owner.getId(),groupId,0);proceed.countDown();
+            var page=reading.get(10,TimeUnit.SECONDS);
+            assertThat(page.items()).hasSize(2);
+            assertThat(page.items().stream().filter(row->row.id().equals(subId)).findFirst().orElseThrow().effective().dreLine()).isEqualTo(OperationalDreLine.REC);
+            assertThat(categories.findById(groupId)).isEmpty();assertThat(categories.findById(subId)).isEmpty();
+        }finally {proceed.countDown();pool.shutdownNow();}
     }
     private Company company(String suffix,String cnpj) {
         var firm=firms.saveAndFlush(new AccountingFirm("Synthetic Category Firm "+suffix,true));firmIds.add(firm.getId());
