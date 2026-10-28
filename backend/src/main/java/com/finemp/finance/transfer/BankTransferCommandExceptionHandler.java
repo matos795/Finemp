@@ -10,6 +10,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice(assignableTypes=BankTransferCommandController.class)
 public class BankTransferCommandExceptionHandler {
+    @ExceptionHandler(com.finemp.finance.period.FinancialPeriodClosedException.class)
+    ProblemDetail periodClosed() {return problem(HttpStatus.CONFLICT,"Um dos períodos financeiros afetados está fechado.","FINANCIAL_PERIOD_CLOSED");}
     @ExceptionHandler({IllegalArgumentException.class,HttpMessageNotReadableException.class,MissingRequestHeaderException.class,MissingServletRequestParameterException.class,MethodArgumentTypeMismatchException.class})
     ProblemDetail invalid(Exception ignored) {return problem(HttpStatus.BAD_REQUEST,"Comando de transferência inválido.","INVALID_BANK_TRANSFER_COMMAND");}
     @ExceptionHandler(OrganizationAccessDeniedException.class)

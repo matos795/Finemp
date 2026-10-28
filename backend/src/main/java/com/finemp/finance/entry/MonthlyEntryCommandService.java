@@ -36,11 +36,12 @@ public class MonthlyEntryCommandService {
         }
         var calendar=EntrySeriesCalendar.generate(new EntrySeriesCalendar.Input(SeriesMode.MONTHLY,quantity,data.documentDate(),data.entryDate(),data.competence(),data.dueDate(),data.paymentDate()));
         references.validate(company,data,null);
-        var group=series.saveAndFlush(new FinancialEntrySeries(owner,definition,actor));
         var planned=new ArrayList<FinancialEntry>(quantity);
         for(var occurrence:calendar)planned.add(new FinancialEntry(owner,new FinancialEntryValues(data.direction(),data.description(),data.nominalAmount(),
                 occurrence.documentDate(),occurrence.entryDate(),occurrence.competence(),occurrence.dueDate(),occurrence.paymentDate(),null,
                 data.bankAccountId(),data.categoryId(),data.partnerId(),data.resultCenterId(),data.costBehaviorOverride(),data.paymentMethod(),data.documentNumber(),data.notes()),actor));
+        guard.requireEntryPeriodsOpen(company,planned.stream().map(FinancialEntry::getValues).toArray(FinancialEntryValues[]::new));
+        var group=series.saveAndFlush(new FinancialEntrySeries(owner,definition,actor));
         var saved=entries.saveAllAndFlush(planned);var links=new ArrayList<EntrySeriesMembership>(quantity);var results=new ArrayList<EntrySeriesCommandReceipt.Item>(quantity);
         for(int index=0;index<saved.size();index++) {
             var row=saved.get(index);links.add(new EntrySeriesMembership(owner,group,row,index+1));results.add(new EntrySeriesCommandReceipt.Item(index+1,row.getId(),row.getVersion()));

@@ -11,7 +11,20 @@ import org.springframework.transaction.annotation.*;
 @ConditionalOnProperty(prefix="finemp.finance.entries",name="enabled",havingValue="true")
 public class EntryWriteTransactionGuard {
     private final JdbcTemplate jdbc;
-    public EntryWriteTransactionGuard(JdbcTemplate jdbc) {this.jdbc=jdbc;}
+    private final com.finemp.finance.period.FinancialPeriodGuard periods;
+    public EntryWriteTransactionGuard(JdbcTemplate jdbc,com.finemp.finance.period.FinancialPeriodGuard periods) {this.jdbc=jdbc;this.periods=periods;}
+    @Transactional(propagation=Propagation.MANDATORY)
+    public void requireEntryPeriodsOpen(UUID company,FinancialEntryValues... states) {requirePeriods(company,true,states);}
+    @Transactional(propagation=Propagation.MANDATORY)
+    public void requirePaymentPeriodsOpen(UUID company,FinancialEntryValues... states) {requirePeriods(company,false,states);}
+    private void requirePeriods(UUID company,boolean competence,FinancialEntryValues... states) {
+        var affected=new HashSet<java.time.YearMonth>();
+        for(var state:states) {
+            if(competence)affected.add(state.competence());
+            if(state.paymentDate()!=null)affected.add(java.time.YearMonth.from(state.paymentDate()));
+        }
+        periods.requireOpen(company,affected);
+    }
     @Transactional(propagation=Propagation.MANDATORY)
     public void requireReadCommitted() {
         if(!Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>)connection->connection.getTransactionIsolation()==Connection.TRANSACTION_READ_COMMITTED)))

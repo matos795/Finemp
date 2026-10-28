@@ -27,6 +27,7 @@ public class BankTransferCommandService {
         var fingerprint=BankTransferCommandFingerprint.create(company,actor,values);
         var replay=replay(company,actor,command,fingerprint);if(replay!=null)return replay;
         guard.validateCreationReferences(company,values);
+        guard.requirePeriodOpen(company,values);
         var row=transfers.saveAndFlush(new BankTransfer(owner,values,actor));
         var receipt=new BankTransferCommandReceipt(company,command,row.getId(),BankTransferCommandAction.CREATED,row.getVersion());
         journal.append(actor,fingerprint,receipt,null,null,values);return receipt;
@@ -39,7 +40,7 @@ public class BankTransferCommandService {
         long version=guard.lockVersion(company,transfer).orElseThrow(()->new SaasResourceNotFoundException("Transferência financeira"));
         var row=transfers.findByIdAndCompanyId(transfer,company).orElseThrow(()->new SaasResourceNotFoundException("Transferência financeira"));
         if(version!=expectedVersion || row.getVersion()!=version)throw new BankTransferCommandConflictException(BankTransferCommandConflictException.Reason.STALE_VERSION);
-        var before=row.getValues();transfers.delete(row);transfers.flush();
+        var before=row.getValues();guard.requirePeriodOpen(company,before);transfers.delete(row);transfers.flush();
         var receipt=new BankTransferCommandReceipt(company,command,transfer,BankTransferCommandAction.DELETED,version);
         journal.append(actor,fingerprint,receipt,version,before,null);return receipt;
     }

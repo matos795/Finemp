@@ -481,7 +481,13 @@ POST /api/companies/{companyId}/financial-entry-series/monthly recebe values do 
 
 Reenvio recupera o recibo original inclusive após exclusões, sem recriar ocorrências; Location pode então retornar404. Valores, calendário, efeitos e posições pertencem ao backend. GET/lista de lançamentos acrescentam series quando houver vínculo, com id, mode, number e quantity originais. quantity não diminui nem number é renumerado após excluir. O campo é omitido para individuais. Não inferir grupo, posição, total de parcela ou soma financeira no frontend.
 
-## 20. Compatibilidade
+## 20. Fechamento e mutações financeiras
+
+O backend verifica todos os meses afetados por cada comando sob a trava da Company. Captura/edição/exclusão conferem competências anterior/nova e meses dos pagamentos existentes; baixa/estorno conferem meses dos pagamentos anterior/novo, permitindo competência fechada com pagamento em mês aberto. Transferências conferem sua data. Recorrência e exclusão relacionada validam o conjunto inteiro antes de persistir efeitos. Período fechado retorna409 FINANCIAL_PERIOD_CLOSED nas rotas existentes, com mensagem fixa e sem dados de outro tenant. O frontend não deve refazer essa decisão localmente. Reenvio autorizado recupera recibo sem reaplicar efeitos, inclusive após fechamento posterior.
+
+A API de fechar/reabrir e o histórico ainda serão expostos em incremento próprio; isto não é fechamento automático ou alteração do Questor.
+
+## 21. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

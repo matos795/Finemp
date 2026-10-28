@@ -12,7 +12,9 @@ import org.springframework.transaction.annotation.*;
 @Transactional(propagation=Propagation.MANDATORY)
 public class BankTransferWriteGuard {
     private final JdbcTemplate jdbc;
-    public BankTransferWriteGuard(JdbcTemplate jdbc) {this.jdbc=jdbc;}
+    private final com.finemp.finance.period.FinancialPeriodGuard periods;
+    public BankTransferWriteGuard(JdbcTemplate jdbc,com.finemp.finance.period.FinancialPeriodGuard periods) {this.jdbc=jdbc;this.periods=periods;}
+    public void requirePeriodOpen(UUID company,BankTransferValues state) {periods.requireOpen(company,List.of(java.time.YearMonth.from(state.transferDate())));}
     public void requireReadCommitted() {
         if(!Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>)connection->connection.getTransactionIsolation()==Connection.TRANSACTION_READ_COMMITTED)))
             throw new BankTransferCommandConflictException(BankTransferCommandConflictException.Reason.TRANSACTION_NOT_SUPPORTED);
