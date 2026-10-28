@@ -51,8 +51,11 @@
 - **FATO CONFIRMADO:** #153/PR154 integrada: exclusão individual HTTP, versão
   exclusivamente na URL e regressão de formulário corrigida também nas
   transferências. CI/revisão no mesmo SHA; nenhuma exclusão por versão só no corpo.
-- **EM IMPLEMENTAÇÃO:** #39, metadados de séries/posições na #155. Recorrência e
-  exclusões relacionadas seguem depois; política monetária #128 permanece aberta.
+- **FATO CONFIRMADO:** #155/PR156 integrada: metadados originais de séries e
+  posições, isolamento das duas referências e exclusão parcial protegida;
+  sete contratos PostgreSQL passaram.
+- **EM IMPLEMENTAÇÃO:** #39, recorrência mensal interna na #160. Exclusões
+  relacionadas seguem depois; política monetária #128 permanece aberta.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
@@ -60,6 +63,23 @@
 - **PONTO ABERTO:** ambiente/mapeamento/permissões Firebird, distribuição/cofre
   definitivos e contratos incremental/retificação/cursor. #50 permanece aberta;
   essas dependências isoladas não bloqueiam os módulos independentes.
+
+## Ordem adicional homologada — 28/10/2026
+
+Após concluir realmente a #39: Centro de Resultado com tipo explícito GROUP /
+ANALYTICAL (#157), fechamento operacional por Company (#158) e fundação de
+retenções a recolher/a compensar (#159); depois #40, #41 e módulos seguintes.
+GROUP não recebe lançamento. Fechamento verifica os períodos afetados, incluindo
+estados anterior/novo; reabertura exige motivo, permissão e auditoria. Retenções
+não autorizam portar percentuais provisórios ou criar motor tributário presumido.
+
+O handoff adicional revisado em28/10 (HANDOFF_FINEMP_1.md, seção18) confirma o
+backend Java/Spring/PostgreSQL como fonte de verdade e a hierarquia oficial de
+cinco níveis. [H] é comportamento; [UX] não é arquitetura; [TP] não se porta;
+[ND] permanece aberto. Client representa o grupo de empresas. Vínculo societário
+não concede acesso nem escolhe consolidado; sem eliminações reais, soma é visão
+agregada. Reutilizar AccountingAccount e ampliar a auditoria oficial existente.
+Importações evoluem para parsing, preview/validação e confirmação atômica.
 
 ## Autoridade da referência
 
