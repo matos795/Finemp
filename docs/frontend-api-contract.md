@@ -437,13 +437,21 @@ GET /api/companies/{companyId}/financial-entries e /{entryId} exigem FINANCIAL_E
 
 ## 14. Criação e alteração individual de lançamentos
 
-POST /api/companies/{companyId}/financial-entries e PUT /{entryId} exigem a flag adicional FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED, além da flag de entries, MANAGE ALL vigente, sessão e CSRF. Catálogo2026-10-28.2 traz editAvailabilityCondition como condição extra da edição, somada à base; metadados não concedem acesso. Baixa, exclusão, transferência e séries não são afirmadas prontas por esse preset.
+POST /api/companies/{companyId}/financial-entries e PUT /{entryId} exigem a flag adicional FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED, além da flag de entries, MANAGE ALL vigente, sessão e CSRF. Catálogo2026-10-28.2 traz editAvailabilityCondition como condição extra da edição, somada à base; metadados não concedem acesso. Exclusão, transferência e séries não são afirmadas prontas por esse preset; baixa/estorno têm contrato na seção15.
 
 Enviar Idempotency-Key UUID e corpo com values; expectedVersion é obrigatório no PUT e ausente/null no POST. Nominal deve ser texto decimal positivo já exato em centavos, sem números JSON, expoentes ou arredondamento implícito. Esse contrato limitado não resolve os pontos abertos de captura/subcentavos e parcelas da #128. Campos desconhecidos, duplicados e injeção de ator/Empresa/actualPaidAmount são rejeitados. Corpo máximo64KiB, application/json sem compressão.
 
 POST responde201 com Location; PUT responde200. Ambos retornam companyId/commandId/entryId/action/version do recibo imutável, inclusive em reenvio. Usar GET para obter estado atual, rótulos e valores. Preservar a mesma chave ao repetir após resposta perdida; outro conteúdo/ação com a mesma chave é409. Atualização com versão desatualizada também é409; não sobrescrever silenciosamente. Reenvio não restaura permissão revogada. Tratar413/415/429/503 separadamente;429 inclui Retry-After. Ver [garantias e limites](architecture/financial-entry-commands.md) e OpenAPI.
 
-## 15. Compatibilidade
+## 15. Baixa e estorno de lançamento
+
+POST /api/companies/{companyId}/financial-entries/{entryId}/settlements recebe expectedVersion e values(paymentDate, paidAmount, bankAccountId). paidAmount é texto positivo já exato em centavos. O backend mantém o nominal e registra o valor efetivamente pago; igualdade com o nominal elimina o override. A baixa marca o título como pago e usa a conta selecionada da Empresa.
+
+POST no mesmo item com /settlement-reversals recebe somente expectedVersion. Limpa data/valor pago e mantém a última conta. Pode registrar comando sobre título já aberto sem exigir mudança artificial de versão. Os dois endpoints exigem as mesmas flags, MANAGE ALL atual, sessão/CSRF, chave UUID e limites de corpo das escritas individuais, inclusive em URI codificado.
+
+Ambos respondem200 com recibo imutável; GET fornece o estado atual. Reenvio de baixa após estorno retorna o recibo original sem reaplicar pagamento. Tratar409 por versão/chave,403 por revogação e400 para campos não permitidos. O recibo público também admite SETTLED e SETTLEMENT_REVERSED. Ator/Empresa, nominal e classificadores são definidos/protegidos pelo backend; não são campos de baixa/estorno. Anexos e captura bruta seguem seus módulos. Ver [estados, evidências e garantias](architecture/financial-entry-settlement.md) e OpenAPI.
+
+## 16. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 

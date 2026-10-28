@@ -116,7 +116,9 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.POST,
-                                                                "/api/companies/{companyId}/financial-entries")
+                                                                "/api/companies/{companyId}/financial-entries",
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/settlements",
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/settlement-reversals")
                                                 .access(financialCommands)
 
                                                 .requestMatchers(HttpMethod.PUT,
