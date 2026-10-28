@@ -13,6 +13,8 @@ spring:
 
 finemp:
   finance:
+    transfers:
+      enabled: ${FINEMP_FINANCE_TRANSFERS_ENABLED:false}
     catalog:
       enabled: ${FINEMP_FINANCE_CATALOG_ENABLED:false}
     entries:
