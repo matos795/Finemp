@@ -1,0 +1,18 @@
+# Synthetic local example. Replace source and mapping only with verified operational values.
+# Secret VALUES belong to the service-account environment, never to this file.
+version=1
+profiles=synthetic
+poll-seconds=5
+profile.synthetic.source-id=56565656-5656-4656-8656-565656565656
+profile.synthetic.origin=https://connector.invalid
+profile.synthetic.credential-env=FINEMP_CONNECTOR_SYNTHETIC_TOKEN
+profile.synthetic.jdbc-url-env=FINEMP_CONNECTOR_SYNTHETIC_JDBC_URL
+profile.synthetic.jdbc-user-env=FINEMP_CONNECTOR_SYNTHETIC_JDBC_USER
+profile.synthetic.jdbc-password-env=FINEMP_CONNECTOR_SYNTHETIC_JDBC_PASSWORD
+profile.synthetic.identity-table=SYN_COMPANIES
+profile.synthetic.identity-code-column=COMPANY_CODE
+profile.synthetic.identity-cnpj-column=TAX_ID
+profile.synthetic.max-records=25000
+profile.synthetic.read-seconds=120
+profile.synthetic.query-seconds=30
+profile.synthetic.http-seconds=20
