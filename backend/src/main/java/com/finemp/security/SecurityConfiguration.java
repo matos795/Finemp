@@ -25,6 +25,8 @@ import org.springframework.security.web.context.SecurityContextHolderFilter;
 import com.finemp.access.CompanyPermission;
 import com.finemp.finance.entry.EntryCommandAuthorizationManager;
 import com.finemp.finance.entry.FinancialEntryPayloadLimitFilter;
+import com.finemp.finance.transfer.BankTransferCommandAuthorizationManager;
+import com.finemp.finance.transfer.BankTransferPayloadLimitFilter;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 @Configuration
@@ -38,6 +40,7 @@ public class SecurityConfiguration {
                         SessionAccountStateValidator sessionAccountStateValidator,
                         QuestorImportAuthorizationManager questorImportAuthorizationManager,
                         EntryCommandAuthorizationManager financialCommands,
+                        BankTransferCommandAuthorizationManager transferCommands,
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
 
@@ -121,6 +124,14 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.POST,
+                                                                "/api/companies/{companyId}/bank-transfers")
+                                                .access(transferCommands)
+
+                                                .requestMatchers(HttpMethod.DELETE,
+                                                                "/api/companies/{companyId}/bank-transfers/{transferId}")
+                                                .access(transferCommands)
+
+                                                .requestMatchers(HttpMethod.POST,
                                                                 "/api/companies/{companyId}/financial-entries",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlements",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlement-reversals")
@@ -154,6 +165,8 @@ public class SecurityConfiguration {
 
                 if (financialCommands.isEnabled())
                         http.addFilterAfter(new FinancialEntryPayloadLimitFilter(65536, 4), AuthorizationFilter.class);
+                if (transferCommands.isEnabled())
+                        http.addFilterAfter(new BankTransferPayloadLimitFilter(65536, 4), AuthorizationFilter.class);
                 return http.build();
         }
 
@@ -163,6 +176,14 @@ public class SecurityConfiguration {
                         @Value("${finemp.finance.entries.enabled:false}") boolean entriesEnabled,
                         @Value("${finemp.finance.entries.commands.enabled:false}") boolean commandsEnabled) {
                 return new EntryCommandAuthorizationManager(permissions, entriesEnabled, commandsEnabled);
+        }
+
+        @Bean
+        BankTransferCommandAuthorizationManager bankTransferCommandAuthorizationManager(
+                        CompanyPermissionAuthorizationService permissions,
+                        @Value("${finemp.finance.transfers.enabled:false}") boolean transfersEnabled,
+                        @Value("${finemp.finance.transfers.commands.enabled:false}") boolean commandsEnabled) {
+                return new BankTransferCommandAuthorizationManager(permissions, transfersEnabled, commandsEnabled);
         }
 
         @Bean
