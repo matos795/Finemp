@@ -111,6 +111,11 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/bank-transfers",
+                                                                "/api/companies/{companyId}/bank-transfers/{transferId}")
+                                                .authenticated()
+
+                                                .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/financial-entries",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}")
                                                 .authenticated()
