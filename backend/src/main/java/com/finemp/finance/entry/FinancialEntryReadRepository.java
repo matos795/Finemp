@@ -37,9 +37,9 @@ public interface FinancialEntryReadRepository extends Repository<FinancialEntry,
               and (:to is null or coalesce(entry.values.paymentDate,entry.values.dueDate)<=:to)
               and (:direction is null or entry.values.direction=:direction)
               and (:status is null
-                or (:status=com.finemp.finance.entry.EntryReadStatus.PAID and entry.values.paymentDate is not null)
-                or (:status=com.finemp.finance.entry.EntryReadStatus.OPEN and entry.values.paymentDate is null)
-                or (:status=com.finemp.finance.entry.EntryReadStatus.OVERDUE and entry.values.paymentDate is null and entry.values.dueDate<:asOf))
+                or (:status='PAID' and entry.values.paymentDate is not null)
+                or (:status='OPEN' and entry.values.paymentDate is null)
+                or (:status='OVERDUE' and entry.values.paymentDate is null and entry.values.dueDate<:asOf))
               and (:bankId is null or entry.values.bankAccountId=:bankId)
               and (:categoryId is null or category.id=:categoryId or category.parentId=:categoryId)
               and (:partnerId is null or entry.values.partnerId=:partnerId)
@@ -55,7 +55,7 @@ public interface FinancialEntryReadRepository extends Repository<FinancialEntry,
             """)
     @QueryHints(@jakarta.persistence.QueryHint(name="jakarta.persistence.query.timeout",value="5000"))
     Page<FinancialEntryReadRow> search(@Param("company") UUID company,@Param("from") LocalDate from,@Param("to") LocalDate to,
-            @Param("direction") FinancialDirection direction,@Param("status") EntryReadStatus status,
+            @Param("direction") FinancialDirection direction,@Param("status") String status,
             @Param("bankId") UUID bankId,@Param("categoryId") UUID categoryId,@Param("partnerId") UUID partnerId,
             @Param("centerCode") String centerCode,@Param("withoutCenter") boolean withoutCenter,@Param("cost") CostBehavior cost,
             @Param("search") String search,@Param("asOf") LocalDate asOf,Pageable pageable);

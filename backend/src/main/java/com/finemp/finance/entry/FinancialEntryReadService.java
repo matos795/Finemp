@@ -37,7 +37,8 @@ public class FinancialEntryReadService {
         if(without && filter.centerId()!=null)throw invalid();
         String code=filter.centerId()==null?"":centers.findCurrentCode(company,filter.centerId()).orElseThrow(()->new SaasResourceNotFoundException("Centro de resultado"));
         LocalDate asOf=reference(filter.asOfDate());
-        var result=queries.search(company,filter.from(),filter.to(),filter.direction(),filter.status(),filter.bankId(),filter.categoryId(),filter.partnerId(),
+        // Status is computed, not an entity-mapped enum: bind its validated API name as SQL text.
+        var result=queries.search(company,filter.from(),filter.to(),filter.direction(),filter.status()==null?null:filter.status().name(),filter.bankId(),filter.categoryId(),filter.partnerId(),
                 code,without,filter.costBehavior(),filter.search()==null?"":filter.search().trim(),asOf,PageRequest.of(page,size));
         return PagedResponse.from(result,row->row.response(asOf));
     }
