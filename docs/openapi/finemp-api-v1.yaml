@@ -23,7 +23,192 @@ tags:
   - name: Financial bank accounts
   - name: Business partners
   - name: Result centers
+  - name: Financial categories
 paths:
+  /api/companies/{companyId}/financial-categories:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial categories]
+      operationId: listFinancialCategories
+      summary: Lista grupos e subcategorias operacionais com classificação efetiva.
+      description: FINEMP_FINANCE_CATALOG_ENABLED e FINANCIAL_CATEGORY_VIEW ou MANAGE ALL. Classificação calculada no servidor; plano operacional distinto de AccountingAccount/PlanoQ. Ordem hierárquica numérica.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: search
+          in: query
+          schema: {type: string, maxLength: 100, default: ''}
+          description: Nome sem acentos/caixa ou código; busca literal.
+        - name: direction
+          in: query
+          schema: {$ref: '#/components/schemas/FinancialDirection'}
+        - name: kind
+          in: query
+          schema: {type: string, enum: [GROUP, SUBCATEGORY]}
+        - name: parentId
+          in: query
+          schema: {type: string, format: uuid}
+          description: Grupo da mesma Empresa, para listar somente suas subcategorias.
+      responses:
+        '200':
+          description: Página com classificações brutas e efetivas.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialCategoryPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/companies/{companyId}/financial-categories/groups:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    post:
+      tags: [Financial categories]
+      operationId: createFinancialCategoryGroup
+      summary: Cria grupo e uma subcategoria inicial atomicamente.
+      description: MANAGE ALL e CSRF. Código gerado no servidor por direção; atividade operacional, DRE REC entrada/DADM saída. Custo efetivo variável entrada/fixo saída. Inicial Nova subcategoria herda campos ausentes. Nome pode ser informado na mesma operação do cadastro.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direction, name]
+              properties:
+                direction: {$ref: '#/components/schemas/FinancialDirection'}
+                name: {type: string, minLength: 1, maxLength: 255}
+      responses:
+        '201':
+          description: Grupo criado com versão zero; sub inicial disponível na lista.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialCategory'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: Sequência esgotada ou conflito concorrente; não publica grupo parcial.
+  /api/companies/{companyId}/financial-categories/{groupId}/subcategories:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: groupId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Financial categories]
+      operationId: createFinancialSubcategory
+      summary: Cria subcategoria com código automático e overrides inicialmente ausentes.
+      description: MANAGE ALL e CSRF. Pai deve ser grupo da Empresa. Não permite terceiro nível. Classificações ausentes usam fallback dinâmico do grupo.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: {type: string, minLength: 1, maxLength: 255}
+      responses:
+        '201':
+          description: Subcategoria criada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialCategory'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: NOT_A_GROUP, SEQUENCE_EXHAUSTED ou conflito concorrente.
+  /api/companies/{companyId}/financial-categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: categoryId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Financial categories]
+      operationId: getFinancialCategory
+      summary: Consulta categoria com VIEW ou MANAGE ALL.
+      responses:
+        '200':
+          description: Classificações brutas e efetivas.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialCategory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Financial categories]
+      operationId: updateFinancialCategory
+      summary: Atualiza classificação sem alterar código, pai ou direção.
+      description: MANAGE ALL. Grupo exige atividade e DRE explícitas; custo null usa padrão da direção. Subcategoria aceita atividade/custo null para herdar, e DRE null para fotografar o valor atual do grupo, conforme handler homologado. Não é troca silenciosa entre herança e fotografia.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, expectedVersion]
+              properties:
+                name: {type: string, minLength: 1, maxLength: 255}
+                cashActivity:
+                  anyOf:
+                    - $ref: '#/components/schemas/CashActivity'
+                    - type: 'null'
+                dreLine:
+                  anyOf:
+                    - $ref: '#/components/schemas/OperationalDreLine'
+                    - type: 'null'
+                costBehavior:
+                  anyOf:
+                    - $ref: '#/components/schemas/CostBehavior'
+                    - type: 'null'
+                expectedVersion: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Classificação e versão após flush.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialCategory'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: STALE_VERSION ou conflito concorrente.
+    delete:
+      tags: [Financial categories]
+      operationId: deleteFinancialCategory
+      summary: Remove categoria sem uso; grupo inclui seus filhos na mesma transação.
+      description: MANAGE ALL e versão exata. Uso por lançamento na categoria ou em subcategorias recusa exclusão. Não desativa. Adapter operacional real depende39; constraints protegem referências físicas existentes.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: version
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '204':
+          description: Removido sem referências.
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: CATEGORY_IN_USE, STALE_VERSION ou conflito físico/concorrente.
   /api/companies/{companyId}/result-centers:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2433,6 +2618,60 @@ components:
           type: string
         total:
           $ref: '#/components/schemas/DecimalAmount'
+    FinancialDirection:
+      type: string
+      enum: [INCOME, EXPENSE]
+    CashActivity:
+      type: string
+      enum: [OPERATING, INVESTING, FINANCING]
+      description: Atividade operacional, de investimento ou financiamento.
+    CostBehavior:
+      type: string
+      enum: [FIXED, VARIABLE]
+    OperationalDreLine:
+      type: string
+      enum: [REC, DED, CUS, DCOM, DADM, DPES, DTRI, OUT, DEP, RFIN, DFIN, IR, NAO]
+      description: Identificadores da referência operacional homologada; não substituem PlanoQ contábil.
+    FinancialCategory:
+      type: object
+      required: [id, companyId, kind, direction, code, name, effective, version]
+      properties:
+        id: {type: string, format: uuid}
+        companyId: {type: string, format: uuid}
+        parentId: {type: [string, 'null'], format: uuid}
+        kind: {type: string, enum: [GROUP, SUBCATEGORY]}
+        direction: {$ref: '#/components/schemas/FinancialDirection'}
+        code: {type: string, maxLength: 64}
+        name: {type: string, maxLength: 255}
+        cashActivity:
+          anyOf:
+            - $ref: '#/components/schemas/CashActivity'
+            - type: 'null'
+        dreLine:
+          anyOf:
+            - $ref: '#/components/schemas/OperationalDreLine'
+            - type: 'null'
+        costBehavior:
+          anyOf:
+            - $ref: '#/components/schemas/CostBehavior'
+            - type: 'null'
+        effective:
+          type: object
+          required: [cashActivity, dreLine, costBehavior]
+          properties:
+            cashActivity: {$ref: '#/components/schemas/CashActivity'}
+            dreLine: {$ref: '#/components/schemas/OperationalDreLine'}
+            costBehavior: {$ref: '#/components/schemas/CostBehavior'}
+        version: {type: integer, format: int64, minimum: 0}
+    FinancialCategoryPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: {$ref: '#/components/schemas/FinancialCategory'}
     ResultCenter:
       type: object
       required: [id, companyId, code, name, active, hasChildren, version]
@@ -2581,6 +2820,8 @@ components:
         - BUSINESS_PARTNER_MANAGE
         - RESULT_CENTER_VIEW
         - RESULT_CENTER_MANAGE
+        - FINANCIAL_CATEGORY_VIEW
+        - FINANCIAL_CATEGORY_MANAGE
     CostCenterScope:
       type: string
       enum: [ALL, RESTRICTED]

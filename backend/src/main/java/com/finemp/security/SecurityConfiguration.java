@@ -100,6 +100,12 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(
+                                                                "/api/companies/{companyId}/financial-categories",
+                                                                "/api/companies/{companyId}/financial-categories/{categoryId}",
+                                                                "/api/companies/{companyId}/financial-categories/{groupId}/subcategories")
+                                                .authenticated()
+
+                                                .requestMatchers(
                                                                 "/api/companies/{companyId}/**")
                                                 .denyAll()
 

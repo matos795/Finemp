@@ -427,7 +427,11 @@ Com a mesma flag financeira, /api/companies/{companyId}/business-partners oferec
 
 /api/companies/{companyId}/result-centers oferece catálogo paginado, busca e subárvore por rootId; GET/POST na coleção, GET/PUT/DELETE no UUID. Código não é alterável; create recebe code/name e inicia ativo, update recebe name/active/expectedVersion. hasChildren é calculado no servidor e não depende de filtros da página. VIEW/MANAGE explícitos ALL, escrita MANAGE com CSRF. /settings recebe requireResultCenter/expectedVersion e inicia false/version=null quando não persistido; não reclassifica legado. POST /suggested-plan é explícito, atômico e exclusivo de plano vazio. Adapter de uso e exigência nas operações financeiras seguem39/42. Ver [hierarquia e dependências](architecture/operational-result-centers.md) e OpenAPI.
 
-## 12. Compatibilidade
+## 12. Categorias financeiras
+
+/api/companies/{companyId}/financial-categories expõe lista paginada e item GET/PUT/DELETE; POST /groups cria grupo com uma sub inicial e POST /{groupId}/subcategories cria sub. FINANCIAL_CATEGORY_VIEW/MANAGE ALL explícitos; escrita exige MANAGE com CSRF. O backend gera códigos, controla versões e retorna raw e effective. NULL de atividade/custo na sub herda do grupo; NULL de DRE no PUT fotografa a classificação atual do grupo, preservando o handler homologado. Sub recém-criada sem DRE ainda usa fallback dinâmico. O cliente apenas apresenta essa distinção. Sem desativação: uso impede excluir, e grupo sem uso exclui seus filhos na mesma transação. Plano padrão completo e referências operacionais são entregas próprias. Ver [regras e evidências](architecture/financial-categories.md).
+
+## 13. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 
