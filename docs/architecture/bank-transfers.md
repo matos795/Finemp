@@ -28,8 +28,14 @@ Registro/exclusão, evento e recibo são uma transação. Criar registra estado 
 
 O incremento #147 expõe apenas GET da coleção e item por Empresa, com o opt-in de transferências. Exige BANK_ACCOUNT_VIEW ou MANAGE ALL vigente. A projeção consulta valores e nomes atuais das duas contas no mesmo comando JPQL, inclusive se o contexto JPA já tiver entidades antigas. Não retorna atores ou estados privados de auditoria. A coleção pagina no servidor, de 1 a 100 itens por página, com data decrescente e UUID como desempate estável. A resposta mantém dinheiro como texto decimal exato. Não adiciona cálculo de saldo ou escrita HTTP.
 
+## DECISÃO técnica — comandos HTTP
+
+O incremento #149 adiciona FINEMP_FINANCE_TRANSFER_COMMANDS_ENABLED, desabilitado por padrão e somado ao opt-in base. POST na coleção aceita values canônicos e responde201 com Location/recibo; DELETE no item aceita expectedVersion na query, sem corpo, e responde200 com recibo. Ambos exigem chave UUID, sessão/CSRF e BANK_ACCOUNT_MANAGE ALL atual antes do serviço. O serviço continua revalidando após o bloqueio.
+
+A autorização da rota normalizada marca somente o POST com um atributo interno do servidor. O filtro usa essa decisão e o mesmo mecanismo compartilhado dos lançamentos, preservando seus marcadores/códigos existentes:64KiB mesmo sem Content-Length confiável, até quatro corpos por instância, JSON sem compressão e liberação de capacidade em falhas. Não compara URI bruto. As duas famílias têm marcadores e instâncias de filtro distintos. DELETE não marca nem consome corpo. Decoder rejeita campos desconhecidos/duplicados, coerções, expoentes, tipos errados, profundidade/tamanho excessivos, UUID abreviado e texto inválido. Não recebe contexto do ator/Empresa no payload.
+
 ## PONTO ABERTO / PRÓXIMO PASSO
 
-A normalização de valores brutos e os efeitos monetários legados continuam na #128. Não foram resolvidos por uma coluna decimal. O próximo incremento exporá a escrita HTTP com limites e contrato próprios. Não existe operação de alteração homologada no formulário de transferências; não será inventada.
+A normalização de valores brutos e os efeitos monetários legados continuam na #128. Não foram resolvidos por uma coluna decimal. Exclusão de lançamentos, séries e conciliação continuam nos incrementos dependentes da #39/#40. Não existe operação de alteração homologada no formulário de transferências; não será inventada.
 
 Os testes usam somente dados sintéticos: precisão e limites, persistência PostgreSQL, isolamento das duas pontas, proteção real de contas, referências atuais sem cache, identificadores iguais em tipos diferentes e conflito de versão. PostgreSQL é validado no CI com Testcontainers.

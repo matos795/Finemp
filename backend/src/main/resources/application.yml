@@ -15,6 +15,8 @@ finemp:
   finance:
     transfers:
       enabled: ${FINEMP_FINANCE_TRANSFERS_ENABLED:false}
+      commands:
+        enabled: ${FINEMP_FINANCE_TRANSFER_COMMANDS_ENABLED:false}
     catalog:
       enabled: ${FINEMP_FINANCE_CATALOG_ENABLED:false}
     entries:
