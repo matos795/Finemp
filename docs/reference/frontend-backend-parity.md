@@ -19,7 +19,9 @@
 - **FATO CONFIRMADO:** #124/PR125 e #126/PR127 integradas: classificação bruta
   e efetiva consistente e plano padrão com paridade integral, rollback e concorrência.
   #38 concluída; uso operacional dos cadastros continua nos módulos dependentes.
-- **EM IMPLEMENTAÇÃO:** #39, calendário confirmado na #129. #128 registra
+- **FATO CONFIRMADO:** #129/PR130 integrada: calendário confirmado de séries,
+  sem acoplamento a uma política monetária presumida.
+- **EM IMPLEMENTAÇÃO:** #39, persistência canônica na #131. #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
   preserva o baseline do inventário; este checkpoint registra avanços posteriores.
