@@ -66,6 +66,16 @@ class ConnectorAgentCycleTest {
         }finally{release.countDown();caller.shutdownNow();assertThat(exited.await(5,TimeUnit.SECONDS)).isTrue();}
         verify(client,never()).complete(any(),any());
     }
+    @Test void shouldTreatAnExplicitlyCancelledRunAsTerminalWithoutReplayingOrReportingFailure() {
+        prepare(work);when(reader.readSnapshot(work.context())).thenReturn(snapshot);
+        var cancelled=new ConnectorWorkResult(work.attemptId(),work.runId(),1,true,SyncAttemptStatus.RUNNING,SyncRunStatus.CANCELLED,
+                work.leaseExpiresAt(),null,null,null,null,null,null);
+        when(client.complete(work,snapshot)).thenReturn(cancelled);
+        try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2))){
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);
+        }
+        verify(client,times(1)).complete(work,snapshot);verify(client,never()).fail(any(),any());
+    }
     @Test void shouldStopPublicationWhenTheHeartbeatIsLostDuringRead() throws Exception {
         var shortWork=work(300);prepare(shortWork);var entered=new CountDownLatch(1);var beat=new CountDownLatch(1);
         when(reader.readSnapshot(any())).thenAnswer(call->{entered.countDown();new CountDownLatch(1).await();return snapshot;});
