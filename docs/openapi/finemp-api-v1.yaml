@@ -1540,7 +1540,7 @@ components:
         credentialId: {type: string, format: uuid}
         accountingFirmId: {type: string, format: uuid}
         accountingSourceId: {type: string, format: uuid}
-        credentialVersion: {type: integer, format: int64}
+        credentialVersion: {type: integer, format: int64, minimum: 0, description: Versão técnica inicial zero; não confundir com attemptNumber, que começa em um.}
     ConnectorProtocolError:
       type: object
       required: [code]

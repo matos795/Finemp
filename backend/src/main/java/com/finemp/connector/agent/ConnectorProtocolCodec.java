@@ -31,7 +31,8 @@ final class ConnectorProtocolCodec {
     }
     ConnectorSession session(byte[] body, UUID source) {
         return decode(body, root -> {
-            var result = new ConnectorSession(uuid(root,"credentialId"), uuid(root,"accountingFirmId"), uuid(root,"accountingSourceId"), positive(root,"credentialVersion"));
+            Long version=count(root,"credentialVersion");if(version==null)throw error(PROTOCOL);
+            var result = new ConnectorSession(uuid(root,"credentialId"), uuid(root,"accountingFirmId"), uuid(root,"accountingSourceId"), version);
             if (!result.accountingSourceId().equals(source)) throw error(PROTOCOL); return result;
         });
     }

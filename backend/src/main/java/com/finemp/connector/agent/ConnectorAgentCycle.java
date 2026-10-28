@@ -125,6 +125,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                 throw new ConnectorClientException(ConnectorClientException.Kind.PROTOCOL);
             pending=null;return Outcome.SUCCEEDED;
         }
+        if(result.runStatus()==SyncRunStatus.CANCELLED){pending=null;return Outcome.FAILED;}
         if(result.attemptStatus()!=SyncAttemptStatus.RUNNING || !result.currentAttempt()) {pending=null;return Outcome.FAILED;}
         if(expires-nanoTime.getAsLong()<=0) {pending=null;return Outcome.RETRY_LATER;}
         pending=new Pending(work,expires);return Outcome.PENDING;
