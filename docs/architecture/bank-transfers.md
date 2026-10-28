@@ -24,8 +24,12 @@ O namespace de comandos de transferência possui chave UUID por Empresa e ator, 
 
 Registro/exclusão, evento e recibo são uma transação. Criar registra estado posterior; excluir registra estado anterior e estado posterior ausente. Não há FK para a transferência no diário: excluir não elimina o histórico. Empresa e ator têm FKs. Estados são JSON canônico privado e não aparecem em logs/respostas; consulta e retenção da auditoria continuam na #51. Não é uma alegação de imutabilidade contra administrador do banco.
 
+## DECISÃO técnica — consulta HTTP
+
+O incremento #147 expõe apenas GET da coleção e item por Empresa, com o opt-in de transferências. Exige BANK_ACCOUNT_VIEW ou MANAGE ALL vigente. A projeção consulta valores e nomes atuais das duas contas no mesmo comando JPQL, inclusive se o contexto JPA já tiver entidades antigas. Não retorna atores ou estados privados de auditoria. A coleção pagina no servidor, de 1 a 100 itens por página, com data decrescente e UUID como desempate estável. A resposta mantém dinheiro como texto decimal exato. Não adiciona cálculo de saldo ou escrita HTTP.
+
 ## PONTO ABERTO / PRÓXIMO PASSO
 
-A normalização de valores brutos e os efeitos monetários legados continuam na #128. Não foram resolvidos por uma coluna decimal. O próximo incremento exporá API limitada e documentada. Não existe operação de alteração homologada no formulário de transferências; não será inventada.
+A normalização de valores brutos e os efeitos monetários legados continuam na #128. Não foram resolvidos por uma coluna decimal. O próximo incremento exporá a escrita HTTP com limites e contrato próprios. Não existe operação de alteração homologada no formulário de transferências; não será inventada.
 
 Os testes usam somente dados sintéticos: precisão e limites, persistência PostgreSQL, isolamento das duas pontas, proteção real de contas, referências atuais sem cache, identificadores iguais em tipos diferentes e conflito de versão. PostgreSQL é validado no CI com Testcontainers.

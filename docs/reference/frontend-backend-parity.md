@@ -38,9 +38,11 @@
 - **FATO CONFIRMADO:** #143/PR144 integrada: persistência independente de
   transferências, referências reais às duas contas e proteção do histórico;
   oito contratos PostgreSQL passaram.
-- **EM IMPLEMENTAÇÃO:** #39, comandos internos de transferências na #145,
-  com autorização vigente, recibos, auditoria e exclusão por versão. A API será
-  entregue em incremento próprio.
+- **FATO CONFIRMADO:** #145/PR146 integrada: comandos internos de criar/excluir
+  transferências com autorização vigente, recibos, auditoria e versão;
+  treze contratos PostgreSQL passaram.
+- **EM IMPLEMENTAÇÃO:** #39, consulta paginada de transferências na #147.
+  Escrita HTTP será entregue em incremento próprio.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
