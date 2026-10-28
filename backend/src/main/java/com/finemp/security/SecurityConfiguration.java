@@ -133,6 +133,7 @@ public class SecurityConfiguration {
 
                                                 .requestMatchers(HttpMethod.POST,
                                                                 "/api/companies/{companyId}/financial-entries",
+                                                                "/api/companies/{companyId}/financial-entry-series/monthly",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlements",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlement-reversals")
                                                 .access(financialCommands)
