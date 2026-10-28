@@ -33,8 +33,11 @@
   autorizada inclusive URI codificado e opt-in separado; nove contratos PG/HTTP.
 - **FATO CONFIRMADO:** #139/PR140 integrada: baixa/estorno internos canônicos,
   versão atual/esperada, recibo idempotente e auditoria atômica; onze contratos PG.
-- **EM IMPLEMENTAÇÃO:** #39, API de baixa/estorno na #141, com JSON estrito,
-  autorização atual, CSRF, corpo limitado por rota autorizada e contrato próprio.
+- **FATO CONFIRMADO:** #141/PR142 integrada: API de baixa/estorno com JSON
+  estrito, autorização atual, CSRF e corpo limitado; sete contratos PG/HTTP.
+- **EM IMPLEMENTAÇÃO:** #39, persistência independente de transferências na
+  #143, com referências reais às duas contas e proteção do histórico. Comandos
+  e API de transferências serão entregues em incrementos próprios.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo
