@@ -42,8 +42,9 @@ class ResultCenterServiceTest {
         allowWrite();when(centers.findByCompanyIdAndCode(company,"1")).thenReturn(Optional.of(row));
         var guard=mock(ResultCenterUsageGuard.class);when(guard.hasEntries(company,id)).thenReturn(true);
         when(usage.orderedStream()).thenAnswer(call->Stream.of(guard));
-        assertThatThrownBy(()->service.create(actor,company,new ResultCenterCreateRequest("1.1","Synthetic Child")))
-                .isInstanceOfSatisfying(ResultCenterConflictException.class,e->assertThat(e.reason()).isEqualTo(ResultCenterConflictException.Reason.PARENT_HAS_ENTRIES));
+        assertThatThrownBy(()->service.update(actor,company,id,new ResultCenterUpdateRequest("Synthetic Center",true,0L,ResultCenterType.GROUP)))
+                .isInstanceOfSatisfying(ResultCenterConflictException.class,e->assertThat(e.reason()).isEqualTo(ResultCenterConflictException.Reason.HAS_ENTRIES));
+        assertThat(row.getType()).isEqualTo(ResultCenterType.ANALYTICAL);
         verify(centers,never()).saveAndFlush(any());
     }
     @Test void mustPreserveUsedHistoryBeforeConsideringChildrenAndRefuseDeletingAnUnusedGroup() {

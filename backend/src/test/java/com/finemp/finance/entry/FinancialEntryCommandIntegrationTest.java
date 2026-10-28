@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties={"finemp.finance.entries.enabled=true","finemp.finance.catalog.enabled=true"})
 @Import(TestcontainersConfiguration.class)
 class FinancialEntryCommandIntegrationTest {
+    @Autowired ResultCenterService centerService;
     @Autowired FinancialEntryCommandService service;
     @Autowired FinancialEntryRepository entries;
     @Autowired CompanyRepository companies;
@@ -52,7 +53,7 @@ class FinancialEntryCommandIntegrationTest {
         var foreignRoot=categories.saveAndFlush(FinancialCategory.group(other,FinancialDirection.EXPENSE,1,"Foreign Group"));
         foreignCategory=categories.saveAndFlush(FinancialCategory.subcategory(foreignRoot,1,"Foreign Category")).getId();
         party=party(owner);foreignParty=party(other);
-        groupCenter=centers.saveAndFlush(new ResultCenter(owner,"1",null,"Synthetic Group",true)).getId();
+        groupCenter=centers.saveAndFlush(new ResultCenter(owner,"1",null,"Synthetic Group",true,ResultCenterType.GROUP)).getId();
         center=centers.saveAndFlush(new ResultCenter(owner,"1.1",groupCenter,"Synthetic Leaf",true)).getId();
         foreignCenter=centers.saveAndFlush(new ResultCenter(other,"1",null,"Foreign Leaf",true)).getId();
     }
@@ -180,6 +181,32 @@ class FinancialEntryCommandIntegrationTest {
             assertThat(count("financial_entry_events")).isEqualTo(2);
             assertThat(entries.findById(created.entryId()).orElseThrow().getValues().nominalAmount()).isEqualByComparingTo("2.00");
         }finally {pool.shutdownNow();}
+    }
+    @Test void groupWithoutChildrenMustRejectCaptureWhileAnExplicitAnalyticalParentStillAcceptsIt() {
+        var empty=centers.saveAndFlush(new ResultCenter(owner,"7",null,"Empty group",true,ResultCenterType.GROUP)).getId();
+        assertThatThrownBy(()->create(UUID.randomUUID(),data("1","Empty group rejected",null,bank,category,null,empty))).isInstanceOf(IllegalArgumentException.class);
+        centers.saveAndFlush(new ResultCenter(owner,"1.1.1",center,"Analytical child",true));
+        assertThat(create(UUID.randomUUID(),data("1","Analytical parent allowed",null,bank,category,null,center)).entryId()).isNotNull();
+    }
+    @Test void groupTypeMustBeReadFromCurrentStateEvenWithAnOldManagedAnalyticalEntity() {
+        new TransactionTemplate(transactions).executeWithoutResult(status->{
+            var cached=centers.findById(center).orElseThrow();
+            jdbc.update("UPDATE operational_result_centers SET type='GROUP',version=version+1 WHERE id=?",center);
+            assertThat(cached.getType()).isEqualTo(ResultCenterType.ANALYTICAL);
+            assertThatThrownBy(()->create(UUID.randomUUID(),data("1","Current type required",null,bank,category,null,center))).isInstanceOf(IllegalArgumentException.class);
+            status.setRollbackOnly();
+        });
+        assertThat(count("financial_entries")).isZero();
+    }
+    @Test void concurrentCaptureAndTypeChangeMustNotLeaveAGroupWithANewEntry()throws Exception {
+        jdbc.update("INSERT INTO company_access_grant_permissions(company_access_grant_id,permission) SELECT id,'RESULT_CENTER_MANAGE' FROM company_access_grants WHERE company_id=? AND user_account_id=?",owner.getId(),manager.getId());
+        var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
+        try {
+            var capture=pool.submit(()->{start.await(5,TimeUnit.SECONDS);try {create(UUID.randomUUID(),data("1","Concurrent type",null,bank,category,null,center));return true;}catch(IllegalArgumentException expected) {return false;}});
+            var change=pool.submit(()->{start.await(5,TimeUnit.SECONDS);try {centerService.update(manager.getId(),owner.getId(),center,new ResultCenterUpdateRequest("Changed group",true,0L,ResultCenterType.GROUP));return true;}catch(ResultCenterConflictException expected) {assertThat(expected.reason()).isEqualTo(ResultCenterConflictException.Reason.HAS_ENTRIES);return false;}});
+            start.countDown();assertThat(List.of(capture.get(15,TimeUnit.SECONDS),change.get(15,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
+            var type=centers.findById(center).orElseThrow().getType();assertThat(count("financial_entries")).isEqualTo(type==ResultCenterType.GROUP?0L:1L);
+        }finally {start.countDown();pool.shutdownNow();}
     }
     FinancialEntryCommandReceipt create(UUID key,FinancialEntryCommandData data) {return service.create(manager.getId(),owner.getId(),key,data);}
     FinancialEntryCommandData data() {return data("1","Synthetic description",null,bank,category,null,null);}
