@@ -42,7 +42,7 @@ class EntrySeriesPersistenceIntegrationTest {
     }
     @AfterEach void cleanSyntheticFixtures() {
         for(var company:List.of(owner,other)) {
-            for(var table:List.of("financial_entry_series_members","financial_entry_series","financial_entry_events","financial_entry_command_receipts","financial_entries","financial_bank_accounts","financial_categories"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
+            for(var table:List.of("financial_entry_series_members","financial_entry_series","financial_entry_events","financial_entry_command_receipts","financial_entry_command_keys","financial_entries","financial_bank_accounts","financial_categories"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
             jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)",company.getId());
             jdbc.update("DELETE FROM company_access_grants WHERE company_id=?",company.getId());jdbc.update("DELETE FROM companies WHERE id=?",company.getId());
         }
