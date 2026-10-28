@@ -14,24 +14,32 @@ import tools.jackson.databind.json.JsonMapper;
 @Transactional(propagation=Propagation.MANDATORY)
 public class EntryCommandJournal {
     private final JdbcTemplate jdbc;
+    private final EntryCommandKeyRegistry keys;
     private final JsonMapper json=JsonMapper.builder().build();
-    public EntryCommandJournal(JdbcTemplate jdbc) {this.jdbc=jdbc;}
+    public EntryCommandJournal(JdbcTemplate jdbc,EntryCommandKeyRegistry keys) {this.jdbc=jdbc;this.keys=keys;}
     Optional<StoredReceipt> find(UUID company,UUID actor,UUID command) {
-        return jdbc.query("SELECT fingerprint,entry_id,action,result_version FROM financial_entry_command_receipts WHERE company_id=? AND actor_id=? AND command_id=?",
+        var result=jdbc.query("SELECT fingerprint,entry_id,action,result_version FROM financial_entry_command_receipts WHERE company_id=? AND actor_id=? AND command_id=?",
                 (row,index)->new StoredReceipt(row.getString("fingerprint"),new FinancialEntryCommandReceipt(company,command,row.getObject("entry_id",UUID.class),
                         EntryCommandAction.valueOf(row.getString("action")),row.getLong("result_version"))),company,actor,command).stream().findFirst();
+        if(result.isEmpty() && keys.exists(company,actor,command))throw new FinancialEntryCommandConflictException(FinancialEntryCommandConflictException.Reason.IDEMPOTENCY_MISMATCH);
+        return result;
     }
     void append(UUID actor,String fingerprint,FinancialEntryCommandReceipt receipt,Long beforeVersion,FinancialEntryValues before,FinancialEntryValues after) {
+        keys.claim(receipt.companyId(),actor,receipt.commandId(),EntryCommandKeyRegistry.Kind.INDIVIDUAL);
+        appendEvent(actor,receipt,beforeVersion,before,after);
+        var now=Timestamp.from(Instant.now());
+        jdbc.update("""
+                INSERT INTO financial_entry_command_receipts(company_id,actor_id,command_id,fingerprint,entry_id,action,result_version,committed_at)
+                VALUES(?,?,?,?,?,?,?,?)
+                """,receipt.companyId(),actor,receipt.commandId(),fingerprint,receipt.entryId(),receipt.action().name(),receipt.version(),now);
+    }
+    void appendEvent(UUID actor,FinancialEntryCommandReceipt receipt,Long beforeVersion,FinancialEntryValues before,FinancialEntryValues after) {
         var now=Timestamp.from(Instant.now());
         jdbc.update("""
                 INSERT INTO financial_entry_events(id,company_id,actor_id,command_id,entry_id,action,before_version,after_version,before_state,after_state,occurred_at)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?)
                 """,UUID.randomUUID(),receipt.companyId(),actor,receipt.commandId(),receipt.entryId(),receipt.action().name(),beforeVersion,after==null?null:receipt.version(),
                 before==null?null:state(before),state(after),now);
-        jdbc.update("""
-                INSERT INTO financial_entry_command_receipts(company_id,actor_id,command_id,fingerprint,entry_id,action,result_version,committed_at)
-                VALUES(?,?,?,?,?,?,?,?)
-                """,receipt.companyId(),actor,receipt.commandId(),fingerprint,receipt.entryId(),receipt.action().name(),receipt.version(),now);
     }
     private String state(FinancialEntryValues values) {
         if(values==null)return null;
