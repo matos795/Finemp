@@ -18,7 +18,11 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
 
     public record ScreenPreset(String id, String label, boolean viewAvailable, boolean editAvailable,
                                Set<CompanyPermission> viewPermissions, Set<CompanyPermission> editPermissions,
-                               String availabilityCondition) {
+                               String availabilityCondition, String editAvailabilityCondition) {
+        public ScreenPreset(String id,String label,boolean viewAvailable,boolean editAvailable,
+                            Set<CompanyPermission> viewPermissions,Set<CompanyPermission> editPermissions,String availabilityCondition) {
+            this(id,label,viewAvailable,editAvailable,viewPermissions,editPermissions,availabilityCondition,null);
+        }
         public ScreenPreset {
             viewPermissions = Set.copyOf(viewPermissions);
             editPermissions = Set.copyOf(editPermissions);
@@ -26,7 +30,7 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
     }
 
     public static AccessCatalog current() {
-        return new AccessCatalog("2026-10-28.1", Set.of(PlatformPermission.values()),
+        return new AccessCatalog("2026-10-28.2", Set.of(PlatformPermission.values()),
                 Set.of(AccountingFirmPermission.values()), Set.of(CompanyPermission.values()), List.of(
                 new ScreenPreset("accounting-ledger", "Razão contábil", true, false,
                         Set.of(CompanyPermission.ACCOUNTING_MOVEMENT_VIEW), Set.of(), null),
@@ -51,7 +55,9 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
                 new ScreenPreset("financial-categories", "Categorias financeiras", true, true,
                         Set.of(CompanyPermission.FINANCIAL_CATEGORY_VIEW),
                         Set.of(CompanyPermission.FINANCIAL_CATEGORY_VIEW, CompanyPermission.FINANCIAL_CATEGORY_MANAGE), "FINANCE_CATALOG_ENABLED"),
-                new ScreenPreset("financial-entries", "Lançamentos financeiros", true, false,
-                        Set.of(CompanyPermission.FINANCIAL_ENTRY_VIEW), Set.of(), "FINANCE_ENTRIES_ENABLED")));
+                new ScreenPreset("financial-entries", "Lançamentos financeiros", true, true,
+                        Set.of(CompanyPermission.FINANCIAL_ENTRY_VIEW),
+                        Set.of(CompanyPermission.FINANCIAL_ENTRY_VIEW,CompanyPermission.FINANCIAL_ENTRY_MANAGE),
+                        "FINANCE_ENTRIES_ENABLED","FINANCE_ENTRY_COMMANDS_ENABLED")));
     }
 }

@@ -33,7 +33,7 @@ paths:
       tags: [Financial entries]
       operationId: listFinancialEntries
       summary: Consulta lançamentos operacionais autorizados com filtros no servidor.
-      description: FINEMP_FINANCE_ENTRIES_ENABLED e FINANCIAL_ENTRY_VIEW ou MANAGE ALL explícitos. Rótulos financeiros mínimos não concedem acesso ao perfil completo do parceiro. Ordem por pagamento quando presente ou vencimento, depois UUID. Sem somatórios de páginas incompletas no cliente; nenhum writer é habilitado.
+      description: FINEMP_FINANCE_ENTRIES_ENABLED e FINANCIAL_ENTRY_VIEW ou MANAGE ALL explícitos. Rótulos financeiros mínimos não concedem acesso ao perfil completo do parceiro. Ordem por pagamento quando presente ou vencimento, depois UUID. Sem somatórios de páginas incompletas no cliente; escrita exige opt-in adicional próprio.
       parameters:
         - $ref: '#/components/parameters/Page'
         - name: size
@@ -93,6 +93,39 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '503':
           description: Consulta temporariamente indisponível ou excedeu orçamento SQL; sem diagnóstico interno.
+    post:
+      tags: [Financial entries]
+      operationId: createFinancialEntry
+      summary: Cria um lançamento individual canônico com recibo idempotente.
+      description: Exige FINEMP_FINANCE_ENTRIES_ENABLED e FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED, MANAGE ALL vigente, sessão e CSRF. Contrato limitado a valor positivo já exato em centavos, enviado como texto; não decide normalização bruta/subcentavo ou séries da Issue128. Chave por Empresa/ator, compartilhada entre ações. Replay autorizado retorna recibo original e status201; estado atual é consultado por GET. Corpo JSON estrito até64KiB, sem compressão, inclusive chunked. Gravação do lançamento, recibo e evento antes/depois é atômica.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinancialEntryCreateCommand'}
+      responses:
+        '201':
+          description: Recibo imutável do comando original ou reenvio; Location indica o GET do lançamento.
+          headers:
+            Location: {schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: Chave reutilizada com outro conteúdo/ação ou conflito de integridade/concorrência; sem gravação parcial.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+        '413': {$ref: '#/components/responses/FinancialEntryPayloadTooLarge'}
+        '415': {$ref: '#/components/responses/FinancialEntryUnsupportedEncoding'}
+        '429': {$ref: '#/components/responses/FinancialEntryBusy'}
+        '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
   /api/companies/{companyId}/financial-entries/{entryId}:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -118,6 +151,38 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '503':
           description: Consulta temporariamente indisponível; sem diagnóstico interno.
+    put:
+      tags: [Financial entries]
+      operationId: updateFinancialEntry
+      summary: Altera lançamento individual com versão esperada e recibo idempotente.
+      description: Mesmos opt-ins, MANAGE ALL vigente, sessão/CSRF e limites do POST. Subcategoria e referências pertencem à Empresa. Valor efetivamente pago é preservado se continuar pago e limpo se paymentDate for null; não é recebido do cliente. Centro obrigatório configurável se aplica somente à criação. Reenvio autorizado retorna o recibo original antes de revalidar referências alteradas posteriormente. Versão esperada divergente é409, inclusive zero é versão válida.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FinancialEntryUpdateCommand'}
+      responses:
+        '200':
+          description: Recibo imutável da alteração ou reenvio; consultar GET para estado atual.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: STALE_VERSION, IDEMPOTENCY_MISMATCH ou conflito de integridade; consultar estado atual.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+        '413': {$ref: '#/components/responses/FinancialEntryPayloadTooLarge'}
+        '415': {$ref: '#/components/responses/FinancialEntryUnsupportedEncoding'}
+        '429': {$ref: '#/components/responses/FinancialEntryBusy'}
+        '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
   /api/companies/{companyId}/financial-categories:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2035,6 +2100,12 @@ components:
       name: JSESSIONID
       description: Sessão HTTP mantida em cookie HttpOnly.
   parameters:
+    FinancialCommandKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, format: uuid}
+      description: Chave única por Empresa e ator; mesma chave com outro conteúdo ou ação conflita. Reenvio exige permissão vigente.
     FinancialAsOfDate:
       name: asOfDate
       in: query
@@ -2107,6 +2178,28 @@ components:
       schema:
         type: string
   responses:
+    FinancialEntryPayloadTooLarge:
+      description: Corpo excede64KiB inclusive chunked; nenhuma gravação foi realizada.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+    FinancialEntryUnsupportedEncoding:
+      description: Escrita aceita application/json sem compressão.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+    FinancialEntryBusy:
+      description: Limite local de requisições com corpo em processamento; tentar novamente.
+      headers:
+        Retry-After: {schema: {type: string, examples: ['1']}}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+    FinancialEntryUnavailable:
+      description: Escrita temporariamente indisponível; sem diagnóstico interno. Repetir com a mesma chave para obter o recibo caso já tenha sido confirmada.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
     BadRequest:
       description: Requisição inválida.
       content:
@@ -2370,7 +2463,10 @@ components:
                 items: {$ref: '#/components/schemas/CompanyPermission'}
               availabilityCondition:
                 type: [string, 'null']
-                description: QUESTOR_INTEGRATION_ENABLED ou SYNC_CONTROL_ENABLED, conforme a configuração exigida pela operação.
+                description: Condição base da funcionalidade, inclusive FINANCE_ENTRIES_ENABLED e FINANCE_CATALOG_ENABLED. Metadado não concede acesso.
+              editAvailabilityCondition:
+                type: [string, 'null']
+                description: Condição adicional de escrita somada à base; FINANCE_ENTRY_COMMANDS_ENABLED no lançamento individual. Null usa apenas a base. Metadado não concede acesso e não afirma que baixa/transferência/séries estejam prontas.
     SetCompanyAccessRequest:
       type: object
       required: [role, costCenterScope, permissions]
@@ -2751,6 +2847,69 @@ components:
     FinancialEntryReadStatus:
       type: string
       enum: [OPEN, PAID, OVERDUE]
+    FinancialEntryCreateCommand:
+      type: object
+      additionalProperties: false
+      required: [values]
+      properties:
+        values: {$ref: '#/components/schemas/FinancialEntryCommandValues'}
+        expectedVersion: {type: 'null', description: Ausente ou null na criação.}
+    FinancialEntryUpdateCommand:
+      type: object
+      additionalProperties: false
+      required: [values, expectedVersion]
+      properties:
+        values: {$ref: '#/components/schemas/FinancialEntryCommandValues'}
+        expectedVersion: {type: integer, format: int64, minimum: 0}
+    FinancialEntryCommandValues:
+      type: object
+      additionalProperties: false
+      required: [direction, description, nominalAmount, documentDate, entryDate, competence, dueDate, bankAccountId, categoryId]
+      description: Dados canônicos individuais; texto monetário positivo exato. Não inclui ator, Empresa ou actualPaidAmount. Subcategoria e referências são validadas no servidor. Datas e competência entre anos0001 e9999. Campos inesperados, chaves duplicadas, NUL ou surrogates inválidos são rejeitados.
+      properties:
+        direction: {$ref: '#/components/schemas/FinancialDirection'}
+        description: {type: string, minLength: 2, maxLength: 255}
+        nominalAmount:
+          type: string
+          maxLength: 20
+          pattern: '^[0-9]{1,17}(\.[0-9]{1,2})?$'
+          not: {pattern: '^0+(\.0{1,2})?$'}
+          description: Maior que zero; sem expoente, sinal negativo ou arredondamento implícito. Normalizado para duas casas no estado persistido.
+          examples: ['123.45']
+        documentDate: {type: string, format: date}
+        entryDate: {type: string, format: date}
+        competence: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'}
+        dueDate: {type: string, format: date}
+        paymentDate: {type: [string, 'null'], format: date}
+        bankAccountId: {type: string, format: uuid}
+        categoryId: {type: string, format: uuid}
+        partnerId: {type: [string, 'null'], format: uuid}
+        resultCenterId: {type: [string, 'null'], format: uuid}
+        costBehaviorOverride:
+          anyOf:
+            - $ref: '#/components/schemas/CostBehavior'
+            - type: 'null'
+        paymentMethod: {type: [string, 'null'], maxLength: 80}
+        documentNumber: {type: [string, 'null'], maxLength: 255}
+        notes: {type: [string, 'null'], maxLength: 4000}
+    FinancialEntryCommandReceipt:
+      type: object
+      required: [companyId, commandId, entryId, action, version]
+      properties:
+        companyId: {type: string, format: uuid}
+        commandId: {type: string, format: uuid}
+        entryId: {type: string, format: uuid}
+        action: {type: string, enum: [CREATED, UPDATED]}
+        version: {type: integer, format: int64, minimum: 0, description: Versão resultante do comando original; não afirma o estado atual.}
+    FinancialEntryCommandRejection:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          enum: [INVALID_FINANCIAL_ENTRY_COMMAND, FINANCIAL_ENTRY_ACCESS_DENIED, FINANCIAL_ENTRY_NOT_FOUND, STALE_VERSION, IDEMPOTENCY_MISMATCH, TRANSACTION_NOT_SUPPORTED, FINANCIAL_ENTRY_CONFLICT, FINANCIAL_ENTRY_PAYLOAD_TOO_LARGE, FINANCIAL_ENTRY_UNSUPPORTED_ENCODING, FINANCIAL_ENTRY_BUSY, FINANCIAL_ENTRY_COMMAND_UNAVAILABLE]
+        status: {type: integer}
+        detail: {type: string, description: Mensagem fixa; sem conteúdo financeiro ou diagnóstico SQL.}
     FinancialEntryValues:
       type: object
       required: [direction, description, nominalAmount, documentDate, entryDate, competence, dueDate, bankAccountId, categoryId, paymentMethod, documentNumber, notes]

@@ -28,6 +28,11 @@ class AccessCatalogTest {
         var history = catalog.companyScreenPresets().get(4);
         assertThat(history.availabilityCondition()).isEqualTo("SYNC_CONTROL_ENABLED");
         assertThat(history.viewPermissions()).containsExactly(CompanyPermission.QUESTOR_SYNC);
+        var entries=catalog.companyScreenPresets().get(9);
+        assertThat(entries.editAvailable()).isTrue();
+        assertThat(entries.editPermissions()).contains(CompanyPermission.FINANCIAL_ENTRY_MANAGE);
+        assertThat(entries.availabilityCondition()).isEqualTo("FINANCE_ENTRIES_ENABLED");
+        assertThat(entries.editAvailabilityCondition()).isEqualTo("FINANCE_ENTRY_COMMANDS_ENABLED");
     }
 
     @Test
