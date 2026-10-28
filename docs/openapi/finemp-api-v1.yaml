@@ -297,6 +297,34 @@ paths:
         '415': {$ref: '#/components/responses/FinancialEntryUnsupportedEncoding'}
         '429': {$ref: '#/components/responses/FinancialEntryBusy'}
         '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
+    delete:
+      tags: [Financial entries]
+      operationId: deleteFinancialEntry
+      summary: Exclui lançamento financeiro individual com versão e recibo idempotente.
+      description: Exige os dois opt-ins de lançamentos, FINANCIAL_ENTRY_MANAGE ALL vigente, sessão/CSRF e chave UUID. Sem corpo. Recibo DELETED informa a última versão persistida; estado/versão posteriores de auditoria são ausentes. Reenvio após exclusão exige permissão atual e recupera o recibo original. Abrange individuais atuais, sem séries/lotes/itens ainda.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+        - name: expectedVersion
+          in: query
+          required: true
+          schema: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Recibo imutável da exclusão individual; não representa recurso ainda existente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: Versão/chave conflitante ou integridade; sem efeitos parciais.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+        '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
   /api/companies/{companyId}/financial-entries/{entryId}/settlements:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -3139,8 +3167,8 @@ components:
         companyId: {type: string, format: uuid}
         commandId: {type: string, format: uuid}
         entryId: {type: string, format: uuid}
-        action: {type: string, enum: [CREATED, UPDATED, SETTLED, SETTLEMENT_REVERSED]}
-        version: {type: integer, format: int64, minimum: 0, description: Versão resultante do comando original; não afirma o estado atual.}
+        action: {type: string, enum: [CREATED, UPDATED, SETTLED, SETTLEMENT_REVERSED, DELETED]}
+        version: {type: integer, format: int64, minimum: 0, description: Versão resultante do comando original; para DELETED é a última versão persistida. Não afirma o estado atual.}
     FinancialEntryCommandRejection:
       type: object
       required: [code]

@@ -34,4 +34,4 @@ UPDATE também bloqueia a linha do lançamento e consulta sua versão atual por 
 
 ## PRÓXIMO PASSO / PONTO ABERTO
 
-Exclusão, transferências e séries continuam na #39. Valores brutos e efeitos binários legados da #128 não são decididos neste bloco. Consulta/exportação de auditoria e anexos pertencem à #51.
+Exclusão individual possui [contrato próprio](financial-entry-deletion.md), e transferências possuem [persistência, comandos e API próprios](bank-transfers.md). DELETE não marca nem lê corpo; POST/PUT/baixa/estorno mantêm seus limites. Séries/lotes continuam na #39. Valores brutos e efeitos binários legados da #128 não são decididos neste bloco. Consulta/exportação de auditoria e anexos pertencem à #51.

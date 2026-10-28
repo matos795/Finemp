@@ -467,7 +467,13 @@ DELETE no item recebe expectedVersion pela query, sem corpo. Ambos exigem sessã
 
 POST tem o mesmo mecanismo de proteção dos lançamentos: autorização antes do corpo, JSON estrito,64KiB inclusive sem Content-Length, sem compressão e até quatro corpos em processamento por instância. DELETE não lê corpo. Tratar409 por chave/versão/estado conflitante,413 por excesso,415 por formato e429 com Retry-After1 por capacidade;503 deve ser repetido com a mesma chave. Os erros não ecoam dados privados. Não há PUT de transferência, envio bancário externo ou alteração de saldo inicial.
 
-## 18. Compatibilidade
+## 18. Exclusão de lançamento individual
+
+DELETE /api/companies/{companyId}/financial-entries/{entryId}?expectedVersion=... usa os mesmos opt-ins de lançamentos, sessão/CSRF, FINANCIAL_ENTRY_MANAGE ALL vigente e Idempotency-Key UUID. Não recebe corpo. Responde200 com recibo DELETED e última versão persistida. GET posterior retorna404; repetir DELETE com a mesma chave/versão retorna o recibo original, exigindo permissão atual.
+
+O alvo pode estar pago ou aberto. Não confundir esse contrato com remoção de séries, lotes ou itens: essas origens ainda não estão disponibilizadas e terão integração própria. Tratar409 por versão ou chave compartilhada com outra ação,403 por acesso atual,404 por alvo ausente/alheio sob Empresa autorizada e400 para header/versão inválidos. O frontend não calcula efeitos nem apaga histórico local como substituto da confirmação do backend.
+
+## 19. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 
