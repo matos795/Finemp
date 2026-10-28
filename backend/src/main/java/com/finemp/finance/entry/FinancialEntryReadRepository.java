@@ -19,7 +19,7 @@ public interface FinancialEntryReadRepository extends Repository<FinancialEntry,
               entry.id,entry.company.id,entry.values,bank.name,category.code,category.name,
               case when partner.profile.tradeName<>'' then partner.profile.tradeName else coalesce(partner.profile.name,'') end,
               coalesce(center.code,''),coalesce(center.name,''),
-            """+COST+",entry.createdAt,entry.updatedAt,entry.version) ";
+            """+COST+",entry.createdAt,entry.updatedAt,entry.version,seriesGroup.id,seriesGroup.definition.mode,seriesMember.number,seriesGroup.definition.quantity) ";
     String FROM="""
             from FinancialEntry entry
             join BankAccount bank on bank.id=entry.values.bankAccountId and bank.company.id=entry.company.id
@@ -27,6 +27,8 @@ public interface FinancialEntryReadRepository extends Repository<FinancialEntry,
             left join FinancialCategory parentCategory on parentCategory.id=category.parentId and parentCategory.company.id=entry.company.id
             left join BusinessPartner partner on partner.id=entry.values.partnerId and partner.company.id=entry.company.id
             left join ResultCenter center on center.id=entry.values.resultCenterId and center.company.id=entry.company.id
+            left join EntrySeriesMembership seriesMember on seriesMember.entryId=entry.id and seriesMember.company.id=entry.company.id
+            left join FinancialEntrySeries seriesGroup on seriesGroup.id=seriesMember.seriesId and seriesGroup.company.id=entry.company.id
             """;
     @Query(SELECT+FROM+"where entry.company.id=:company and entry.id=:id")
     @QueryHints(@jakarta.persistence.QueryHint(name="jakarta.persistence.query.timeout",value="5000"))

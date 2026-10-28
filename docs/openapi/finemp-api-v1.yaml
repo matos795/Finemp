@@ -27,6 +27,42 @@ tags:
   - name: Financial entries
   - name: Financial bank transfers
 paths:
+  /api/companies/{companyId}/financial-entry-series/monthly:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    post:
+      tags: [Financial entries]
+      operationId: createMonthlyEntrySeries
+      summary: Cria um conjunto mensal canônico e retorna seu recibo ordenado.
+      description: Mesmos opt-ins, MANAGE ALL vigente, sessão/CSRF, chave UUID e limite de corpo da escrita individual. Reutiliza valores positivos exatos; repete valor, preserva datas homologadas e pagamento apenas na primeira ocorrência. Não é parcelamento nem agendamento automático. Reenvio retorna o conjunto original, mesmo após exclusões.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MonthlyEntryCreateCommand'}
+      responses:
+        '201':
+          description: Recibo imutável com posições/IDs/versões originais.
+          headers:
+            Location: {schema: {type: string}, description: GET da primeira ocorrência original; pode estar removida em reenvio posterior.}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EntrySeriesCommandReceipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409':
+          description: Chave reutilizada com conteúdo/ação diferente ou conflito de integridade; sem efeitos parciais.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/FinancialEntryCommandRejection'}
+        '413': {$ref: '#/components/responses/FinancialEntryPayloadTooLarge'}
+        '415': {$ref: '#/components/responses/FinancialEntryUnsupportedEncoding'}
+        '429': {$ref: '#/components/responses/FinancialEntryBusy'}
+        '503': {$ref: '#/components/responses/FinancialEntryUnavailable'}
   /api/companies/{companyId}/bank-transfers:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -3121,6 +3157,40 @@ components:
       required: [expectedVersion]
       properties:
         expectedVersion: {type: integer, format: int64, minimum: 0}
+    MonthlyEntryCreateCommand:
+      type: object
+      additionalProperties: false
+      required: [values, quantity]
+      properties:
+        values: {$ref: '#/components/schemas/FinancialEntryCommandValues'}
+        quantity: {type: integer, minimum: 2, maximum: 120}
+    EntrySeriesCommandReceipt:
+      type: object
+      required: [companyId, commandId, seriesId, items]
+      properties:
+        companyId: {type: string, format: uuid}
+        commandId: {type: string, format: uuid}
+        seriesId: {type: string, format: uuid}
+        items:
+          type: array
+          minItems: 2
+          maxItems: 120
+          description: Ordem original de geração; não representa estado atual após alterações/exclusões.
+          items:
+            type: object
+            required: [number, entryId, version]
+            properties:
+              number: {type: integer, minimum: 1, maximum: 120}
+              entryId: {type: string, format: uuid}
+              version: {type: integer, format: int64, minimum: 0}
+    FinancialEntrySeriesInfo:
+      type: object
+      required: [id, mode, number, quantity]
+      properties:
+        id: {type: string, format: uuid}
+        mode: {type: string, enum: [MONTHLY, INSTALLMENTS], description: Metadado original; não implica geração INSTALLMENTS habilitada.}
+        number: {type: integer, minimum: 1, maximum: 120}
+        quantity: {type: integer, minimum: 2, maximum: 120, description: Quantidade original, não a restante.}
     FinancialEntryCreateCommand:
       type: object
       additionalProperties: false
@@ -3224,6 +3294,7 @@ components:
         id: {type: string, format: uuid}
         companyId: {type: string, format: uuid}
         values: {$ref: '#/components/schemas/FinancialEntryValues'}
+        series: {$ref: '#/components/schemas/FinancialEntrySeriesInfo'}
         labels:
           type: object
           properties:

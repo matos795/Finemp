@@ -21,14 +21,23 @@ public class EntryCommandJsonDecoder {
                     .maxTokenCount(128).maxDocumentLength(65536).build()).build()).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
     public Request decode(byte[] body) {
         try {
-            var root=root(body);fields(root,Set.of("values","expectedVersion"));var values=root.get("values");fields(values,FIELDS);
-            var data=new FinancialEntryCommandData(FinancialDirection.valueOf(text(values,"direction",true)),text(values,"description",true),money(values,"nominalAmount"),
-                    date(values,"documentDate",true),date(values,"entryDate",true),YearMonth.parse(text(values,"competence",true)),date(values,"dueDate",true),date(values,"paymentDate",false),
-                    uuid(values,"bankAccountId",true),uuid(values,"categoryId",true),uuid(values,"partnerId",false),uuid(values,"resultCenterId",false),
-                    nullable(values,"costBehaviorOverride")?null:CostBehavior.valueOf(text(values,"costBehaviorOverride",true)),
-                    text(values,"paymentMethod",false),text(values,"documentNumber",false),text(values,"notes",false));
-            return new Request(data,version(root,false));
+            var root=root(body);fields(root,Set.of("values","expectedVersion"));return new Request(data(root.get("values")),version(root,false));
         }catch(RuntimeException invalid) {throw invalid();}
+    }
+    public MonthlyRequest decodeMonthly(byte[] body) {
+        try {
+            var root=root(body);fields(root,Set.of("values","quantity"));var quantity=root.get("quantity");
+            if(quantity==null || !quantity.isIntegralNumber() || !quantity.canConvertToInt() || quantity.intValue()<2 || quantity.intValue()>120)throw invalid();
+            return new MonthlyRequest(data(root.get("values")),quantity.intValue());
+        }catch(RuntimeException invalid) {throw invalid();}
+    }
+    private FinancialEntryCommandData data(JsonNode values) {
+        fields(values,FIELDS);
+        return new FinancialEntryCommandData(FinancialDirection.valueOf(text(values,"direction",true)),text(values,"description",true),money(values,"nominalAmount"),
+                date(values,"documentDate",true),date(values,"entryDate",true),YearMonth.parse(text(values,"competence",true)),date(values,"dueDate",true),date(values,"paymentDate",false),
+                uuid(values,"bankAccountId",true),uuid(values,"categoryId",true),uuid(values,"partnerId",false),uuid(values,"resultCenterId",false),
+                nullable(values,"costBehaviorOverride")?null:CostBehavior.valueOf(text(values,"costBehaviorOverride",true)),
+                text(values,"paymentMethod",false),text(values,"documentNumber",false),text(values,"notes",false));
     }
     public SettlementRequest decodeSettlement(byte[] body) {
         try {
@@ -77,5 +86,8 @@ public class EntryCommandJsonDecoder {
     }
     public record SettlementRequest(EntrySettlementData values,Long expectedVersion) {
         @Override public String toString() {return "EntrySettlementRequest[redacted]";}
+    }
+    public record MonthlyRequest(FinancialEntryCommandData values,int quantity) {
+        @Override public String toString() {return "MonthlyEntryRequest[redacted]";}
     }
 }

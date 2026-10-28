@@ -1,6 +1,6 @@
 # Recorrência mensal canônica
 
-Referências: #39, #155 e #160. Comando interno antes da API e da exclusão coordenada de séries.
+Referências: #39, #155, #160 e #164. O comando interno precedeu a exclusão coordenada e a captura HTTP.
 
 ## FATO CONFIRMADO
 
@@ -14,6 +14,10 @@ Um registro comum de chaves no PostgreSQL impede colisão entre recibos individu
 
 A auditoria amplia o diário financeiro oficial: vários eventos CREATED sob a mesma chave, um por lançamento. Não há sistema paralelo de audit trail. Evento/recibo não têm FK para a linha operacional que apague o histórico após exclusão. O recibo de conjunto armazena uma lista imutável e limitada de resultados; quantidade e cardinalidade são verificadas também no banco.
 
+## DECISÃO técnica — contrato HTTP
+
+POST financial-entry-series/monthly reutiliza o decoder de valores, opt-ins, MANAGE ALL vigente, sessão/CSRF, chave UUID e filtro de corpo da escrita individual. Somente quantity inteira2–120 é acrescentada ao envelope. Retorna201 e recibo ordenado; Location aponta à primeira ocorrência, que já possui GET. Não cria endpoint de grupo sem demanda. A projeção financeira faz joins tenant-scoped de membro/grupo e expõe metadados originais, omitidos para individuais, sem consultas extras por linha.
+
 ## PRÓXIMO PASSO / PONTO ABERTO
 
-Integrar exclusão coordenada conforme a referência e só então expor a captura mensal. O gate RESTRICT de membros permanece até essa integração. Não há scheduler, geração INSTALLMENTS ou definição de percentuais/normalização bruta. Depois da #39: tipos explícitos de Centro de Resultado (#157), fechamento por Company (#158), retenções fundamentais (#159), #40 e #41, conforme a ordem homologada em28/10.
+A exclusão coordenada foi integrada antes desta captura. FKs RESTRICT continuam protegendo operações diretas; o comando remove apenas os vínculos/ocorrências homologados com recibo e auditoria. Não há scheduler, geração INSTALLMENTS ou definição de percentuais/normalização bruta. Depois da #39: tipos explícitos de Centro de Resultado (#157), fechamento por Company (#158), retenções fundamentais (#159), #40 e #41, conforme a ordem homologada em28/10.
