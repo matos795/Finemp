@@ -72,14 +72,17 @@ class EntrySeriesPersistenceIntegrationTest {
             assertThatThrownBy(()->jdbc.update("UPDATE financial_entry_series SET mode='SINGLE' WHERE id=?",group.getId())).isInstanceOf(DataIntegrityViolationException.class);status.setRollbackOnly();
         });
     }
-    @Test void existingIndividualDeletionAndRawParentDeletesMustNotSilentlyDiscardSeriesMembership() {
-        assertThatThrownBy(()->deletion.delete(actor.getId(),owner.getId(),UUID.randomUUID(),target.getId(),0L)).isInstanceOf(DataIntegrityViolationException.class);
+    @Test void rawParentDeletesMustBeRestrictedAndCoordinatedDeletionMustPreserveAudit() {
         new TransactionTemplate(transactions).executeWithoutResult(status->{
             assertThatThrownBy(()->jdbc.update("DELETE FROM financial_entry_series WHERE id=?",group.getId())).isInstanceOf(DataIntegrityViolationException.class);status.setRollbackOnly();
         });
-        assertThat(entries.findById(target.getId())).isPresent();assertThat(members.findById(member.getId())).isPresent();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_entry_events WHERE company_id=?",Long.class,owner.getId())).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_entry_command_receipts WHERE company_id=?",Long.class,owner.getId())).isZero();
+        new TransactionTemplate(transactions).executeWithoutResult(status->{
+            assertThatThrownBy(()->jdbc.update("DELETE FROM financial_entries WHERE id=?",target.getId())).isInstanceOf(DataIntegrityViolationException.class);status.setRollbackOnly();
+        });
+        deletion.delete(actor.getId(),owner.getId(),UUID.randomUUID(),target.getId(),0L);
+        assertThat(entries.findById(target.getId())).isEmpty();assertThat(members.findById(member.getId())).isEmpty();assertThat(series.findById(group.getId())).isPresent();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_entry_events WHERE company_id=?",Long.class,owner.getId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_entry_command_receipts WHERE company_id=?",Long.class,owner.getId())).isEqualTo(1);
     }
     @Test void staleDetachedGroupAndMembershipDeletesMustNotRemoveNewerMetadata() {
         var unused=series.saveAndFlush(new FinancialEntrySeries(owner,new EntrySeriesDefinition(SeriesMode.MONTHLY,2),actor.getId()));

@@ -54,8 +54,11 @@
 - **FATO CONFIRMADO:** #155/PR156 integrada: metadados originais de séries e
   posições, isolamento das duas referências e exclusão parcial protegida;
   sete contratos PostgreSQL passaram.
-- **EM IMPLEMENTAÇÃO:** #39, recorrência mensal interna na #160. Exclusões
-  relacionadas seguem depois; política monetária #128 permanece aberta.
+- **FATO CONFIRMADO:** #160/PR161 integrada: recorrência mensal interna,
+  recibo do conjunto, migração/chave compartilhada e diário oficial ampliado;
+  nove contratos mensais e um de migração PostgreSQL passaram.
+- **EM IMPLEMENTAÇÃO:** #39, exclusões relacionadas na #162, antes de expor
+  captura mensal; política monetária #128 permanece aberta.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
   A matriz original abaixo

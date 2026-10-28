@@ -17,7 +17,8 @@ class EntryDeletionCommandServiceTest {
     final FinancialEntryRepository entries=mock(FinancialEntryRepository.class);
     final EntryWriteTransactionGuard guard=mock(EntryWriteTransactionGuard.class);
     final EntryCommandJournal journal=mock(EntryCommandJournal.class);
-    final EntryDeletionCommandService service=new EntryDeletionCommandService(permissions,companies,entries,guard,journal);
+    final EntryDeletionSelection selection=mock(EntryDeletionSelection.class);
+    final EntryDeletionCommandService service=new EntryDeletionCommandService(permissions,companies,entries,guard,journal,selection);
     final UUID actor=UUID.randomUUID(),company=UUID.randomUUID(),key=UUID.randomUUID(),id=UUID.randomUUID();
     @Test void denialAndRevocationWhileWaitingMustStopBeforeReceiptOrFinancialLookup() {
         assertThatThrownBy(()->service.delete(actor,company,key,id,0L)).isInstanceOf(OrganizationAccessDeniedException.class);verifyNoInteractions(companies,entries,guard,journal);
@@ -27,7 +28,7 @@ class EntryDeletionCommandServiceTest {
     @Test void paidIndividualEntryCanBeDeletedWithoutRevalidatingCaptureReferences() {
         allow();var row=row();when(guard.lockEntryVersion(company,id)).thenReturn(Optional.of(0L));when(entries.findByIdAndCompanyId(id,company)).thenReturn(Optional.of(row));
         var receipt=service.delete(actor,company,key,id,0L);assertThat(receipt.action()).isEqualTo(EntryCommandAction.DELETED);
-        verify(entries).delete(row);verify(entries).flush();verify(journal).append(actor,EntryDeletionFingerprint.of(company,actor,id,0L),receipt,0L,row.getValues(),null);
+        verify(entries).deleteAll(List.of(row));verify(entries).flush();verify(journal).appendDeletion(actor,EntryDeletionFingerprint.of(company,actor,id,0L),receipt,List.of(new EntryCommandJournal.DeletedState(id,0L,row.getValues())));
     }
     @Test void replayMustReturnReceiptBeforeReadingADeletedTarget() {
         allow();var original=new FinancialEntryCommandReceipt(company,key,id,EntryCommandAction.DELETED,0);
@@ -42,13 +43,13 @@ class EntryDeletionCommandServiceTest {
     @Test void currentAndManagedVersionsMustMatchExpectedAndMissingTargetsRemainOwned() {
         allow();when(guard.lockEntryVersion(company,id)).thenReturn(Optional.of(1L));when(entries.findByIdAndCompanyId(id,company)).thenReturn(Optional.of(row()));
         assertThatThrownBy(()->service.delete(actor,company,key,id,1L)).isInstanceOf(FinancialEntryCommandConflictException.class).extracting("reason").isEqualTo(FinancialEntryCommandConflictException.Reason.STALE_VERSION);
-        verify(entries,never()).delete(any());when(guard.lockEntryVersion(company,id)).thenReturn(Optional.empty());
+        verify(entries,never()).deleteAll(anyList());when(guard.lockEntryVersion(company,id)).thenReturn(Optional.empty());
         assertThatThrownBy(()->service.delete(actor,company,key,id,0L)).isInstanceOf(SaasResourceNotFoundException.class);
     }
     @Test void nullOrNegativeCommandContextMustFailBeforeReceiptLookup() {
         allow();assertThatThrownBy(()->service.delete(actor,company,null,id,0L)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(()->service.delete(actor,company,key,id,-1L)).isInstanceOf(IllegalArgumentException.class);verifyNoInteractions(entries,journal);
     }
-    void allow() {when(permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE)).thenReturn(true);when(companies.findLockedById(company)).thenReturn(Optional.of(mock(Company.class)));when(journal.find(company,actor,key)).thenReturn(Optional.empty());}
+    void allow() {when(permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE)).thenReturn(true);when(companies.findLockedById(company)).thenReturn(Optional.of(mock(Company.class)));when(journal.find(company,actor,key)).thenReturn(Optional.empty());when(selection.lock(company,id)).thenReturn(List.of(new EntryDeletionSelection.Target(id,0,null,null,null)));}
     FinancialEntry row() {var date=LocalDate.of(2026,7,1);return new FinancialEntry(mock(Company.class),new FinancialEntryValues(FinancialDirection.EXPENSE,"Synthetic paid entry",new BigDecimal("1.23"),date,date,YearMonth.of(2026,7),date,date,null,UUID.randomUUID(),UUID.randomUUID(),null,null,null,"","",""),actor);}
 }
