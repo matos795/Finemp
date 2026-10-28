@@ -28,7 +28,7 @@ public class ResultCenterService {
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public ResultCenterResponse create(UUID actor,UUID company,ResultCenterCreateRequest request) {
         var owner=writeOwner(actor,company);
-        if(request==null)throw invalid();
+        if(request==null || request.type()==null)throw invalid();
         return ResultCenterResponse.from(createRow(owner,request),false);
     }
     private ResultCenter createRow(Company owner,ResultCenterCreateRequest request) {
@@ -37,16 +37,20 @@ public class ResultCenterService {
         UUID parentId=null;
         if(code.parentCode()!=null) {
             var parent=centers.findByCompanyIdAndCode(company,code.parentCode()).orElseThrow(()->conflict(ResultCenterConflictException.Reason.PARENT_NOT_FOUND));
-            if(usage.orderedStream().anyMatch(guard->guard.hasEntries(company,parent.getId())))throw conflict(ResultCenterConflictException.Reason.PARENT_HAS_ENTRIES);
             parentId=parent.getId();
         }
-        return centers.saveAndFlush(new ResultCenter(owner,code.value(),parentId,request.name(),true));
+        return centers.saveAndFlush(new ResultCenter(owner,code.value(),parentId,request.name(),true,request.type()));
     }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public ResultCenterResponse update(UUID actor,UUID company,UUID id,ResultCenterUpdateRequest request) {
         writeOwner(actor,company);
         if(request==null || request.active()==null)throw invalid();
         var row=owned(company,id);version(row,request.expectedVersion());
+        if(request.type()!=null && request.type()!=row.getType()) {
+            if(request.type()==ResultCenterType.GROUP && usage.orderedStream().anyMatch(guard->guard.hasEntries(company,id)))
+                throw conflict(ResultCenterConflictException.Reason.HAS_ENTRIES);
+            row.changeType(request.type());
+        }
         row.replace(request.name(),request.active());centers.flush();
         return response(row);
     }
@@ -80,7 +84,8 @@ public class ResultCenterService {
         var rows=new ArrayList<ResultCenter>();
         String[][] plan={{"1","Comercial"},{"1.1","Loja física"},{"1.2","Loja virtual"},{"2","Serviços"},
                 {"2.1","Contratos de manutenção"},{"3","Administrativo"},{"4","Financeiro"}};
-        for(var item:plan)rows.add(createRow(owner,new ResultCenterCreateRequest(item[0],item[1])));
+        for(var item:plan)rows.add(createRow(owner,new ResultCenterCreateRequest(item[0],item[1],
+                Set.of("1","2").contains(item[0])?ResultCenterType.GROUP:ResultCenterType.ANALYTICAL)));
         var parents=centers.parentsWithChildren(company,rows.stream().map(ResultCenter::getId).collect(Collectors.toSet()));
         return rows.stream().map(row->ResultCenterResponse.from(row,parents.contains(row.getId()))).toList();
     }
