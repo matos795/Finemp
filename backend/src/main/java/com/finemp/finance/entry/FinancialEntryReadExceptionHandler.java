@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.*;
 import org.springframework.validation.BindException;
 
-@RestControllerAdvice(basePackageClasses=FinancialEntryReadController.class)
+@RestControllerAdvice(assignableTypes=FinancialEntryReadController.class)
 public class FinancialEntryReadExceptionHandler {
     @ExceptionHandler({IllegalArgumentException.class,BindException.class,HandlerMethodValidationException.class,MethodArgumentTypeMismatchException.class})
     ProblemDetail invalid(Exception ignored) {return problem(HttpStatus.BAD_REQUEST,"Parâmetros de consulta financeira inválidos.","INVALID_FINANCIAL_ENTRY_QUERY");}

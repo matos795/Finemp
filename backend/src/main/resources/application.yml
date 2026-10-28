@@ -18,6 +18,8 @@ finemp:
     entries:
       enabled: ${FINEMP_FINANCE_ENTRIES_ENABLED:false}
       calendar-zone: ${FINEMP_FINANCE_CALENDAR_ZONE:America/Sao_Paulo}
+      commands:
+        enabled: ${FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED:false}
   connector:
     enabled: ${FINEMP_CONNECTOR_ENABLED:false}
     credential-lifetime-days: ${FINEMP_CONNECTOR_CREDENTIAL_LIFETIME_DAYS:90}

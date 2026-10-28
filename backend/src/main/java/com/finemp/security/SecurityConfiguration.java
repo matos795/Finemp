@@ -22,6 +22,9 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 
 import com.finemp.access.CompanyPermission;
+import com.finemp.finance.entry.EntryCommandAuthorizationManager;
+import com.finemp.finance.entry.FinancialEntryPayloadLimitFilter;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -33,6 +36,7 @@ public class SecurityConfiguration {
                         SecurityContextRepository securityContextRepository,
                         SessionAccountStateValidator sessionAccountStateValidator,
                         QuestorImportAuthorizationManager questorImportAuthorizationManager,
+                        EntryCommandAuthorizationManager financialCommands,
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
 
@@ -110,6 +114,14 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}")
                                                 .authenticated()
 
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/companies/{companyId}/financial-entries")
+                                                .access(financialCommands)
+
+                                                .requestMatchers(HttpMethod.PUT,
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}")
+                                                .access(financialCommands)
+
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/**")
                                                 .denyAll()
@@ -132,6 +144,8 @@ public class SecurityConfiguration {
                                                 .clearAuthentication(true)
                                                 .deleteCookies("JSESSIONID"));
 
+                if (financialCommands.isEnabled())
+                        http.addFilterAfter(new FinancialEntryPayloadLimitFilter(65536, 4), AuthorizationFilter.class);
                 return http.build();
         }
 
