@@ -9,6 +9,7 @@ import { AppLayout } from "../../components/layout/app-layout"
 import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
 import { RequirePermission } from "../../features/auth/components/require-permission"
 import { DrePage } from "../../features/dre/pages/dre-page"
+import { BankAccountsPage } from "../../features/bank-accounts/pages/bank-accounts-page"
 
 export function AppRouter() {
     return (
@@ -35,6 +36,20 @@ export function AppRouter() {
                         element={
                             <RequirePermission permission="DRE_VIEW">
                                 <DrePage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/bank-accounts"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "BANK_ACCOUNT_VIEW",
+                                    "BANK_ACCOUNT_MANAGE",
+                                ]}
+                            >
+                                <BankAccountsPage />
                             </RequirePermission>
                         }
                     />
