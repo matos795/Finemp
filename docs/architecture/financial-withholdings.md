@@ -16,6 +16,16 @@ V40 contém FK composta Company/entry, referências aos responsáveis, timestamp
 
 Esta fundação não expõe endpoints nem comandos operacionais. A #159 permanece aberta para escrita com autorização vigente, versões, recibos, auditoria oficial e verificação dos períodos afetados, além do contrato de leitura/API. O domínio não aplica o mock percentual de NFS-e do HANDOFF (p_ctr.js/calcNF/nfCalc) nem suas fórmulas de líquido. Validação legal, calendário fiscal, vencimentos, títulos derivados e contabilização/sugestão automática seguem separados e abertos. Não há acesso ou escrita no Questor.
 
-## Validação
+## Comandos internos — #175
+
+CREATE/UPDATE/DELETE usam FINANCIAL_ENTRY_MANAGE ALL vigente antes e depois da trava Company, READ COMMITTED e timeout de trava5s. Cada comando informa versão atual do lançamento; atualização/exclusão também informam versão da retenção. SQL atual sob trava evita confiar em entidades antigas no contexto JPA. Vínculo ao lançamento é imutável. Não há alteração de valores ou versão do lançamento pelo comando de retenção.
+
+A competência atual do lançamento é conferida no guard oficial de fechamento. Retenção informada não movimenta caixa nem altera pagamento; não se cria efeito no mês de caixa por suposição. Recibo usa Company/ator/UUID e fingerprint do conteúdo/ação/precondições. Replay autorizado antecede revalidação do recurso, preservando a resposta inclusive após exclusão da retenção/lançamento, sem recriar dados.
+
+V41 guarda somente recibos operacionais. Os eventos CREATED/UPDATED/DELETED ampliam AccessAuditRecorder/Event oficial com recurso e estado anterior/novo. Exclusão mantém auditoria com afterState nulo; recibos não têm FK ao recurso vivo. Estado, auditoria e recibo são atômicos. FINEMP_FINANCE_WITHHOLDINGS_ENABLED é opt-in desabilitado por padrão; ainda não há contrato HTTP neste incremento.
+
+Nove contratos PostgreSQL cobrem transições exatas sem efeito no pai, versões atuais, Company/permissões/revogação, fechamento/replay, remoção do recurso, identidade do comando, rollback de cada ação no recibo e concorrência. A API seguirá o mesmo contrato, com JSON estrito, sessão/CSRF e limites compartilhados.
+
+## Validação da persistência
 
 Três testes locais cobrem dinheiro exato/limites, tratamento declarado e entradas textuais inválidas. Seis contratos PostgreSQL verificam persistência exata sem efeito no lançamento, FK de outra Company, consultas paginadas isoladas, versão concorrente, proteção da exclusão e checks monetários/tipo/código. Dados exclusivamente sintéticos; compilação local não substitui execução PostgreSQL na CI.
