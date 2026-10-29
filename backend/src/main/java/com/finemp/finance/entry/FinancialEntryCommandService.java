@@ -43,6 +43,7 @@ public class FinancialEntryCommandService {
         if(currentVersion!=expectedVersion || row.getVersion()!=currentVersion)throw new FinancialEntryCommandConflictException(FinancialEntryCommandConflictException.Reason.STALE_VERSION);
         var before=row.getValues();long beforeVersion=row.getVersion();references.validate(company,data,before);
         transactions.requireEntryPeriodsOpen(company,before,data.values(before.actualPaidAmount()));
+        transactions.requireLinkedStatementPeriodsOpen(company,java.util.List.of(entry));
         row.replace(data.values(before.actualPaidAmount()),actor);entries.flush();
         var receipt=new FinancialEntryCommandReceipt(company,command,entry,EntryCommandAction.UPDATED,row.getVersion());
         journal.append(actor,fingerprint,receipt,beforeVersion,before,row.getValues());return receipt;

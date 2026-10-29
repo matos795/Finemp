@@ -47,6 +47,7 @@ public class EntrySettlementCommandService {
         if(action==EntryCommandAction.SETTLED)references.validateBank(company,data.bankAccountId());
         var after=action==EntryCommandAction.SETTLED?EntrySettlement.settle(before,data):EntrySettlement.reverse(before);
         transactions.requirePaymentPeriodsOpen(company,before,after);
+        transactions.requireLinkedStatementPeriodsOpen(company,java.util.List.of(entry));
         row.replace(after,actor);entries.flush();
         var receipt=new FinancialEntryCommandReceipt(company,command,entry,action,row.getVersion());
         journal.append(actor,fingerprint,receipt,beforeVersion,before,row.getValues());return receipt;

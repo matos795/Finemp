@@ -17,6 +17,17 @@ public class EntryWriteTransactionGuard {
     public void requireEntryPeriodsOpen(UUID company,FinancialEntryValues... states) {requirePeriods(company,true,states);}
     @Transactional(propagation=Propagation.MANDATORY)
     public void requirePaymentPeriodsOpen(UUID company,FinancialEntryValues... states) {requirePeriods(company,false,states);}
+    /** Caller holds the Company lock shared with period closure and entry mutations. */
+    @Transactional(propagation=Propagation.MANDATORY)
+    public void requireLinkedStatementPeriodsOpen(UUID company,Collection<UUID> entryIds) {
+        if(company==null || entryIds==null || entryIds.stream().anyMatch(Objects::isNull))throw new IllegalArgumentException("Contexto de vínculo inválido.");
+        if(entryIds.isEmpty())return;
+        var ids=entryIds.stream().distinct().toList();
+        var args=new ArrayList<Object>();args.add(company);args.addAll(ids);
+        var months=jdbc.query("SELECT DISTINCT posted_date FROM financial_bank_statement_items WHERE company_id=? AND linked_entry_id IN ("+String.join(",",Collections.nCopies(ids.size(),"?"))+")",
+                (row,index)->java.time.YearMonth.from(row.getObject(1,java.time.LocalDate.class)),args.toArray());
+        periods.requireOpen(company,new HashSet<>(months));
+    }
     private void requirePeriods(UUID company,boolean competence,FinancialEntryValues... states) {
         var affected=new HashSet<java.time.YearMonth>();
         for(var state:states) {

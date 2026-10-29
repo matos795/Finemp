@@ -34,6 +34,15 @@ class EntryDeletionCommandServiceTest {
         allow();var original=new FinancialEntryCommandReceipt(company,key,id,EntryCommandAction.DELETED,0);
         when(journal.find(company,actor,key)).thenReturn(Optional.of(new EntryCommandJournal.StoredReceipt(EntryDeletionFingerprint.of(company,actor,id,0L),original)));
         assertThat(service.delete(actor,company,key,id,0L)).isEqualTo(original);verifyNoInteractions(entries);verify(guard,never()).lockEntryVersion(any(),any());
+        verify(guard,never()).requireLinkedStatementPeriodsOpen(any(),any());
+    }
+    @Test void closedStatementOnRelatedOccurrenceMustBlockAllDeletionsBeforeRemovingMemberships(){
+        allow();var root=row();var later=row();UUID laterId=UUID.randomUUID();
+        when(guard.lockEntryVersion(company,id)).thenReturn(Optional.of(0L));when(entries.findByIdAndCompanyId(id,company)).thenReturn(Optional.of(root));when(entries.findByIdAndCompanyId(laterId,company)).thenReturn(Optional.of(later));
+        when(selection.lock(company,id)).thenReturn(List.of(new EntryDeletionSelection.Target(id,0,null,null,1),new EntryDeletionSelection.Target(laterId,0,null,null,2)));
+        doThrow(new com.finemp.finance.period.FinancialPeriodClosedException()).when(guard).requireLinkedStatementPeriodsOpen(company,List.of(id,laterId));
+        assertThatThrownBy(()->service.delete(actor,company,key,id,0L)).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
+        verify(selection,never()).removeMemberships(any(),any());verify(entries,never()).deleteAll(anyList());verify(entries,never()).flush();verify(journal,never()).appendDeletion(any(),any(),any(),any());
     }
     @Test void mismatchedKeyMustConflictBeforeTargetLookup() {
         allow();when(journal.find(company,actor,key)).thenReturn(Optional.of(new EntryCommandJournal.StoredReceipt("different",null)));
