@@ -111,6 +111,8 @@ class BankStatementPersistenceIntegrationTest {
         assertThatThrownBy(()->imports.confirm(actor.getId(),other.getId(),UUID.randomUUID(),foreignBank.getId(),items)).isInstanceOf(OrganizationAccessDeniedException.class);
         assertThatThrownBy(()->imports.confirm(actor.getId(),owner.getId(),UUID.randomUUID(),foreignBank.getId(),items)).isInstanceOf(SaasResourceNotFoundException.class);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM access_audit_events WHERE company_id=? AND action='FINANCIAL_STATEMENT_IMPORTED'",Long.class,owner.getId())).isEqualTo(1);
+        var provenanceCommand=UUID.randomUUID();imports.confirmWithProvenance(actor.getId(),owner.getId(),provenanceCommand,bank.getId(),items,"a".repeat(64));
+        assertThatThrownBy(()->imports.confirmWithProvenance(actor.getId(),owner.getId(),provenanceCommand,bank.getId(),items,"b".repeat(64))).isInstanceOf(StatementImportConflictException.class).extracting(e->((StatementImportConflictException)e).getReason()).isEqualTo(StatementImportConflictException.Reason.IDEMPOTENCY_MISMATCH);
     }
     @Test void closedPeriodAndDuplicateFitidDoNotWritePartialImport(){
         var command=UUID.randomUUID();var items=List.of(value("1","One","same"),value("2","Two","same"));
