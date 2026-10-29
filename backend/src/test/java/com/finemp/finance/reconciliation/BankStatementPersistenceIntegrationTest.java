@@ -27,7 +27,11 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.statement-read.enabled=true","finemp.finance.aging.enabled=true","finemp.finance.open-titles.enabled=true","finemp.finance.monthly-cash.enabled=true","finemp.finance.daily-cash.enabled=true","finemp.finance.statement-actions.enabled=true","finemp.finance.entries.enabled=true","finemp.finance.entries.commands.enabled=true"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
+@org.springframework.test.context.TestPropertySource(properties="finemp.finance.presentation.enabled=true")
 class BankStatementPersistenceIntegrationTest {
+    @Autowired com.finemp.finance.reporting.FinancialPresentationSnapshotService presentation;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean(name="dailyCashTotalsService")
+    com.finemp.finance.reporting.DailyCashTotalsService dailySnapshotProbe;
     @Autowired EntrySettlementCommandService settlements;
     @Autowired EntryDeletionCommandService deletions;
     @Autowired FinancialEntryCommandService entryCommands;
@@ -302,6 +306,30 @@ class BankStatementPersistenceIntegrationTest {
         var tx=new TransactionTemplate(transactions);
         tx.executeWithoutResult(status->{companies.findLockedById(owner.getId());entryGuard.requireLinkedStatementPeriodsOpen(owner.getId(),List.of(entry.getId(),foreignEntry.getId()));});
         assertThatThrownBy(()->tx.executeWithoutResult(status->{companies.findLockedById(other.getId());entryGuard.requireLinkedStatementPeriodsOpen(other.getId(),List.of(foreignEntry.getId()));})).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
+    }
+    @Test void presentationKeepsOneSnapshotWhenPaymentCommitsBetweenBlocks(){
+        org.mockito.Mockito.doAnswer(call->{
+            Object firstBlock=call.callRealMethod();
+            var concurrent=new TransactionTemplate(transactions);concurrent.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            concurrent.executeWithoutResult(status->jdbc.update("UPDATE financial_entries SET payment_date=DATE '2026-07-02',actual_paid_amount=2.00 WHERE id=?",entry.getId()));
+            return firstBlock;
+        }).when(dailySnapshotProbe).report(actor.getId(),owner.getId(),"2026-07");
+        var snapshot=presentation.snapshot(actor.getId(),owner.getId(),"2026-07",LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL);
+        assertThat(snapshot.partial()).isTrue();assertThat(snapshot.schemaVersion()).isEqualTo(1);assertThat(snapshot.companyId()).isEqualTo(owner.getId());
+        assertThat(snapshot.cashMonth().days().getFirst().openExpense()).isEqualByComparingTo("1.00");
+        assertThat(snapshot.cashYear().totalOpenExpense()).isEqualByComparingTo("1.00");assertThat(snapshot.cashYear().totalRealExpense()).isEqualByComparingTo("0.00");
+        assertThat(snapshot.payables().totalAmount()).isEqualByComparingTo("1.00");assertThat(snapshot.receivables().totalAmount()).isEqualByComparingTo("0.00");
+        assertThat(jdbc.queryForObject("SELECT actual_paid_amount FROM financial_entries WHERE id=?",BigDecimal.class,entry.getId())).isEqualByComparingTo("2.00");
+        assertThat(aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).totalCount()).isZero();
+    }
+    @Test void presentationRequiresExplicitParametersPermissionAndConsistentIsolation(){
+        var scope=com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL;var date=LocalDate.of(2026,7,31);
+        assertThatThrownBy(()->presentation.snapshot(actor.getId(),other.getId(),"2026-07",date,scope)).isInstanceOf(OrganizationAccessDeniedException.class);
+        assertThatThrownBy(()->presentation.snapshot(actor.getId(),owner.getId(),null,date,scope)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->presentation.snapshot(actor.getId(),owner.getId(),"2026-07",null,scope)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->presentation.snapshot(actor.getId(),owner.getId(),"2026-07",date,null)).isInstanceOf(IllegalArgumentException.class);
+        var weak=new TransactionTemplate(transactions);weak.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
+        assertThatThrownBy(()->weak.execute(status->presentation.snapshot(actor.getId(),owner.getId(),"2026-07",date,scope))).isInstanceOf(IllegalStateException.class);
     }
     void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}
