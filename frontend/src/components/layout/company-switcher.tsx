@@ -1,7 +1,6 @@
 import { useCompanyAccess } from "../../features/companies/company-access-context"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
-
+/** Seletor de empresa do topo (protótipo: .f > label + select). */
 export function CompanySwitcher() {
     const {
         user,
@@ -11,31 +10,35 @@ export function CompanySwitcher() {
 
     if (!selectedCompany) {
         return (
-            <span className="text-sm text-muted-foreground">
+            <span className="mut">
                 Nenhuma empresa disponível
             </span>
         )
     }
 
     return (
-        <Select
-            value={selectedCompany.id}
-            onValueChange={selectCompany}
-        >
-            <SelectTrigger className="w-[260px] bg-white">
-                <SelectValue />
-            </SelectTrigger>
+        <div className="f">
+            <label htmlFor="selEmp">
+                Empresa
+            </label>
 
-            <SelectContent>
+            <select
+                id="selEmp"
+                style={{ minWidth: 180 }}
+                value={selectedCompany.id}
+                onChange={(event) =>
+                    selectCompany(event.target.value)
+                }
+            >
                 {user.companies.map((company) => (
-                    <SelectItem
+                    <option
                         key={company.id}
                         value={company.id}
                     >
                         {company.name}
-                    </SelectItem>
+                    </option>
                 ))}
-            </SelectContent>
-        </Select>
+            </select>
+        </div>
     )
 }

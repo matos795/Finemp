@@ -1,26 +1,35 @@
-import { LogOut, UserRound } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router"
+import logoUrl from "../../assets/finemp-logo.png"
 import { useCompanyAccess } from "../../features/companies/company-access-context"
 import { logout } from "../../features/auth/api/auth-api"
 import { currentUserQueryKey } from "../../features/auth/hooks/use-current-user"
 import { CompanySwitcher } from "./company-switcher"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
-import { Button } from "../ui/button"
-import { Avatar, AvatarFallback } from "../ui/avatar"
 
-export function AppHeader() {
-    const { user } = useCompanyAccess()
+const todayFormatter =
+    new Intl.DateTimeFormat("pt-BR")
+
+interface AppHeaderProps {
+    menuOpen: boolean
+    onToggleMenu: () => void
+}
+
+/**
+ * Cabeçalho do protótipo homologado (header.top).
+ * "Saldo atual" e a contagem de lançamentos do protótipo dependem de
+ * dados que a API ainda não fornece e não são calculados aqui.
+ */
+export function AppHeader({
+    menuOpen,
+    onToggleMenu,
+}: AppHeaderProps) {
+    const {
+        user,
+        selectedCompany,
+    } = useCompanyAccess()
 
     const queryClient = useQueryClient()
     const navigate = useNavigate()
-
-    const initials = user.name
-        .split(" ")
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join("")
-        .toUpperCase()
 
     async function handleLogout() {
         await logout()
@@ -36,59 +45,65 @@ export function AppHeader() {
     }
 
     return (
-        <header className="flex h-20 items-center justify-between border-b bg-white px-6 lg:px-8">
-            <CompanySwitcher />
-
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        className="h-11 gap-3 px-2"
-                    >
-                        <div className="hidden text-right md:block">
-                            <p className="text-sm font-medium">
-                                {user.name}
-                            </p>
-
-                            <p className="text-xs text-muted-foreground">
-                                {user.email}
-                            </p>
-                        </div>
-
-                        <Avatar className="size-9">
-                            <AvatarFallback className="bg-[#102238] text-xs text-white">
-                                {initials}
-                            </AvatarFallback>
-                        </Avatar>
-                    </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                    align="end"
-                    className="w-56"
+        <header className="top">
+            <button
+                type="button"
+                className={menuOpen ? "icobtn on" : "icobtn"}
+                id="btnMenu"
+                aria-label="Mostrar ou ocultar o menu"
+                title="Mostrar / ocultar menu"
+                onClick={onToggleMenu}
+            >
+                <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
                 >
-                    <DropdownMenuLabel>
-                        Minha conta
-                    </DropdownMenuLabel>
+                    <path
+                        d="M3 5h14M3 10h14M3 15h14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            </button>
 
-                    <DropdownMenuSeparator />
+            <img
+                id="logo"
+                alt="FINEMP Finanças Empresariais"
+                src={logoUrl}
+            />
 
-                    <DropdownMenuItem disabled>
-                        <UserRound />
-                        {user.email}
-                    </DropdownMenuItem>
+            <div className="hd-main">
+                <h1>
+                    Fluxo de Caixa{" "}
+                    {selectedCompany && (
+                        <span style={{ color: "var(--gold)" }}>
+                            · {selectedCompany.name}
+                        </span>
+                    )}
+                </h1>
 
-                    <DropdownMenuSeparator />
+                <div className="hd-meta">
+                    <span>
+                        Hoje: <b>{todayFormatter.format(new Date())}</b>
+                    </span>
+                </div>
+            </div>
 
-                    <DropdownMenuItem
-                        onClick={handleLogout}
-                        className="text-destructive"
-                    >
-                        <LogOut />
-                        Sair
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="hd-right">
+                <CompanySwitcher />
+
+                <button
+                    type="button"
+                    className="btn sec"
+                    title={`${user.name} · ${user.email}`}
+                    onClick={handleLogout}
+                >
+                    Sair
+                </button>
+            </div>
         </header>
     )
 }
