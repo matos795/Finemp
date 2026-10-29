@@ -1535,6 +1535,70 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/financial-reports/open-titles:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: listOpenTitlesAsOf
+      summary: Lista paginada de títulos em aberto na data-base informada.
+      description: >-
+        Condicional a FINEMP_FINANCE_OPEN_TITLES_ENABLED; exige FINANCIAL_ENTRY_VIEW
+        ou FINANCIAL_ENTRY_MANAGE ALL. Usa os mesmos critérios do aging: títulos sem
+        pagamento ou pagos depois da data-base, valor nominal, sem filtro de emissão;
+        COMPETENCE limita competência ao mês da data-base. O servidor calcula dias
+        de atraso e faixa, e aplica paginação no banco em snapshot consistente. Estado
+        atual aplicado à data-base não reconstrói alterações nem estornos históricos.
+      parameters:
+        - name: direction
+          in: query
+          required: true
+          schema: {type: string, enum: [INCOME, EXPENSE]}
+        - name: asOf
+          in: query
+          required: true
+          schema: {type: string, format: date}
+        - name: scope
+          in: query
+          schema: {type: string, enum: [ALL, COMPETENCE], default: ALL}
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Página por vencimento e identificador, sem cache; valores exatos em texto.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  page: {type: integer}
+                  size: {type: integer}
+                  totalItems: {type: integer, format: int64}
+                  totalPages: {type: integer}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: {type: string, format: uuid}
+                        description: {type: string}
+                        direction: {type: string, enum: [INCOME, EXPENSE]}
+                        nominalAmount: {type: string}
+                        competence: {type: string}
+                        dueDate: {type: string, format: date}
+                        paymentDate: {type: string, format: date, nullable: true}
+                        daysLate: {type: integer}
+                        band: {type: string, enum: [DUE_0_30, DUE_31_60, DUE_61_90, DUE_OVER_90, OVERDUE_1_30, OVERDUE_31_60, OVERDUE_61_90, OVERDUE_OVER_90]}
+                        bankAccountId: {type: string, format: uuid}
+                        partnerId: {type: string, format: uuid, nullable: true}
+                        resultCenterId: {type: string, format: uuid, nullable: true}
+                        version: {type: integer, format: int64}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/financial-reports/open-titles/aging:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
