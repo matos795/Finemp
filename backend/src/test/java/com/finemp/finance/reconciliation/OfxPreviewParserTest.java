@@ -72,7 +72,9 @@ class OfxPreviewParserTest {
     }
     @Test void xmlCommentAndUnsupportedMarkupMustNotCreateOrSilentlyModifyTransactions() {
         var xml="<?xml version=\"1.0\"?><OFX><!-- <STMTTRN><TRNAMT>9</TRNAMT><DTPOSTED>20260701</DTPOSTED></STMTTRN> --><BANKTRANLIST><STMTTRN><TRNAMT>1</TRNAMT><DTPOSTED>20260701</DTPOSTED><MEMO><![CDATA[texto]]></MEMO></STMTTRN></BANKTRANLIST></OFX>";
-        var rows=parser.parse(xml.getBytes(StandardCharsets.UTF_8)).rows();assertThat(rows).hasSize(1);assertThat(rows.getFirst().error()).isEqualTo(OfxPreviewParser.Error.INVALID_TEXT);
+        assertThatThrownBy(()->parser.parse(xml.getBytes(StandardCharsets.UTF_8))).isInstanceOf(IllegalArgumentException.class);
+        var forged=xml.replace("<![CDATA[texto]]>","<![CDATA[<STMTTRN><DTPOSTED>20260702</DTPOSTED><TRNAMT>999</TRNAMT></STMTTRN>]]>");
+        assertThatThrownBy(()->parser.parse(forged.getBytes(StandardCharsets.UTF_8))).isInstanceOf(IllegalArgumentException.class);
         var unsupported=xml.replace("<MEMO><![CDATA[texto]]></MEMO>","<MEMO xml:space=\"preserve\">ignored</MEMO><MEMO>valid</MEMO>");assertThat(parser.parse(unsupported.getBytes(StandardCharsets.UTF_8)).rows().getFirst().error()).isEqualTo(OfxPreviewParser.Error.INVALID_TEXT);
         assertThatThrownBy(()->parser.parse(xml.replace("<OFX>","<!DOCTYPE OFX [<!ENTITY x SYSTEM 'file:///not-read'>]><OFX>").getBytes(StandardCharsets.UTF_8))).isInstanceOf(IllegalArgumentException.class);
     }
