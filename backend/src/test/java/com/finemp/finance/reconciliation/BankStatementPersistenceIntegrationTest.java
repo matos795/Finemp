@@ -2,6 +2,7 @@ package com.finemp.finance.reconciliation;
 
 import com.finemp.TestcontainersConfiguration;
 import com.finemp.access.*;
+import com.finemp.administration.*;
 import com.finemp.accountingfirm.*;
 import com.finemp.client.*;
 import com.finemp.company.*;
@@ -23,22 +24,22 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(properties="finemp.finance.catalog.enabled=true")
+@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true"})
 @Import(TestcontainersConfiguration.class)
 class BankStatementPersistenceIntegrationTest {
     @Autowired BankStatementItemRepository statements;@Autowired BankAccountRepository banks;@Autowired BankAccountService bankService;
     @Autowired FinancialEntryRepository entries;@Autowired FinancialCategoryRepository categories;@Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;@Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialStatementBankReferences") BankAccountReferenceGuard guard;
-    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;
+    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;
     Company owner,other;BankAccount bank,second,foreignBank;FinancialEntry entry,foreignEntry;UserAccount actor;final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>();
     @BeforeEach void prepare(){
         owner=company("Owner","70707070000170");other=company("Other","80808080000180");actor=users.saveAndFlush(new UserAccount("Synthetic Statement Actor",UUID.randomUUID()+"@example.invalid","hash"));
-        grants.saveAndFlush(new CompanyAccessGrant(actor,owner,CompanyAccessRole.CUSTOM,CostCenterScope.ALL,Set.of(CompanyPermission.BANK_ACCOUNT_MANAGE)));
+        grants.saveAndFlush(new CompanyAccessGrant(actor,owner,CompanyAccessRole.CUSTOM,CostCenterScope.ALL,Set.of(CompanyPermission.BANK_ACCOUNT_MANAGE,CompanyPermission.FINANCIAL_ENTRY_MANAGE)));
         bank=bank(owner,"Primary");second=bank(owner,"Secondary");foreignBank=bank(other,"Foreign");entry=entry(owner,bank);foreignEntry=entry(other,foreignBank);
     }
     @AfterEach void cleanup(){
         for(var company:List.of(owner,other)){
-            for(var table:List.of("financial_statement_import_receipts","financial_bank_statement_items","financial_entries","financial_bank_accounts","financial_categories"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
+            for(var table:List.of("financial_statement_import_receipts","financial_bank_statement_items","financial_entries","financial_periods","financial_bank_accounts","financial_categories","access_audit_events"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
             jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)",company.getId());jdbc.update("DELETE FROM company_access_grants WHERE company_id=?",company.getId());companies.deleteById(company.getId());
         }
         for(var id:clientIds)clients.deleteById(id);for(var id:firmIds)firms.deleteById(id);users.deleteById(actor.getId());
@@ -101,6 +102,34 @@ class BankStatementPersistenceIntegrationTest {
     @Test void concurrentSameImportReceiptHasExactlyOneWinner()throws Exception{
         var command=UUID.randomUUID();var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
         try{Callable<Boolean> task=()->{if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Barrier");try{receipt(owner,bank,command);return true;}catch(DataIntegrityViolationException expected){return false;}};var a=pool.submit(task);var b=pool.submit(task);start.countDown();assertThat(List.of(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);}finally{start.countDown();pool.shutdownNow();}
+    }
+    @Test void importCommandIsIdempotentScopedAndPreservesSimilarRows(){
+        var command=UUID.randomUUID();var items=List.of(value("1.20","Synthetic recurring",""),value("1.20","Synthetic recurring",""));
+        var first=imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),items);var replay=imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),items);
+        assertThat(replay).isEqualTo(first);assertThat(first.itemIds()).hasSize(2).doesNotHaveDuplicates();assertThat(statements.count()).isEqualTo(2);
+        assertThatThrownBy(()->imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),List.of(value("2","Different","")))).isInstanceOf(StatementImportConflictException.class).extracting(e->((StatementImportConflictException)e).getReason()).isEqualTo(StatementImportConflictException.Reason.IDEMPOTENCY_MISMATCH);
+        assertThatThrownBy(()->imports.confirm(actor.getId(),other.getId(),UUID.randomUUID(),foreignBank.getId(),items)).isInstanceOf(OrganizationAccessDeniedException.class);
+        assertThatThrownBy(()->imports.confirm(actor.getId(),owner.getId(),UUID.randomUUID(),foreignBank.getId(),items)).isInstanceOf(SaasResourceNotFoundException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM access_audit_events WHERE company_id=? AND action='FINANCIAL_STATEMENT_IMPORTED'",Long.class,owner.getId())).isEqualTo(1);
+    }
+    @Test void closedPeriodAndDuplicateFitidDoNotWritePartialImport(){
+        var command=UUID.randomUUID();var items=List.of(value("1","One","same"),value("2","Two","same"));
+        assertThatThrownBy(()->imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),items)).isInstanceOf(StatementImportConflictException.class).extracting(e->((StatementImportConflictException)e).getReason()).isEqualTo(StatementImportConflictException.Reason.DUPLICATE_FITID);
+        jdbc.update("INSERT INTO financial_periods(id,company_id,period,closed,version,updated_by,updated_at) VALUES(?,?,'2026-07',true,0,?,now())",UUID.randomUUID(),owner.getId(),actor.getId());
+        assertThatThrownBy(()->imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),List.of(value("1","One","")))).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
+        assertThat(statements.count()).isZero();assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_statement_import_receipts WHERE company_id=?",Long.class,owner.getId())).isZero();
+    }
+    @Test void concurrentSameImportCommandReturnsOneReceiptWithoutDuplicateMovements()throws Exception{
+        var command=UUID.randomUUID();var items=List.of(value("1","Synthetic concurrent",""));var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
+        try{Callable<StatementImportCommandService.Receipt> task=()->{if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Barrier");return imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),items);};var a=pool.submit(task);var b=pool.submit(task);start.countDown();assertThat(a.get(15,TimeUnit.SECONDS)).isEqualTo(b.get(15,TimeUnit.SECONDS));assertThat(statements.count()).isEqualTo(1);}finally{start.countDown();pool.shutdownNow();}
+    }
+    @Test void existingFitidAbortsAllNewRowsAndCommittedReplaySurvivesClosure(){
+        save(owner,bank,value("1","Existing","fit-existing"));
+        assertThatThrownBy(()->imports.confirm(actor.getId(),owner.getId(),UUID.randomUUID(),bank.getId(),List.of(value("2","New",""),value("3","Duplicate","fit-existing")))).isInstanceOf(StatementImportConflictException.class);
+        assertThat(statements.count()).isEqualTo(1);assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_statement_import_receipts WHERE company_id=?",Long.class,owner.getId())).isZero();
+        var command=UUID.randomUUID();var items=List.of(value("5","Synthetic posted","fit-new"));var result=imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),items);
+        jdbc.update("INSERT INTO financial_periods(id,company_id,period,closed,version,updated_by,updated_at) VALUES(?,?,'2026-07',true,0,?,now())",UUID.randomUUID(),owner.getId(),actor.getId());
+        assertThat(imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),items)).isEqualTo(result);assertThat(statements.count()).isEqualTo(2);
     }
     void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}

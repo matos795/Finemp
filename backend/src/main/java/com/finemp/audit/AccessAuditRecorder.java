@@ -43,6 +43,13 @@ public class AccessAuditRecorder {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public UUID recordStatementImport(UUID actor,UUID company,UUID bank,UUID command,String after,Set<? extends Enum<?>> permissions) {
+        if(after==null)throw new IllegalArgumentException("Estado de importação ausente.");
+        var event=new AccessAuditEvent(AccessAuditAction.FINANCIAL_STATEMENT_IMPORTED,actor,actor,null,company,clock.instant(),permissions);
+        event.resource("FINANCIAL_STATEMENT_IMPORT",bank,command,null,after,null);entityManager.persist(event);return event.getId();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public UUID record(AccessAuditAction action, UUID actorId, UUID subjectUserId,
                        UUID firmId, UUID companyId, Set<? extends Enum<?>> permissions) {
         var event = new AccessAuditEvent(action, actorId, subjectUserId, firmId, companyId,
