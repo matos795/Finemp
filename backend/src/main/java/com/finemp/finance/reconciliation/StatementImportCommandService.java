@@ -28,11 +28,15 @@ public class StatementImportCommandService {
     private final JsonMapper json=JsonMapper.builder().build();
     public StatementImportCommandService(JdbcTemplate jdbc,CompanyRepository companies,CompanyPermissionAuthorizationService permissions,BankAccountRepository banks,FinancialPeriodGuard periods,AccessAuditRecorder audit){this.jdbc=jdbc;this.companies=companies;this.permissions=permissions;this.banks=banks;this.periods=periods;this.audit=audit;}
     public Receipt confirm(UUID actor,UUID company,UUID command,UUID bank,List<StatementValues> selected) {
+        return confirmWithProvenance(actor,company,command,bank,selected,"0".repeat(64));
+    }
+    public Receipt confirmWithProvenance(UUID actor,UUID company,UUID command,UUID bank,List<StatementValues> selected,String provenanceHash) {
         require(actor,company);
         if(!Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>)c->c.getTransactionIsolation()==Connection.TRANSACTION_READ_COMMITTED)))throw conflict(StatementImportConflictException.Reason.TRANSACTION_NOT_SUPPORTED);
         jdbc.execute("SET LOCAL lock_timeout = '5s'");companies.findLockedById(company).orElseThrow(OrganizationAccessDeniedException::new);require(actor,company);
-        if(command==null || bank==null || selected==null || selected.isEmpty() || selected.size()>MAX_ITEMS || selected.stream().anyMatch(Objects::isNull))throw new IllegalArgumentException("Seleção de extrato inválida.");
-        var items=List.copyOf(selected);String fingerprint=hash(json.writeValueAsString(new Input(company,actor,bank,items)));
+        if(command==null || bank==null || selected==null || selected.isEmpty() || selected.size()>MAX_ITEMS || selected.stream().anyMatch(Objects::isNull) || provenanceHash==null || !provenanceHash.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("Seleção de extrato inválida.");
+        var items=List.copyOf(selected);Object fingerprintInput=provenanceHash.equals("0".repeat(64))?new Input(company,actor,bank,items):new ProvenanceInput(company,actor,bank,items,provenanceHash);
+        String fingerprint=hash(json.writeValueAsString(fingerprintInput));
         var existing=jdbc.query("SELECT fingerprint,result_state FROM financial_statement_import_receipts WHERE company_id=? AND actor_id=? AND command_id=?",(row,index)->new Stored(row.getString("fingerprint"),json.readValue(row.getString("result_state"),Receipt.class)),company,actor,command).stream().findFirst();
         if(existing.isPresent()){if(!fingerprint.equals(existing.get().fingerprint()))throw conflict(StatementImportConflictException.Reason.IDEMPOTENCY_MISMATCH);return existing.get().receipt();}
         var account=banks.findByIdAndCompanyId(bank,company).orElseThrow(()->new SaasResourceNotFoundException("Conta financeira"));if(!account.isActive())throw conflict(StatementImportConflictException.Reason.INACTIVE_BANK);
@@ -50,5 +54,6 @@ public class StatementImportCommandService {
     public record Receipt(UUID companyId,UUID bankAccountId,UUID commandId,List<UUID> itemIds,UUID auditEventId){public Receipt{itemIds=List.copyOf(itemIds);}}
     private record AuditState(UUID bankAccountId,List<UUID> itemIds){}
     private record Input(UUID company,UUID actor,UUID bank,List<StatementValues> items){@Override public String toString(){return "StatementImportInput[redacted]";}}
+    private record ProvenanceInput(UUID company,UUID actor,UUID bank,List<StatementValues> items,String provenanceHash){@Override public String toString(){return "StatementImportInput[redacted]";}}
     private record Stored(String fingerprint,Receipt receipt){@Override public String toString(){return "StatementImportStored[redacted]";}}
 }

@@ -16,7 +16,7 @@ class StatementPreviewControllerTest {
     final CompanyPermissionAuthorizationService permissions=mock(CompanyPermissionAuthorizationService.class);
     final BankAccountRepository banks=mock(BankAccountRepository.class);
     final UserAccountPrincipal actor=mock(UserAccountPrincipal.class);
-    final StatementPreviewController controller=new StatementPreviewController(permissions,banks);
+    final StatementPreviewController controller=new StatementPreviewController(permissions,banks,new StatementRequestCapacity());
     final UUID user=UUID.randomUUID(),company=UUID.randomUUID(),bank=UUID.randomUUID();
     @Test void unauthorizedAndForeignBankAreRejectedBeforeReadingFile()throws Exception {
         when(actor.getUserAccountId()).thenReturn(user);var request=mock(HttpServletRequest.class);

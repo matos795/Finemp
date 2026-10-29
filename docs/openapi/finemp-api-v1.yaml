@@ -1460,7 +1460,7 @@ paths:
         Condicional a FINEMP_FINANCE_STATEMENT_PREVIEW_ENABLED. Exige sessão, CSRF,
         FINANCIAL_ENTRY_MANAGE com escopo ALL e conta pertencente à empresa. A análise
         não persiste, concilia, baixa nem modifica saldos. O corpo é limitado a 16 MiB;
-        duas análises simultâneas por instância são permitidas. CSV requer separador
+        uma operação de arquivo por instância é permitida. CSV requer separador
         explícito; OFX não aceita separador. Linhas inválidas e possíveis duplicidades
         são apresentadas; nenhuma duplicidade é confirmada automaticamente. Moeda e
         múltiplas contas do arquivo devem ser verificadas antes de futura importação.
@@ -1482,6 +1482,10 @@ paths:
       responses:
         '200':
           description: Prévia temporária; resposta sem cache. Valores monetários são strings decimais exatas.
+          headers:
+            X-Statement-SHA256:
+              description: SHA-256 do arquivo analisado, usado para confirmar o mesmo conteúdo.
+              schema: {type: string, pattern: '^[0-9a-f]{64}$'}
           content:
             application/json:
               schema:
@@ -1530,6 +1534,74 @@ paths:
         '413': {description: Arquivo excede o limite.}
         '415': {description: Tipo ou codificação de conteúdo não suportado.}
         '429': {description: Limite de análises simultâneas atingido.}
+  /api/companies/{companyId}/bank-accounts/{bankId}/statement-imports:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: bankId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Financial bank accounts]
+      operationId: confirmBankStatementImport
+      summary: Confirma movimentos escolhidos após a prévia.
+      description: >-
+        Condicional a FINEMP_FINANCE_STATEMENT_IMPORT_ENABLED. Exige sessão, CSRF,
+        FINANCIAL_ENTRY_MANAGE ALL, conta da empresa e confirmações explícitas da
+        conta, da moeda em reais e dos alertas examinados. O servidor verifica o SHA
+        da prévia, reprocessa o arquivo e usa apenas as linhas selecionadas válidas.
+        Arquivos OFX com múltiplas contas, bancos ou moedas, metadados bancários
+        inválidos ou moeda explicitamente diferente de BRL são recusados. Não há
+        baixa nem conciliação. Limite técnico: arquivo de 8 MiB, corpo de 12 MiB e
+        até 5.000 linhas. Reenvio idêntico retorna o recibo; a mesma chave com corpo
+        diferente conflita. A análise e a confirmação compartilham capacidade limitada.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [format, fileBase64, fileSha256, selectedRows, accountConfirmed, currencyConfirmed, warningsConfirmed]
+              properties:
+                format: {type: string, enum: [OFX, CSV]}
+                separator: {type: string, enum: [COMMA, SEMICOLON, TAB, PIPE], description: Obrigatório apenas para CSV.}
+                fileBase64: {type: string, format: byte, description: Arquivo original reapresentado para validação no servidor.}
+                fileSha256: {type: string, pattern: '^[0-9a-f]{64}$', description: Valor de X-Statement-SHA256 recebido na prévia.}
+                selectedRows:
+                  type: array
+                  minItems: 1
+                  maxItems: 5000
+                  uniqueItems: true
+                  items: {type: integer, minimum: 1}
+                accountConfirmed: {type: boolean, enum: [true], description: O usuário confirma a escolha da conta financeira.}
+                currencyConfirmed: {type: boolean, enum: [true], description: O usuário confirma a moeda em reais.}
+                warningsConfirmed: {type: boolean, enum: [true], description: O usuário examinou e confirmou os alertas da prévia.}
+      responses:
+        '200':
+          description: Recibo da operação ou reexecução idêntica, sem cache.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyId, bankAccountId, commandId, itemIds, auditEventId]
+                properties:
+                  companyId: {type: string, format: uuid}
+                  bankAccountId: {type: string, format: uuid}
+                  commandId: {type: string, format: uuid}
+                  itemIds: {type: array, items: {type: string, format: uuid}}
+                  auditEventId: {type: string, format: uuid}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Período fechado, FITID em conflito, chave reutilizada ou estado concorrente.}
+        '413': {description: Corpo excede o limite.}
+        '415': {description: Tipo ou codificação de conteúdo não suportado.}
+        '429': {description: Limite de operações simultâneas atingido.}
   /api/companies/{companyId}/bank-accounts:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
