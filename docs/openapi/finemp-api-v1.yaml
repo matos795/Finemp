@@ -1445,6 +1445,65 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: Versão divergente ou referência/conflito concorrente.
+  /api/companies/{companyId}/statement-items/{statementId}/candidates:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: statementId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Financial bank accounts]
+      operationId: listStatementReconciliationCandidates
+      summary: Lista sugestões de conciliação para movimento de extrato.
+      description: >-
+        Condicional a FINEMP_FINANCE_STATEMENT_CANDIDATES_ENABLED; exige
+        FINANCIAL_ENTRY_VIEW ou FINANCIAL_ENTRY_MANAGE com escopo ALL. Retorna
+        sugestões sem alterar lançamentos ou conciliar. Baixados da mesma conta
+        até três dias de distância precedem abertos até quinze dias de vencimento;
+        o valor deve diferir menos de 0,011 e lançamentos já vinculados são omitidos.
+        Paginação e filtros são aplicados no banco em snapshot de leitura consistente;
+        empates são ordenados pelo identificador. Valores são strings decimais exatas.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+        - name: status
+          in: query
+          schema: {type: string, enum: [PAID, OPEN]}
+      responses:
+        '200':
+          description: Página de sugestões sem cache.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  page: {type: integer}
+                  size: {type: integer}
+                  totalItems: {type: integer, format: int64}
+                  totalPages: {type: integer}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entryId: {type: string, format: uuid}
+                        description: {type: string}
+                        direction: {type: string, enum: [INCOME, EXPENSE]}
+                        bankAccountId: {type: string, format: uuid}
+                        dueDate: {type: string, format: date}
+                        paymentDate: {type: string, format: date, nullable: true}
+                        nominalAmount: {type: string}
+                        actualPaidAmount: {type: string, nullable: true}
+                        version: {type: integer, format: int64}
+                        distanceDays: {type: integer}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /api/companies/{companyId}/bank-accounts/{bankId}/statement-previews:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
