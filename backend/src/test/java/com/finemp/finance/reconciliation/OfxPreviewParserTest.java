@@ -28,8 +28,9 @@ class OfxPreviewParserTest {
         var rows=parser.parse(file.getBytes(StandardCharsets.UTF_8)).rows();assertThat(rows).hasSize(4);assertThat(rows).allSatisfy(row->assertThat(row.warnings()).contains(OfxPreviewParser.Warning.DUPLICATE_IN_FILE));assertThat(rows.getFirst().warnings()).contains(OfxPreviewParser.Warning.FALLBACK_IDENTITY);
     }
     @Test void windows1252AndUtf8MustDecodeWithoutExternalResolution() {
-        var file="CHARSET:1252\n<!DOCTYPE OFX [<!ENTITY ext SYSTEM 'file:///not-read'>]><OFX><BANKTRANLIST><STMTTRN><TRNAMT>1\n<DTPOSTED>20260701\n<MEMO>Café\n</STMTTRN></BANKTRANLIST></OFX>";
+        var file="CHARSET:1252\n<OFX><BANKTRANLIST><STMTTRN><TRNAMT>1\n<DTPOSTED>20260701\n<MEMO>Café\n</STMTTRN></BANKTRANLIST></OFX>";
         var result=parser.parse(file.getBytes(Charset.forName("windows-1252")));assertThat(result.rows().getFirst().values().memo()).isEqualTo("Café");
+        var unsafe=file.replace("<OFX>","<!DOCTYPE OFX [<!ENTITY ext SYSTEM 'file:///not-read'>]><OFX>");assertThatThrownBy(()->parser.parse(unsafe.getBytes(Charset.forName("windows-1252")))).isInstanceOf(IllegalArgumentException.class);
     }
     @Test void malformedOrOversizedFilesMustNotReturnAnIncompleteSuccess() {
         assertThatThrownBy(()->parser.parse(new byte[0])).isInstanceOf(IllegalArgumentException.class);assertThatThrownBy(()->parser.parse(new byte[16*1024*1024+1])).isInstanceOf(IllegalArgumentException.class);
@@ -64,5 +65,15 @@ class OfxPreviewParserTest {
     @Test void duplicateFitIdMustBeFlaggedEvenWhenOneRowHasInvalidDate() {
         var sgml="OFXHEADER:100\n<OFX><BANKTRANLIST><STMTTRN><TRNAMT>1\n<DTPOSTED>20260701\n<FITID>same\n<STMTTRN><TRNAMT>1\n<DTPOSTED>20260230\n<FITID>same\n</BANKTRANLIST></OFX>";
         var rows=parser.parse(sgml.getBytes(StandardCharsets.UTF_8)).rows();assertThat(rows.get(1).error()).isEqualTo(OfxPreviewParser.Error.BAD_DATE);assertThat(rows).allSatisfy(row->assertThat(row.warnings()).contains(OfxPreviewParser.Warning.DUPLICATE_IN_FILE));
+    }
+    @Test void xmlMultilineFieldsMustNotBeTruncatedOrMistakenForEmpty() {
+        var xml="<?xml version=\"1.0\"?><OFX><BANKTRANLIST><STMTTRN><TRNAMT>\n1.20\n</TRNAMT><DTPOSTED>\n20260701\n</DTPOSTED><MEMO>Compra\nparcela 2</MEMO></STMTTRN></BANKTRANLIST></OFX>";
+        var row=parser.parse(xml.getBytes(StandardCharsets.UTF_8)).rows().getFirst();assertThat(row.error()).isNull();assertThat(row.values().memo()).isEqualTo("Compra\nparcela 2");assertThat(row.values().signedAmount()).isEqualTo(new BigDecimal("1.20"));assertThat(row.values().postedDate()).isEqualTo(LocalDate.of(2026,7,1));
+    }
+    @Test void xmlCommentAndUnsupportedMarkupMustNotCreateOrSilentlyModifyTransactions() {
+        var xml="<?xml version=\"1.0\"?><OFX><!-- <STMTTRN><TRNAMT>9</TRNAMT><DTPOSTED>20260701</DTPOSTED></STMTTRN> --><BANKTRANLIST><STMTTRN><TRNAMT>1</TRNAMT><DTPOSTED>20260701</DTPOSTED><MEMO><![CDATA[texto]]></MEMO></STMTTRN></BANKTRANLIST></OFX>";
+        var rows=parser.parse(xml.getBytes(StandardCharsets.UTF_8)).rows();assertThat(rows).hasSize(1);assertThat(rows.getFirst().error()).isEqualTo(OfxPreviewParser.Error.INVALID_TEXT);
+        var unsupported=xml.replace("<MEMO><![CDATA[texto]]></MEMO>","<MEMO xml:space=\"preserve\">ignored</MEMO><MEMO>valid</MEMO>");assertThat(parser.parse(unsupported.getBytes(StandardCharsets.UTF_8)).rows().getFirst().error()).isEqualTo(OfxPreviewParser.Error.INVALID_TEXT);
+        assertThatThrownBy(()->parser.parse(xml.replace("<OFX>","<!DOCTYPE OFX [<!ENTITY x SYSTEM 'file:///not-read'>]><OFX>").getBytes(StandardCharsets.UTF_8))).isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -15,8 +15,12 @@ public class OfxPreviewParser {
     private static final Pattern LEDGER_END=Pattern.compile("</LEDGERBAL>",Pattern.CASE_INSENSITIVE);
     private static final Map<String,Pattern> TAGS=java.util.stream.Stream.of("BANKID","ACCTID","CURDEF","BALAMT","DTASOF","DTPOSTED","TRNAMT","NAME","MEMO","TRNTYPE","FITID","CHECKNUM","REFNUM")
             .collect(java.util.stream.Collectors.toUnmodifiableMap(name->name,name->Pattern.compile("<"+name+">([^<\\r\\n]*)",Pattern.CASE_INSENSITIVE)));
+    private static final Map<String,Pattern> XML_TAGS=TAGS.keySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(name->name,name->Pattern.compile("<"+name+">([^<]*)</"+name+">",Pattern.CASE_INSENSITIVE)));
+    private static final Map<String,Pattern> TAG_OPEN=TAGS.keySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(name->name,name->Pattern.compile("<"+name+"(?:\\s[^>]*)?>",Pattern.CASE_INSENSITIVE)));
     public Preview parse(byte[] bytes) {
-        String source=StatementTextDecoder.decodeOfx(bytes);boolean xml=isXml(source);var rows=new ArrayList<Row>();var identities=new HashMap<String,List<Integer>>();
+        String source=StatementTextDecoder.decodeOfx(bytes);boolean xml=isXml(source);source=stripCommentsAndInstructions(source);
+        if(Pattern.compile("<!(?:DOCTYPE|ENTITY)\\b",Pattern.CASE_INSENSITIVE).matcher(source).find() || xml && Pattern.compile("<STMTTRN\\s",Pattern.CASE_INSENSITIVE).matcher(source).find())throw invalid();
+        var rows=new ArrayList<Row>();var identities=new HashMap<String,List<Integer>>();
         var open=OPEN.matcher(source);int position=0;
         while(open.find(position)) {
             if(rows.size()>=MAX_ROWS)throw invalid();int begin=open.end();var end=END.matcher(source);
@@ -69,11 +73,12 @@ public class OfxPreviewParser {
         }catch(NumberFormatException | ArithmeticException invalid){throw new Problem(Error.BAD_AMOUNT);}
     }
     private static String tag(String block,String name,boolean xml) {
-        var matcher=TAGS.get(name).matcher(block);return matcher.find()?trim(xml?xmlText(matcher.group(1)):matcher.group(1)):"";
+        if(xml){var opening=TAG_OPEN.get(name).matcher(block);if(!opening.find())return "";var matcher=XML_TAGS.get(name).matcher(block);matcher.region(opening.start(),block.length());if(!matcher.lookingAt())throw new Problem(Error.INVALID_TEXT);return trim(xmlText(matcher.group(1)));}
+        var matcher=TAGS.get(name).matcher(block);return matcher.find()?trim(matcher.group(1)):"";
     }
     private static boolean hasMultiple(String source,String name,boolean xml,List<Warning> warnings) {
-        var matcher=TAGS.get(name).matcher(source);String first=null;
-        while(matcher.find()){String value;try{value=trim(xml?xmlText(matcher.group(1)):matcher.group(1));}catch(Problem invalid){if(!warnings.contains(Warning.INVALID_BANK_INFORMATION))warnings.add(Warning.INVALID_BANK_INFORMATION);continue;}if(value.isEmpty())continue;if(first==null)first=value;else if(!first.equals(value))return true;}return false;
+        var matcher=(xml?TAG_OPEN:TAGS).get(name).matcher(source);String first=null;
+        while(matcher.find()){String value;try{if(xml){var full=XML_TAGS.get(name).matcher(source);full.region(matcher.start(),source.length());if(!full.lookingAt())throw new Problem(Error.INVALID_TEXT);value=trim(xmlText(full.group(1)));}else value=trim(matcher.group(1));}catch(Problem invalid){if(!warnings.contains(Warning.INVALID_BANK_INFORMATION))warnings.add(Warning.INVALID_BANK_INFORMATION);continue;}if(value.isEmpty())continue;if(first==null)first=value;else if(!first.equals(value))return true;}return false;
     }
     private static String metadataTag(String source,String name,boolean xml,List<Warning> warnings) {try{return metadata(tag(source,name,xml),warnings);}catch(Problem invalid){if(!warnings.contains(Warning.INVALID_BANK_INFORMATION))warnings.add(Warning.INVALID_BANK_INFORMATION);return "";}}
     private static boolean isXml(String source) {
@@ -81,6 +86,16 @@ public class OfxPreviewParser {
         int first=source.indexOf('<');String header=first<0?source:source.substring(0,first);
         if(Pattern.compile("(?im)^\\s*(?:OFXHEADER|DATA)\\s*:\\s*(?:100|OFXSGML)\\s*$").matcher(header).find())return false;
         return Pattern.compile("</(?:TRNAMT|DTPOSTED)>",Pattern.CASE_INSENSITIVE).matcher(source).find();
+    }
+    private static String stripCommentsAndInstructions(String source) {
+        var out=new StringBuilder(source.length());int position=0;
+        while(position<source.length()) {
+            int comment=source.indexOf("<!--",position),instruction=source.indexOf("<?",position);
+            int start=comment<0?instruction:instruction<0?comment:Math.min(comment,instruction);
+            if(start<0){out.append(source,position,source.length());break;}
+            out.append(source,position,start);String close=start==comment?"-->":"?>";int end=source.indexOf(close,start+close.length());if(end<0)throw invalid();position=end+close.length();
+        }
+        return out.toString();
     }
     private static String xmlText(String raw) {
         var result=new StringBuilder(raw.length());int position=0;
