@@ -106,6 +106,10 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/statement-items/{statementId}/candidates")
                                                 .authenticated()
 
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/bank-accounts/{bankId}/statement-items")
+                                                .authenticated()
+
                                                 .requestMatchers(HttpMethod.POST,
                                                                 "/api/companies/{companyId}/bank-accounts/{bankId}/statement-previews",
                                                                 "/api/companies/{companyId}/bank-accounts/{bankId}/statement-imports")
