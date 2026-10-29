@@ -1445,6 +1445,91 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: Versão divergente ou referência/conflito concorrente.
+  /api/companies/{companyId}/bank-accounts/{bankId}/statement-previews:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: bankId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Financial bank accounts]
+      operationId: previewBankStatement
+      summary: Analisa temporariamente extrato OFX ou CSV da empresa autorizada.
+      description: >-
+        Condicional a FINEMP_FINANCE_STATEMENT_PREVIEW_ENABLED. Exige sessão, CSRF,
+        FINANCIAL_ENTRY_MANAGE com escopo ALL e conta pertencente à empresa. A análise
+        não persiste, concilia, baixa nem modifica saldos. O corpo é limitado a 16 MiB;
+        duas análises simultâneas por instância são permitidas. CSV requer separador
+        explícito; OFX não aceita separador. Linhas inválidas e possíveis duplicidades
+        são apresentadas; nenhuma duplicidade é confirmada automaticamente. Moeda e
+        múltiplas contas do arquivo devem ser verificadas antes de futura importação.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - name: format
+          in: query
+          required: true
+          schema: {type: string, enum: [OFX, CSV]}
+        - name: separator
+          in: query
+          required: false
+          schema: {type: string, enum: [COMMA, SEMICOLON, TAB, PIPE]}
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        '200':
+          description: Prévia temporária; resposta sem cache. Valores monetários são strings decimais exatas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rows, warnings]
+                properties:
+                  bankCode: {type: string, description: Presente na prévia OFX.}
+                  accountReference: {type: string, description: Presente na prévia OFX.}
+                  currency: {type: string, description: Presente na prévia OFX.}
+                  balance:
+                    nullable: true
+                    type: object
+                    properties:
+                      date: {type: string, format: date}
+                      amount: {type: string, description: Valor decimal exato.}
+                  warnings:
+                    type: array
+                    items: {type: string}
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                      required: [number, warnings]
+                      properties:
+                        number: {type: integer}
+                        rawDate: {type: string}
+                        rawAmount: {type: string}
+                        rawMemo: {type: string}
+                        error: {type: string, nullable: true}
+                        warnings:
+                          type: array
+                          items: {type: string}
+                        values:
+                          type: object
+                          nullable: true
+                          properties:
+                            postedDate: {type: string, format: date}
+                            signedAmount: {type: string, description: Valor decimal exato com sinal.}
+                            memo: {type: string}
+                            externalId: {type: string}
+                            documentReference: {type: string}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '413': {description: Arquivo excede o limite.}
+        '415': {description: Tipo ou codificação de conteúdo não suportado.}
+        '429': {description: Limite de análises simultâneas atingido.}
   /api/companies/{companyId}/bank-accounts:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
