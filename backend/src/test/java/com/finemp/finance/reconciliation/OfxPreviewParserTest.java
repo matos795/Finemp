@@ -44,4 +44,25 @@ class OfxPreviewParserTest {
         var prefix="<OFX><CURDEF>USD\n<CURDEF>BRL\n<BANKTRANLIST><STMTTRN><TRNAMT>1\n<DTPOSTED>20260701\n</STMTTRN></BANKTRANLIST></OFX>";
         var result=parser.parse(prefix.getBytes(StandardCharsets.UTF_8));assertThat(result.currency()).isEqualTo("USD");assertThat(result.warnings()).contains(OfxPreviewParser.Warning.CURRENCY_UNCONFIRMED,OfxPreviewParser.Warning.MULTIPLE_CURRENCIES);
     }
+    @Test void xmlEscapesMustDecodeWithoutResolvingCustomEntities() {
+        var xml="<?xml version=\"1.0\" encoding=\"UTF-8\"?><OFX><BANKTRANLIST><STMTTRN><TRNAMT>1.00</TRNAMT><DTPOSTED>20260701</DTPOSTED><MEMO>A &amp; B &#x1F600;</MEMO><FITID>id&amp;1</FITID><CHECKNUM>&lt;X&gt;</CHECKNUM></STMTTRN></BANKTRANLIST></OFX>";
+        var row=parser.parse(xml.getBytes(StandardCharsets.UTF_8)).rows().getFirst();assertThat(row.values().memo()).isEqualTo("A & B 😀");assertThat(row.values().externalId()).isEqualTo("id&1");assertThat(row.values().documentReference()).isEqualTo("<X>");
+        assertThat(row.values().identityKey()).isEqualTo(new StatementValues(LocalDate.of(2026,7,1),BigDecimal.ONE,"A & B 😀","id&1","").identityKey());
+        var dangerous=xml.replace("A &amp; B &#x1F600;","&external;");assertThat(parser.parse(dangerous.getBytes(StandardCharsets.UTF_8)).rows().getFirst().error()).isEqualTo(OfxPreviewParser.Error.INVALID_TEXT);
+    }
+    @Test void charsetDeclarationsMustTakePrecedenceOverWordsInTheTransaction() {
+        var xml="<?xml version=\"1.0\" encoding=\"UTF-8\"?><OFX><BANKTRANLIST><STMTTRN><TRNAMT>1</TRNAMT><DTPOSTED>20260701</DTPOSTED><MEMO>Café WINDOWS-1252</MEMO></STMTTRN></BANKTRANLIST></OFX>";
+        assertThat(parser.parse(xml.getBytes(StandardCharsets.UTF_8)).rows().getFirst().values().memo()).isEqualTo("Café WINDOWS-1252");
+        var sgml="OFXHEADER:100\n<OFX><BANKTRANLIST><STMTTRN><TRNAMT>1\n<DTPOSTED>20260701\n<MEMO>Café WINDOWS-1252\n</BANKTRANLIST></OFX>";
+        assertThat(parser.parse(sgml.getBytes(StandardCharsets.UTF_8)).rows().getFirst().values().memo()).isEqualTo("Café WINDOWS-1252");
+    }
+    @Test void xmlRequiresClosedTransactionsWhileSgmlPermitsTheLegacyOpenForm() {
+        var xml="<?xml version=\"1.0\"?><OFX><BANKTRANLIST><STMTTRN><TRNAMT>1</TRNAMT><DTPOSTED>20260701</DTPOSTED><STMTTRN><TRNAMT>2</TRNAMT><DTPOSTED>20260701</DTPOSTED></STMTTRN></BANKTRANLIST></OFX>";
+        var rows=parser.parse(xml.getBytes(StandardCharsets.UTF_8)).rows();assertThat(rows.getFirst().error()).isEqualTo(OfxPreviewParser.Error.UNTERMINATED);assertThat(rows.getFirst().values()).isNull();assertThat(rows.get(1).values()).isNotNull();
+        var sgml="OFXHEADER:100\n<OFX><BANKTRANLIST><STMTTRN><TRNAMT>1\n<DTPOSTED>20260701\n<STMTTRN><TRNAMT>2\n<DTPOSTED>20260701\n</BANKTRANLIST></OFX>";assertThat(parser.parse(sgml.getBytes(StandardCharsets.UTF_8)).rows()).allSatisfy(row->assertThat(row.values()).isNotNull());
+    }
+    @Test void duplicateFitIdMustBeFlaggedEvenWhenOneRowHasInvalidDate() {
+        var sgml="OFXHEADER:100\n<OFX><BANKTRANLIST><STMTTRN><TRNAMT>1\n<DTPOSTED>20260701\n<FITID>same\n<STMTTRN><TRNAMT>1\n<DTPOSTED>20260230\n<FITID>same\n</BANKTRANLIST></OFX>";
+        var rows=parser.parse(sgml.getBytes(StandardCharsets.UTF_8)).rows();assertThat(rows.get(1).error()).isEqualTo(OfxPreviewParser.Error.BAD_DATE);assertThat(rows).allSatisfy(row->assertThat(row.warnings()).contains(OfxPreviewParser.Warning.DUPLICATE_IN_FILE));
+    }
 }
