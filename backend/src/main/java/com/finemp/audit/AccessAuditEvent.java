@@ -74,7 +74,9 @@ public class AccessAuditEvent {
 
     void resource(String type,UUID id,UUID command,String before,String after,String reason) {
         this.resourceType=Objects.requireNonNull(type);this.resourceId=Objects.requireNonNull(id);
-        this.commandId=Objects.requireNonNull(command);this.beforeState=before;this.afterState=Objects.requireNonNull(after);this.reason=reason;
+        if(before==null && after==null)throw new IllegalArgumentException("Estado de auditoria ausente.");
+        this.commandId=Objects.requireNonNull(command);this.beforeState=before;this.afterState=after;this.reason=reason;
     }
     public UUID getId() { return id; }
 }
+

@@ -29,6 +29,20 @@ public class AccessAuditRecorder {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public UUID recordFinancialWithholding(AccessAuditAction action,UUID actor,UUID company,UUID resource,UUID command,
+            String before,String after,Set<? extends Enum<?>> permissions) {
+        boolean valid=switch(action) {
+            case FINANCIAL_WITHHOLDING_CREATED -> before==null && after!=null;
+            case FINANCIAL_WITHHOLDING_UPDATED -> before!=null && after!=null;
+            case FINANCIAL_WITHHOLDING_DELETED -> before!=null && after==null;
+            default -> false;
+        };
+        if(!valid)throw new IllegalArgumentException("Transição de retenção inválida.");
+        var event=new AccessAuditEvent(action,actor,actor,null,company,clock.instant(),permissions);
+        event.resource("FINANCIAL_WITHHOLDING",resource,command,before,after,null);entityManager.persist(event);return event.getId();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public UUID record(AccessAuditAction action, UUID actorId, UUID subjectUserId,
                        UUID firmId, UUID companyId, Set<? extends Enum<?>> permissions) {
         var event = new AccessAuditEvent(action, actorId, subjectUserId, firmId, companyId,
