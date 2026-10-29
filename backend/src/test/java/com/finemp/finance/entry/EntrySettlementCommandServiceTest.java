@@ -51,6 +51,7 @@ class EntrySettlementCommandServiceTest {
                 EntrySettlementFingerprint.settlement(company,actor,entry,0,data),receipt)));
         assertThat(service.settle(actor,company,command,entry,0L,data)).isEqualTo(receipt);
         verifyNoInteractions(entries,references);verify(transactions,never()).lockEntryVersion(any(),any());
+        verify(transactions,never()).requireLinkedStatementPeriodsOpen(any(),any());
     }
     @Test void keyMismatchMustFailBeforeLookingUpOrMutatingTheEntry() {
         allow();when(journal.find(company,actor,command)).thenReturn(Optional.of(new EntryCommandJournal.StoredReceipt("different",null)));

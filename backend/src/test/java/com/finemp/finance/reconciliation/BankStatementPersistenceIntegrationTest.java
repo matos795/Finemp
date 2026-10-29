@@ -28,6 +28,10 @@ import static org.assertj.core.api.Assertions.*;
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class BankStatementPersistenceIntegrationTest {
+    @Autowired EntrySettlementCommandService settlements;
+    @Autowired EntryDeletionCommandService deletions;
+    @Autowired FinancialEntryCommandService entryCommands;
+    @Autowired EntryWriteTransactionGuard entryGuard;
     @Autowired BankStatementItemRepository statements;@Autowired BankAccountRepository banks;@Autowired BankAccountService bankService;
     @Autowired FinancialEntryRepository entries;@Autowired FinancialCategoryRepository categories;@Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;@Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialStatementBankReferences") BankAccountReferenceGuard guard;
@@ -266,6 +270,29 @@ class BankStatementPersistenceIntegrationTest {
         var route="/api/companies/"+owner.getId()+"/financial-reports/open-titles";
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE").param("asOf","2026-07-01").param("size","1"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].nominalAmount").value("1.00"));
+    }
+    @Test void closedLinkedStatementMustBlockUpdateReversalAndDeletionAtomically(){
+        LocalDate august=LocalDate.of(2026,8,1);
+        jdbc.update("UPDATE financial_entries SET competence='2026-08',payment_date=? WHERE id=?",august,entry.getId());
+        var linked=save(owner,bank,value("-1","Closed linked statement","CLOSED-LINK"));
+        jdbc.update("UPDATE financial_bank_statement_items SET status='RECONCILED',linked_entry_id=? WHERE id=?",entry.getId(),linked.getId());
+        jdbc.update("INSERT INTO financial_periods(id,company_id,period,closed,version,updated_by,updated_at) VALUES(?,?,'2026-07',true,0,?,now())",UUID.randomUUID(),owner.getId(),actor.getId());
+        var update=new FinancialEntryCommandData(FinancialDirection.EXPENSE,"Changed",BigDecimal.ONE,august,august,YearMonth.of(2026,8),august,august,bank.getId(),categoryIds.get(owner.getId()),null,null,null,"","","");
+        assertThatThrownBy(()->entryCommands.update(actor.getId(),owner.getId(),UUID.randomUUID(),entry.getId(),0L,update)).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
+        assertThatThrownBy(()->settlements.reverse(actor.getId(),owner.getId(),UUID.randomUUID(),entry.getId(),0L)).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
+        assertThatThrownBy(()->deletions.delete(actor.getId(),owner.getId(),UUID.randomUUID(),entry.getId(),0L)).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
+        var unchanged=entries.findById(entry.getId()).orElseThrow();assertThat(unchanged.getVersion()).isZero();assertThat(unchanged.getValues().paymentDate()).isEqualTo(august);assertThat(unchanged.getValues().description()).isEqualTo("Synthetic statement entry");
+        assertThat(statements.findById(linked.getId()).orElseThrow().getLinkedEntryId()).isEqualTo(entry.getId());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_entry_command_receipts WHERE company_id=?",Long.class,owner.getId())).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_entry_events WHERE company_id=?",Long.class,owner.getId())).isZero();
+    }
+    @Test void linkedPeriodLookupMustIgnoreOtherCompaniesAndUnlinkedEntries(){
+        var linked=save(other,foreignBank,value("-1","Foreign closed statement","FOREIGN-CLOSED"));
+        jdbc.update("UPDATE financial_bank_statement_items SET status='RECONCILED',linked_entry_id=? WHERE id=?",foreignEntry.getId(),linked.getId());
+        jdbc.update("INSERT INTO financial_periods(id,company_id,period,closed,version,updated_by,updated_at) VALUES(?,?,'2026-07',true,0,?,now())",UUID.randomUUID(),other.getId(),actor.getId());
+        var tx=new TransactionTemplate(transactions);
+        tx.executeWithoutResult(status->{companies.findLockedById(owner.getId());entryGuard.requireLinkedStatementPeriodsOpen(owner.getId(),List.of(entry.getId(),foreignEntry.getId()));});
+        assertThatThrownBy(()->tx.executeWithoutResult(status->{companies.findLockedById(other.getId());entryGuard.requireLinkedStatementPeriodsOpen(other.getId(),List.of(foreignEntry.getId()));})).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
     }
     void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}
