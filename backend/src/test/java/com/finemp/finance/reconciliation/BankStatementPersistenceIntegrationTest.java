@@ -24,14 +24,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true"})
+@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true"})
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class BankStatementPersistenceIntegrationTest {
     @Autowired BankStatementItemRepository statements;@Autowired BankAccountRepository banks;@Autowired BankAccountService bankService;
     @Autowired FinancialEntryRepository entries;@Autowired FinancialCategoryRepository categories;@Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;@Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialStatementBankReferences") BankAccountReferenceGuard guard;
-    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;
-    Company owner,other;BankAccount bank,second,foreignBank;FinancialEntry entry,foreignEntry;UserAccount actor;final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>();
+    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;@Autowired StatementCandidateReadService candidates;@Autowired org.springframework.test.web.servlet.MockMvc mvc;
+    Company owner,other;BankAccount bank,second,foreignBank;FinancialEntry entry,foreignEntry;UserAccount actor;final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>();final Map<UUID,UUID> categoryIds=new HashMap<>();
     @BeforeEach void prepare(){
         owner=company("Owner","70707070000170");other=company("Other","80808080000180");actor=users.saveAndFlush(new UserAccount("Synthetic Statement Actor",UUID.randomUUID()+"@example.invalid","hash"));
         grants.saveAndFlush(new CompanyAccessGrant(actor,owner,CompanyAccessRole.CUSTOM,CostCenterScope.ALL,Set.of(CompanyPermission.BANK_ACCOUNT_MANAGE,CompanyPermission.FINANCIAL_ENTRY_MANAGE)));
@@ -133,11 +134,38 @@ class BankStatementPersistenceIntegrationTest {
         jdbc.update("INSERT INTO financial_periods(id,company_id,period,closed,version,updated_by,updated_at) VALUES(?,?,'2026-07',true,0,?,now())",UUID.randomUUID(),owner.getId(),actor.getId());
         assertThat(imports.confirm(actor.getId(),owner.getId(),command,bank.getId(),items)).isEqualTo(result);assertThat(statements.count()).isEqualTo(2);
     }
+    @Test void candidatesAreScopedPaginatedAndExcludeAlreadyLinkedEntries()throws Exception{
+        jdbc.update("UPDATE financial_entries SET nominal_amount=9 WHERE id=?",entry.getId());
+        var statement=save(owner,bank,value("-1.00","Synthetic item","target"));var paid=entry(owner,bank);var linked=entry(owner,bank);var open=entry(owner,second);
+        jdbc.update("UPDATE financial_entries SET payment_date=DATE '2026-07-01' WHERE id IN (?,?)",paid.getId(),linked.getId());
+        var linkedStatement=save(owner,bank,value("-1.00","Already linked","linked"));jdbc.update("UPDATE financial_bank_statement_items SET status='RECONCILED',linked_entry_id=? WHERE id=?",linked.getId(),linkedStatement.getId());
+        var first=candidates.list(actor.getId(),owner.getId(),statement.getId(),null,0,1);var next=candidates.list(actor.getId(),owner.getId(),statement.getId(),null,1,1);
+        assertThat(first.totalItems()).isEqualTo(2);assertThat(first.items().getFirst().entryId()).isEqualTo(paid.getId());assertThat(next.items().getFirst().entryId()).isEqualTo(open.getId());
+        assertThat(candidates.list(actor.getId(),owner.getId(),statement.getId(),StatementCandidateReadService.Status.OPEN,0,20).totalItems()).isEqualTo(1);
+        assertThatThrownBy(()->candidates.list(actor.getId(),other.getId(),statement.getId(),null,0,20)).isInstanceOf(OrganizationAccessDeniedException.class);
+        var route="/api/companies/"+owner.getId()+"/statement-items/"+statement.getId()+"/candidates";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("size","1"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].nominalAmount").value("1.00"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route.replace(owner.getId().toString(),other.getId().toString())).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+    }
+    @Test void candidateDateAndMoneyBoundariesMatchTheVerifiedMatcher(){
+        jdbc.update("UPDATE financial_entries SET nominal_amount=9 WHERE id=?",entry.getId());var statement=save(owner,bank,value("-1.00","Synthetic boundaries","boundaries"));
+        var paidWithin=entry(owner,bank);var paidOutside=entry(owner,bank);var amountOutside=entry(owner,bank);var openWithin=entry(owner,second);var openOutside=entry(owner,second);
+        jdbc.update("UPDATE financial_entries SET payment_date=DATE '2026-07-04',actual_paid_amount=1.01 WHERE id=?",paidWithin.getId());
+        jdbc.update("UPDATE financial_entries SET payment_date=DATE '2026-07-05' WHERE id=?",paidOutside.getId());
+        jdbc.update("UPDATE financial_entries SET nominal_amount=1.02 WHERE id=?",amountOutside.getId());
+        jdbc.update("UPDATE financial_entries SET due_date=DATE '2026-07-16' WHERE id=?",openWithin.getId());
+        jdbc.update("UPDATE financial_entries SET due_date=DATE '2026-07-17' WHERE id=?",openOutside.getId());
+        var rows=candidates.list(actor.getId(),owner.getId(),statement.getId(),null,0,20).items();
+        assertThat(rows).extracting(StatementCandidateReadService.View::entryId).containsExactly(paidWithin.getId(),openWithin.getId());
+        assertThat(rows.getFirst().actualPaidAmount()).isEqualByComparingTo("1.01");assertThat(rows.getFirst().distanceDays()).isEqualTo(3);
+    }
     void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}
     BankStatementItem save(Company company,BankAccount bank,StatementValues values){return statements.saveAndFlush(new BankStatementItem(company,bank,values,actor.getId()));}
     StatementValues value(String amount,String memo,String fit){return new StatementValues(LocalDate.of(2026,7,1),new BigDecimal(amount),memo,fit,"");}
     BankAccount bank(Company company,String name){return banks.saveAndFlush(new BankAccount(company,"Synthetic Statement "+name,BankAccountType.CASH,BigDecimal.ZERO,LocalDate.of(2026,1,1),true));}
-    FinancialEntry entry(Company company,BankAccount bank){var date=LocalDate.of(2026,7,1);var group=categories.saveAndFlush(FinancialCategory.group(company,FinancialDirection.EXPENSE,1,"Synthetic Statement Group"));var sub=categories.saveAndFlush(FinancialCategory.subcategory(group,1,"Synthetic Statement Category"));return entries.saveAndFlush(new FinancialEntry(company,new FinancialEntryValues(FinancialDirection.EXPENSE,"Synthetic statement entry",BigDecimal.ONE,date,date,YearMonth.of(2026,7),date,null,null,bank.getId(),sub.getId(),null,null,null,"","",""),actor.getId()));}
+    FinancialEntry entry(Company company,BankAccount bank){var date=LocalDate.of(2026,7,1);var category=categoryIds.computeIfAbsent(company.getId(),id->{var group=categories.saveAndFlush(FinancialCategory.group(company,FinancialDirection.EXPENSE,1,"Synthetic Statement Group"));return categories.saveAndFlush(FinancialCategory.subcategory(group,1,"Synthetic Statement Category")).getId();});return entries.saveAndFlush(new FinancialEntry(company,new FinancialEntryValues(FinancialDirection.EXPENSE,"Synthetic statement entry",BigDecimal.ONE,date,date,YearMonth.of(2026,7),date,null,null,bank.getId(),category,null,null,null,"","",""),actor.getId()));}
     Company company(String name,String cnpj){var firm=firms.saveAndFlush(new AccountingFirm("Synthetic Statement Firm "+name,true));firmIds.add(firm.getId());var client=clients.saveAndFlush(new Client(firm,"Synthetic Statement Client "+name,true));clientIds.add(client.getId());return companies.saveAndFlush(new Company(client,"Synthetic Statement Company "+name,cnpj));}
 }
