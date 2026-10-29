@@ -97,6 +97,10 @@ public class SecurityConfiguration {
                                                 // Financial services enforce fresh company permissions and ownership.
                                                 // Keep this route explicit: unrelated company paths remain denied.
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/financial-reports/open-titles/aging")
+                                                .authenticated()
+
+                                                .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/statement-items/{statementId}/candidates")
                                                 .authenticated()
 

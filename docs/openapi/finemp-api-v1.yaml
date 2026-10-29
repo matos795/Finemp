@@ -1445,6 +1445,61 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: Versão divergente ou referência/conflito concorrente.
+  /api/companies/{companyId}/financial-reports/open-titles/aging:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: getOpenTitlesAging
+      summary: Resume títulos por faixa de vencimento na data-base informada.
+      description: >-
+        Condicional a FINEMP_FINANCE_AGING_ENABLED. Exige FINANCIAL_ENTRY_VIEW ou
+        FINANCIAL_ENTRY_MANAGE ALL. Considera títulos sem pagamento ou pagos após
+        a data-base, usando valor nominal e sem filtro de data de emissão. A opção
+        COMPETENCE inclui apenas competência até o mês da data-base. Vencimento na
+        data-base está na faixa a vencer até 30 dias. Consulta o estado atual com
+        data-base; não reconstrói alterações e estornos históricos. Não escolhe
+        período padrão e não calcula números no frontend.
+      parameters:
+        - name: direction
+          in: query
+          required: true
+          schema: {type: string, enum: [INCOME, EXPENSE]}
+        - name: asOf
+          in: query
+          required: true
+          schema: {type: string, format: date}
+        - name: scope
+          in: query
+          schema: {type: string, enum: [ALL, COMPETENCE], default: ALL}
+      responses:
+        '200':
+          description: Totais e oito faixas em snapshot consistente; valores em texto decimal exato.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [asOf, direction, scope, totalCount, totalAmount, bands]
+                properties:
+                  asOf: {type: string, format: date}
+                  direction: {type: string, enum: [INCOME, EXPENSE]}
+                  scope: {type: string, enum: [ALL, COMPETENCE]}
+                  totalCount: {type: integer, format: int64}
+                  totalAmount: {type: string}
+                  bands:
+                    type: array
+                    minItems: 8
+                    maxItems: 8
+                    items:
+                      type: object
+                      required: [band, count, amount]
+                      properties:
+                        band: {type: string, enum: [DUE_0_30, DUE_31_60, DUE_61_90, DUE_OVER_90, OVERDUE_1_30, OVERDUE_31_60, OVERDUE_61_90, OVERDUE_OVER_90]}
+                        count: {type: integer, format: int64}
+                        amount: {type: string}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/statement-items/{statementId}/candidates:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
