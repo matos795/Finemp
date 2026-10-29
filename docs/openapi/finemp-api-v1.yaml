@@ -1445,6 +1445,51 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: Versão divergente ou referência/conflito concorrente.
+  /api/companies/{companyId}/financial-reports/daily-cash-totals:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: getDailyCashTotals
+      summary: Resume valores realizados e em aberto por data.
+      description: >-
+        Condicional a FINEMP_FINANCE_DAILY_CASH_ENABLED; exige FINANCIAL_ENTRY_VIEW
+        ou FINANCIAL_ENTRY_MANAGE ALL. Baixados usam data e valor efetivo da baixa;
+        abertos usam vencimento e valor nominal. Retorna todos os dias do mês em
+        snapshot consistente, com valores decimais exatos em texto. Não inclui saldo,
+        transferências ou projeção; títulos atrasados não são deslocados para hoje.
+        Não escolhe período padrão nem reconstrói histórico de alterações.
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema: {type: string, pattern: '^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$'}
+      responses:
+        '200':
+          description: Totais diários sem cache.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [month, days]
+                properties:
+                  month: {type: string}
+                  days:
+                    type: array
+                    minItems: 28
+                    maxItems: 31
+                    items:
+                      type: object
+                      required: [date, realIncome, realExpense, openIncome, openExpense]
+                      properties:
+                        date: {type: string, format: date}
+                        realIncome: {type: string}
+                        realExpense: {type: string}
+                        openIncome: {type: string}
+                        openExpense: {type: string}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/financial-reports/monthly-cash-totals:
     parameters:
       - $ref: '#/components/parameters/CompanyId'

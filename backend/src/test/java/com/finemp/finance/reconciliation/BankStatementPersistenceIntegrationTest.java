@@ -24,14 +24,14 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.aging.enabled=true","finemp.finance.monthly-cash.enabled=true","finemp.finance.statement-actions.enabled=true","finemp.finance.entries.enabled=true","finemp.finance.entries.commands.enabled=true"})
+@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.aging.enabled=true","finemp.finance.monthly-cash.enabled=true","finemp.finance.daily-cash.enabled=true","finemp.finance.statement-actions.enabled=true","finemp.finance.entries.enabled=true","finemp.finance.entries.commands.enabled=true"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class BankStatementPersistenceIntegrationTest {
     @Autowired BankStatementItemRepository statements;@Autowired BankAccountRepository banks;@Autowired BankAccountService bankService;
     @Autowired FinancialEntryRepository entries;@Autowired FinancialCategoryRepository categories;@Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;@Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialStatementBankReferences") BankAccountReferenceGuard guard;
-    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;@Autowired StatementCandidateReadService candidates;@Autowired StatementIgnoreCommandService ignores;@Autowired com.finemp.finance.reporting.OpenTitlesAgingService aging;@Autowired com.finemp.finance.reporting.MonthlyCashTotalsService monthly;@Autowired org.springframework.test.web.servlet.MockMvc mvc;
+    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;@Autowired StatementCandidateReadService candidates;@Autowired StatementIgnoreCommandService ignores;@Autowired com.finemp.finance.reporting.OpenTitlesAgingService aging;@Autowired com.finemp.finance.reporting.MonthlyCashTotalsService monthly;@Autowired com.finemp.finance.reporting.DailyCashTotalsService daily;@Autowired org.springframework.test.web.servlet.MockMvc mvc;
     Company owner,other;BankAccount bank,second,foreignBank;FinancialEntry entry,foreignEntry;UserAccount actor;final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>();final Map<UUID,UUID> categoryIds=new HashMap<>();
     @BeforeEach void prepare(){
         owner=company("Owner","70707070000170");other=company("Other","80808080000180");actor=users.saveAndFlush(new UserAccount("Synthetic Statement Actor",UUID.randomUUID()+"@example.invalid","hash"));
@@ -228,6 +228,17 @@ class BankStatementPersistenceIntegrationTest {
     @Test void monthlyCashTotalsKeepExactSumsBeyondIndividualMoneyPrecision(){
         var otherEntry=entry(owner,bank);jdbc.update("UPDATE financial_entries SET nominal_amount=99999999999999999.99 WHERE id IN (?,?)",entry.getId(),otherEntry.getId());
         var july=monthly.report(actor.getId(),owner.getId(),2026).months().get(6);assertThat(july.openExpense()).isEqualByComparingTo("199999999999999999.98");
+    }
+    @Test void dailyCashTotalsUseRealPaymentAndOpenDueDatesIncludingLeapDay()throws Exception{
+        var paid=entry(owner,bank);var open=entry(owner,bank);jdbc.update("UPDATE financial_entries SET payment_date=DATE '2024-02-01',actual_paid_amount=1.23 WHERE id=?",paid.getId());jdbc.update("UPDATE financial_entries SET due_date=DATE '2024-02-29' WHERE id=?",open.getId());
+        var result=daily.report(actor.getId(),owner.getId(),"2024-02");assertThat(result.days()).hasSize(29);assertThat(result.days().getFirst().realExpense()).isEqualByComparingTo("1.23");assertThat(result.days().getLast().openExpense()).isEqualByComparingTo("1.00");
+        assertThat(daily.report(actor.getId(),owner.getId(),"9999-12").days()).hasSize(31);
+        assertThatThrownBy(()->daily.report(actor.getId(),other.getId(),"2024-02")).isInstanceOf(OrganizationAccessDeniedException.class);
+        var route="/api/companies/"+owner.getId()+"/financial-reports/daily-cash-totals";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("month","2024-02"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.days[0].realExpense").value("1.23"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("month","2024-13"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
     }
     void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}
