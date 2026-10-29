@@ -121,7 +121,15 @@ public class CsvStatementPreviewParser {
             int direction=-1;for(int i=0;i<names.size();i++)if(Set.of("d/c","c/d","tipo").contains(names.get(i))){direction=i;break;}
             return new Header(date,amount,credit,debit,find(names,"historico","descricao","lancamento","memo","detalhe"),find(names,"documento","doc","n doc","numero"),direction,fields.size());
         }
-        private static int find(List<String> names,String...aliases){for(int i=0;i<names.size();i++)for(var alias:aliases)if(names.get(i).equals(alias) || names.get(i).startsWith(alias))return i;return -1;}
+        private static int find(List<String> names,String...aliases){
+            int exact=-1,other=-1;
+            for(int i=0;i<names.size();i++)for(var alias:aliases){
+                String name=names.get(i);
+                if(name.equals(alias)){if(exact>=0 && exact!=i)throw invalid();exact=i;break;}
+                if(name.startsWith(alias+" ")){if(other>=0 && other!=i)throw invalid();other=i;break;}
+            }
+            return exact>=0?exact:other;
+        }
         private static int findDirected(List<String> names,String...aliases){
             int exact=-1,other=-1;
             for(int i=0;i<names.size();i++){

@@ -80,4 +80,9 @@ class CsvStatementPreviewParserTest {
         assertThat(parser.parse(exact.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("10.00"));
         assertThatThrownBy(()->parser.parse("Data;Crédito previsto;Crédito futuro;Débito\n2026-07-01;1;2;0\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void dateHeaderPrefersExactAndRejectsMultipleAmbiguousDates() {
+        var csv="Data agendamento;Data;Valor;Histórico\n2026-08-01;2026-07-01;-20,00;Compra\n";
+        assertThat(parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().postedDate()).isEqualTo(LocalDate.of(2026,7,1));
+        assertThatThrownBy(()->parser.parse("Data agendamento;Data pagamento;Valor\n2026-08-01;2026-07-01;1\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
+    }
 }
