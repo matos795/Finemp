@@ -15,3 +15,7 @@ Detecção automática de separador, planilhas XLSX, metadados de conta/moeda, c
 ## Validação
 
 Sete testes sintéticos cobrem aspas/multilinhas, BOM/Windows-1252, data e sinais, crédito/débito, duplicidades, saldo, números ambíguos/subcentavos, fórmulas em valor e colunas desalinhadas. As regressões OFX e de identidade foram executadas em conjunto.
+# Validação de valores
+
+A prévia valida a expressão monetária inteira e a posição dos separadores antes de converter o valor. Expressões, notação exponencial e agrupamentos inconsistentes são rejeitados, sem remover caracteres e transformá-los silenciosamente em outro valor. A ambiguidade de um único ponto com três casas continua explícita e sem arredondamento.
+

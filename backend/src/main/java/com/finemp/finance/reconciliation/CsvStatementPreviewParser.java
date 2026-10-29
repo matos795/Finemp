@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 /** Bounded CSV preview with explicit separator; never evaluates formulas or persists data. */
 public class CsvStatementPreviewParser {
     private static final int MAX_ROWS=50040,MAX_FIELDS=200,MAX_FIELD=4000;
-    private static final Pattern WORD_D=Pattern.compile("\\bD\\b",Pattern.CASE_INSENSITIVE),WORD_C=Pattern.compile("\\bC\\b",Pattern.CASE_INSENSITIVE);
+    private static final Pattern MONEY=Pattern.compile("^\\s*([DCdc])?\\s*(\\()?\\s*(R\\$)?\\s*([+-])?\\s*(R\\$)?\\s*([0-9][0-9.,]*)\\s*(\\))?\\s*([DCdc])?\\s*$",Pattern.UNICODE_CHARACTER_CLASS);
     public Preview parse(byte[] bytes,char separator) {
         if(separator!=',' && separator!=';' && separator!='\t' && separator!='|')throw invalid();
         var collector=new Collector();tokenize(StatementTextDecoder.decodeCsv(bytes),separator,collector::accept);
@@ -37,34 +37,38 @@ public class CsvStatementPreviewParser {
         try {
             LocalDate date=date(rawDate);BigDecimal value;
             if(h.amount()>=0) {
-                String raw=cell(fields,h.amount());boolean negative=(raw.contains("-") || raw.contains("(") || WORD_D.matcher(raw).find()) && !WORD_C.matcher(raw).find();if(raw.contains("-"))negative=true;
-                String leading=raw.stripLeading();
-                if(leading.startsWith("=") || leading.startsWith("@") || leading.matches("^[+-]\\s*[A-Za-z_][A-Za-z0-9_.]*\\s*\\(.*")
-                        || raw.contains("+") && !leading.matches("^\\+\\s*(?:R\\$\\s*)?[0-9.,]+(?:\\s*[DCdc])?\\s*$"))throw new Problem(Error.BAD_AMOUNT);
-                String cleaned=raw.replaceAll("[^0-9,.-]","");value=numeric(cleaned,false).abs();
-                if(negative || cell(fields,h.direction()).stripLeading().toLowerCase(Locale.ROOT).startsWith("d"))value=value.negate();
+                value=money(cell(fields,h.amount()),false);
+                if(cell(fields,h.direction()).stripLeading().toLowerCase(Locale.ROOT).startsWith("d"))value=value.abs().negate();
             }else {
-                BigDecimal credit=numeric(cleanNumber(cell(fields,h.credit())),true).abs(),debit=numeric(cleanNumber(cell(fields,h.debit())),true).abs();value=exact(credit.subtract(debit),false);
+                BigDecimal credit=money(cell(fields,h.credit()),true).abs(),debit=money(cell(fields,h.debit()),true).abs();value=exact(credit.subtract(debit),false);
             }
             if(value.signum()==0)throw new Problem(Error.ZERO_AMOUNT);
             StatementValues values;try{values=new StatementValues(date,value,memo,"",cell(fields,h.document()));}catch(IllegalArgumentException invalid){throw new Problem(Error.INVALID_TEXT);}
             return new Row(number,safe(rawDate,64),safe(rawAmount,64),safe(memo,4000),values,null,List.of(Warning.FALLBACK_IDENTITY));
         }catch(Problem problem){return new Row(number,safe(rawDate,64),safe(rawAmount,64),safe(memo,4000),null,problem.error,List.of());}
     }
-    private static BigDecimal numeric(String input,boolean emptyAsZero) {
-        if(input.isEmpty()){if(emptyAsZero)return BigDecimal.ZERO.setScale(2);throw new Problem(Error.BAD_AMOUNT);}if(input.length()>64)throw new Problem(Error.BAD_AMOUNT);
+    private static BigDecimal money(String raw,boolean emptyAsZero) {
+        if(raw.isBlank()){if(emptyAsZero)return BigDecimal.ZERO.setScale(2);throw new Problem(Error.BAD_AMOUNT);}
+        if(raw.length()>128)throw new Problem(Error.BAD_AMOUNT);
+        var match=MONEY.matcher(raw);if(!match.matches() || (match.group(2)==null)!=(match.group(7)==null) || match.group(3)!=null && match.group(5)!=null)throw new Problem(Error.BAD_AMOUNT);
+        String input=match.group(6);
         String normalized=input;
-        if(input.contains(","))normalized=input.replace(".","").replaceFirst(",",".");
-        else if(input.matches("-?[0-9]{1,3}\\.[0-9]{3}"))throw new Problem(Error.AMBIGUOUS_AMOUNT);
-        else if(input.matches("-?[0-9]{1,3}(\\.[0-9]{3}){2,}"))normalized=input.replace(".","");
-        try{return exact(new BigDecimal(normalized),true);}catch(NumberFormatException invalid){throw new Problem(Error.BAD_AMOUNT);}
+        if(input.contains(",")) {
+            if(!input.matches("[0-9]+,[0-9]+") && !input.matches("[0-9]{1,3}(\\.[0-9]{3})+,[0-9]+"))throw new Problem(Error.BAD_AMOUNT);
+            normalized=input.replace(".","").replace(',','.');
+        } else if(input.matches("[0-9]{1,3}\\.[0-9]{3}"))throw new Problem(Error.AMBIGUOUS_AMOUNT);
+        else if(input.matches("[0-9]{1,3}(\\.[0-9]{3}){2,}"))normalized=input.replace(".","");
+        else if(!input.matches("[0-9]+(?:\\.[0-9]+)?"))throw new Problem(Error.BAD_AMOUNT);
+        boolean debit="D".equalsIgnoreCase(match.group(1)) || "D".equalsIgnoreCase(match.group(8));
+        boolean credit="C".equalsIgnoreCase(match.group(1)) || "C".equalsIgnoreCase(match.group(8));
+        boolean negative="-".equals(match.group(4)) || (match.group(2)!=null || debit) && !credit;
+        try{BigDecimal result=exact(new BigDecimal(normalized),true);return negative?result.negate():result;}catch(NumberFormatException invalid){throw new Problem(Error.BAD_AMOUNT);}
     }
     private static BigDecimal exact(BigDecimal number,boolean zeroAllowed) {
         if(!zeroAllowed && number.signum()==0)throw new Problem(Error.ZERO_AMOUNT);
         try{var compact=number.signum()==0?BigDecimal.ZERO:number.stripTrailingZeros();if(compact.scale()>2)throw new Problem(Error.SUBCENT_AMOUNT);if((long)compact.precision()-compact.scale()>17)throw new Problem(Error.OUT_OF_RANGE);return compact.setScale(2,RoundingMode.UNNECESSARY);}
         catch(ArithmeticException invalid){throw new Problem(Error.BAD_AMOUNT);}
     }
-    private static String cleanNumber(String value){return value.replaceFirst("R\\$\\s?","").replaceAll("\\s","");}
     private static LocalDate date(String raw) {
         String value=raw.trim();try {
             if(value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}.*")){int year=Integer.parseInt(value.substring(0,4));if(year<1)throw new Problem(Error.BAD_DATE);return LocalDate.of(year,Integer.parseInt(value.substring(5,7)),Integer.parseInt(value.substring(8,10)));}

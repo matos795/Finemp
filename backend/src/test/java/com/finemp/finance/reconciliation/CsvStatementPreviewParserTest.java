@@ -41,4 +41,12 @@ class CsvStatementPreviewParserTest {
     @Test void utf8BomAndQuotedHeaderMustBeAccepted() {
         var csv="\uFEFF\"Data\";Valor\n2026-07-01;1,00\n";assertThat(parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("1.00"));
     }
+    @Test void arithmeticExpressionsExponentNotationAndMisplacedSeparatorsMustNeverBecomeMoney() {
+        var csv="Data;Valor;Histórico\n2026-07-01;-1/2;A\n2026-07-01;-2*3;B\n2026-07-01;1e3;C\n2026-07-01;1,230.00;D\n2026-07-01;12,340.00;E\n";
+        var rows=parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows();assertThat(rows).hasSize(5);assertThat(rows).allSatisfy(row->{assertThat(row.error()).isEqualTo(CsvStatementPreviewParser.Error.BAD_AMOUNT);assertThat(row.values()).isNull();});
+    }
+    @Test void validCurrencySignsAndGroupingRemainSupported() {
+        var csv="Data;Valor;Histórico\n2026-07-01;-R$ 1.234,56;A\n2026-07-01;D R$ 2,00;B\n";
+        var rows=parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows();assertThat(rows.getFirst().values().signedAmount()).isEqualTo(new BigDecimal("-1234.56"));assertThat(rows.get(1).values().signedAmount()).isEqualTo(new BigDecimal("-2.00"));
+    }
 }
