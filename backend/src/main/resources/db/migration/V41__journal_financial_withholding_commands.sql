@@ -1,0 +1,16 @@
+CREATE TABLE financial_withholding_command_receipts (
+    company_id UUID NOT NULL REFERENCES companies(id),
+    actor_id UUID NOT NULL REFERENCES user_accounts(id),
+    command_id UUID NOT NULL,
+    fingerprint VARCHAR(64) NOT NULL CHECK(fingerprint ~ '^[0-9a-f]{64}$'),
+    result_state TEXT NOT NULL CHECK(jsonb_typeof(result_state::jsonb)='object'),
+    committed_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY(company_id,actor_id,command_id)
+);
+ALTER TABLE access_audit_events ADD CONSTRAINT ck_financial_withholding_audit_context CHECK(
+    action NOT IN ('FINANCIAL_WITHHOLDING_CREATED','FINANCIAL_WITHHOLDING_UPDATED','FINANCIAL_WITHHOLDING_DELETED') OR
+    (resource_type='FINANCIAL_WITHHOLDING' AND resource_id IS NOT NULL AND command_id IS NOT NULL
+     AND company_id IS NOT NULL AND actor_user_account_id IS NOT NULL
+     AND ((action='FINANCIAL_WITHHOLDING_CREATED' AND before_state IS NULL AND after_state IS NOT NULL)
+       OR (action='FINANCIAL_WITHHOLDING_UPDATED' AND before_state IS NOT NULL AND after_state IS NOT NULL)
+       OR (action='FINANCIAL_WITHHOLDING_DELETED' AND before_state IS NOT NULL AND after_state IS NULL))) IS TRUE);
