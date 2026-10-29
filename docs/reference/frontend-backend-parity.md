@@ -68,8 +68,11 @@
   comandos internos idempotentes e ampliação da auditoria oficial; oito contratos PG.
 - **FATO CONFIRMADO:** #169/PR170 integrada: guard dos períodos efetivos de
   todas as mutações, sete contratos PG/HTTP e CI818/0 falhas/2 skips.
-- **EM IMPLEMENTAÇÃO:** #171 acrescenta API de fechamento/reabertura/diário;
-  #158 continua aberta até sua conclusão.
+- **FATO CONFIRMADO:** #171/PR172 integrada: API de fechamento/reabertura e
+  consultas/histórico oficial; seis contratos PG/HTTP e CI827/0 falhas/2 skips.
+  #158 concluída, com opt-ins e comandos desabilitados por padrão.
+- **EM IMPLEMENTAÇÃO:** #159, fundação de retenções informadas na #173,
+  sem motor tributário ou alteração de líquido/bruto.
   #39 continua aberta pela política monetária isolada na #128.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
