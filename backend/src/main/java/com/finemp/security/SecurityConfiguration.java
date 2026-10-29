@@ -98,7 +98,8 @@ public class SecurityConfiguration {
                                                 // Keep this route explicit: unrelated company paths remain denied.
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/financial-reports/open-titles/aging",
-                                                                "/api/companies/{companyId}/financial-reports/monthly-cash-totals")
+                                                                "/api/companies/{companyId}/financial-reports/monthly-cash-totals",
+                                                                "/api/companies/{companyId}/financial-reports/daily-cash-totals")
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.GET,
