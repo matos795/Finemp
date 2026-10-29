@@ -85,4 +85,11 @@ class CsvStatementPreviewParserTest {
         assertThat(parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().postedDate()).isEqualTo(LocalDate.of(2026,7,1));
         assertThatThrownBy(()->parser.parse("Data agendamento;Data pagamento;Valor\n2026-08-01;2026-07-01;1\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void exactHeadersWinOverMultiplePrefixesAndDuplicateDirectionsFail() {
+        var csv="Data agendamento;Data pagamento;Data;Valor previsto;Valor futuro;Valor;Histórico\n2026-08-01;2026-08-02;2026-07-01;100;200;3;Compra\n";
+        var row=parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows().getFirst();assertThat(row.values().postedDate()).isEqualTo(LocalDate.of(2026,7,1));assertThat(row.values().signedAmount()).isEqualTo(new BigDecimal("3.00"));
+        var directed="Data;Crédito previsto;Crédito futuro;Crédito;Débito\n2026-07-01;100;200;3;0\n";
+        assertThat(parser.parse(directed.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("3.00"));
+        assertThatThrownBy(()->parser.parse("Data;Valor;D/C;C/D\n2026-07-01;10;C;D\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
+    }
 }

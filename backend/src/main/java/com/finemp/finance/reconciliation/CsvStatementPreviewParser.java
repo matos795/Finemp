@@ -118,7 +118,7 @@ public class CsvStatementPreviewParser {
             var names=fields.stream().map(StatementValues::normalize).toList();int date=find(names,"data"),amount=findAmount(names),credit=findDirected(names,"credito","entrada","valor credito","valor entrada"),debit=findDirected(names,"debito","saida","valor debito","valor saida");
             if(amount>=0 && (credit>=0 || debit>=0))throw invalid();
             if(date<0 || amount<0 && credit<0 && debit<0)return null;
-            int direction=-1;for(int i=0;i<names.size();i++)if(Set.of("d/c","c/d","tipo").contains(names.get(i))){direction=i;break;}
+            int direction=-1;for(int i=0;i<names.size();i++)if(Set.of("d/c","c/d","tipo").contains(names.get(i))){if(direction>=0)throw invalid();direction=i;}
             return new Header(date,amount,credit,debit,find(names,"historico","descricao","lancamento","memo","detalhe"),find(names,"documento","doc","n doc","numero"),direction,fields.size());
         }
         private static int find(List<String> names,String...aliases){
@@ -126,9 +126,9 @@ public class CsvStatementPreviewParser {
             for(int i=0;i<names.size();i++)for(var alias:aliases){
                 String name=names.get(i);
                 if(name.equals(alias)){if(exact>=0 && exact!=i)throw invalid();exact=i;break;}
-                if(name.startsWith(alias+" ")){if(other>=0 && other!=i)throw invalid();other=i;break;}
+                if(name.startsWith(alias+" ")){if(other==-1)other=i;else if(other!=i)other=-2;break;}
             }
-            return exact>=0?exact:other;
+            if(exact<0 && other==-2)throw invalid();return exact>=0?exact:other;
         }
         private static int findDirected(List<String> names,String...aliases){
             int exact=-1,other=-1;
@@ -136,19 +136,19 @@ public class CsvStatementPreviewParser {
                 String name=names.get(i);if(name.contains("saldo"))continue;
                 for(String alias:aliases){
                     if(name.equals(alias)){if(exact>=0 && exact!=i)throw invalid();exact=i;break;}
-                    if(name.startsWith(alias+" ")){if(other>=0 && other!=i)throw invalid();other=i;break;}
+                    if(name.startsWith(alias+" ")){if(other==-1)other=i;else if(other!=i)other=-2;break;}
                 }
             }
-            return exact>=0?exact:other;
+            if(exact<0 && other==-2)throw invalid();return exact>=0?exact:other;
         }
         private static int findAmount(List<String> names){
             int exact=-1,other=-1;
             for(int i=0;i<names.size();i++){
                 String name=names.get(i);if(name.contains("saldo") || name.contains("credito") || name.contains("debito") || name.contains("entrada") || name.contains("saida"))continue;
                 if(Set.of("valor","montante","quantia").contains(name)){if(exact>=0)throw invalid();exact=i;}
-                else if(name.startsWith("valor ") || name.startsWith("montante ") || name.startsWith("quantia ")){if(other>=0)throw invalid();other=i;}
+                else if(name.startsWith("valor ") || name.startsWith("montante ") || name.startsWith("quantia ")){if(other==-1)other=i;else other=-2;}
             }
-            return exact>=0?exact:other;
+            if(exact<0 && other==-2)throw invalid();return exact>=0?exact:other;
         }
     }
     public enum Error { BAD_DATE,BAD_AMOUNT,BAD_COLUMN_COUNT,SUBCENT_AMOUNT,AMBIGUOUS_AMOUNT,OUT_OF_RANGE,ZERO_AMOUNT,INVALID_TEXT }
