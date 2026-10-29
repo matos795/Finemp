@@ -54,8 +54,9 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(statements.existsByCompanyIdAndBankAccountIdAndIdentityKey(owner.getId(),bank.getId(),initial.getIdentityKey())).isTrue();
         assertThatThrownBy(()->save(owner,bank,value("2","Different","FIT-1"))).isInstanceOf(DataIntegrityViolationException.class);
         save(owner,second,value("2","Different","FIT-1"));save(other,foreignBank,value("2","Different","FIT-1"));
-        save(owner,bank,value("-1.20","TÁXÍ", ""));assertThatThrownBy(()->save(owner,bank,value("-1.2"," taxi ", ""))).isInstanceOf(DataIntegrityViolationException.class);
-        assertThat(statements.count()).isEqualTo(4);
+        var firstFallback=save(owner,bank,value("-1.20","TÁXÍ", ""));var secondFallback=save(owner,bank,value("-1.2"," taxi ", ""));
+        assertThat(firstFallback.getIdentityKey()).isEqualTo(secondFallback.getIdentityKey());assertThat(firstFallback.getId()).isNotEqualTo(secondFallback.getId());
+        assertThat(statements.count()).isEqualTo(5);
     }
     @Test void physicalReferencesAndUniqueLinkMustRejectCrossCompanyAndDuplicateReconciliation(){
         var first=save(owner,bank,value("1","First","F1"));var secondRow=save(owner,bank,value("2","Second","F2"));
@@ -79,6 +80,10 @@ class BankStatementPersistenceIntegrationTest {
     @Test void concurrentIdenticalIdentityMustPersistExactlyOneItem()throws Exception{
         var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
         try{Callable<Boolean> task=()->{if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Barrier");try{save(owner,bank,value("1","First","F1"));return true;}catch(DataIntegrityViolationException expected){return false;}};var a=pool.submit(task);var b=pool.submit(task);start.countDown();assertThat(List.of(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);assertThat(statements.count()).isEqualTo(1);}finally{start.countDown();pool.shutdownNow();}
+    }
+    @Test void concurrentSimilarMovementsWithoutFitidMustBothRemainAvailable()throws Exception{
+        var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
+        try{Callable<UUID> task=()->{if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Barrier");return save(owner,bank,value("1","Synthetic recurring debit","")).getId();};var a=pool.submit(task);var b=pool.submit(task);start.countDown();assertThat(List.of(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS))).doesNotHaveDuplicates();assertThat(statements.count()).isEqualTo(2);}finally{start.countDown();pool.shutdownNow();}
     }
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}
     BankStatementItem save(Company company,BankAccount bank,StatementValues values){return statements.saveAndFlush(new BankStatementItem(company,bank,values,actor.getId()));}
