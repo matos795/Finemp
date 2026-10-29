@@ -176,6 +176,11 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(result.overdueCount()).isEqualTo(4);assertThat(result.overdueAmount()).isEqualByComparingTo("4.04");assertThat(result.dueWithin30Count()).isEqualTo(2);assertThat(result.dueWithin30Amount()).isEqualByComparingTo("2.01");
         var empty=aging.report(actor.getId(),owner.getId(),FinancialDirection.INCOME,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL);assertThat(empty.overdueCount()).isZero();assertThat(empty.overdueAmount()).isEqualByComparingTo("0.00");assertThat(empty.dueWithin30Amount()).isEqualByComparingTo("0.00");
         assertThat(result.bands()).allSatisfy(band->assertThat(band.count()).isGreaterThanOrEqualTo(1));
+        for(var band:result.bands()){
+            var detail=openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL,band.band(),0,100);
+            assertThat(detail.totalItems()).isEqualTo(band.count());assertThat(detail.items()).allSatisfy(row->assertThat(row.band()).isEqualTo(band.band()));
+            assertThat(detail.items().stream().map(com.finemp.finance.reporting.OpenTitlesReadService.View::nominalAmount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(band.amount());
+        }
         var restricted=aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.COMPETENCE);
         assertThat(restricted.totalCount()).isEqualTo(8);assertThat(restricted.totalAmount()).isEqualByComparingTo("8.07");
         assertThatThrownBy(()->aging.report(actor.getId(),other.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL)).isInstanceOf(OrganizationAccessDeniedException.class);
@@ -270,6 +275,10 @@ class BankStatementPersistenceIntegrationTest {
         var route="/api/companies/"+owner.getId()+"/financial-reports/open-titles";
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE").param("asOf","2026-07-01").param("size","1"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].nominalAmount").value("1.00"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE").param("asOf","2026-07-01").param("band","DUE_31_60").param("size","1"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalItems").value(1)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].id").value(future.getId().toString()));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE").param("asOf","2026-07-01").param("band","UNKNOWN"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
     }
     @Test void closedLinkedStatementMustBlockUpdateReversalAndDeletionAtomically(){
         LocalDate august=LocalDate.of(2026,8,1);

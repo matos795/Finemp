@@ -20,10 +20,14 @@ public class OpenTitlesReadService {
     private final CompanyPermissionAuthorizationService permissions;private final NamedParameterJdbcTemplate jdbc;
     public OpenTitlesReadService(CompanyPermissionAuthorizationService permissions,NamedParameterJdbcTemplate jdbc){this.permissions=permissions;this.jdbc=jdbc;}
     public PagedResponse<View> list(UUID actor,UUID company,FinancialDirection direction,LocalDate asOf,OpenTitlesAgingService.Scope scope,int page,int size){
+        return list(actor,company,direction,asOf,scope,null,page,size);
+    }
+    public PagedResponse<View> list(UUID actor,UUID company,FinancialDirection direction,LocalDate asOf,OpenTitlesAgingService.Scope scope,OpenTitlesAgingService.Band band,int page,int size){
         if(actor==null || company==null || !permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_VIEW) && !permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE))throw new OrganizationAccessDeniedException();
         if(direction==null || asOf==null || asOf.getYear()<1 || asOf.getYear()>9999 || scope==null || page<0 || size<1 || size>100)throw new IllegalArgumentException("Consulta de títulos inválida.");
         var args=new MapSqlParameterSource().addValue("company",company).addValue("direction",direction.name()).addValue("asOf",asOf).addValue("competence",YearMonth.from(asOf).toString());
         String where=" FROM financial_entries WHERE company_id=:company AND direction=:direction AND (payment_date IS NULL OR payment_date>CAST(:asOf AS date))"+(scope==OpenTitlesAgingService.Scope.COMPETENCE?" AND competence<=:competence":"");
+        if(band!=null){where+=" AND (CAST(:asOf AS date)-due_date) BETWEEN :minDays AND :maxDays";args.addValue("minDays",band.minDays()).addValue("maxDays",band.maxDays());}
         long total=Objects.requireNonNull(jdbc.queryForObject("SELECT count(*)"+where,args,Long.class));args.addValue("limit",size).addValue("offset",(long)page*size);
         var rows=jdbc.query("SELECT *,CAST(:asOf AS date)-due_date AS days_late"+where+" ORDER BY due_date ASC,id ASC LIMIT :limit OFFSET :offset",args,(rs,n)->view(rs));
         return new PagedResponse<>(rows,page,size,total,(int)Math.min(Integer.MAX_VALUE,(total+size-1)/size));
