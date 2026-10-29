@@ -45,7 +45,12 @@ public class OpenTitlesAgingService {
     }
     public enum Scope { ALL,COMPETENCE }
     public enum Band {
-        DUE_0_30,DUE_31_60,DUE_61_90,DUE_OVER_90,OVERDUE_1_30,OVERDUE_31_60,OVERDUE_61_90,OVERDUE_OVER_90;
+        DUE_0_30(-30,0),DUE_31_60(-60,-31),DUE_61_90(-90,-61),DUE_OVER_90(Integer.MIN_VALUE,-91),
+        OVERDUE_1_30(1,30),OVERDUE_31_60(31,60),OVERDUE_61_90(61,90),OVERDUE_OVER_90(91,Integer.MAX_VALUE);
+        private final int minDays,maxDays;
+        Band(int minDays,int maxDays){this.minDays=minDays;this.maxDays=maxDays;}
+        public int minDays(){return minDays;}
+        public int maxDays(){return maxDays;}
         public static Band forDays(int days){if(days<=0)return days>=-30?DUE_0_30:days>=-60?DUE_31_60:days>=-90?DUE_61_90:DUE_OVER_90;return days<=30?OVERDUE_1_30:days<=60?OVERDUE_31_60:days<=90?OVERDUE_61_90:OVERDUE_OVER_90;}
     }
     public record BandTotal(Band band,long count,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal amount){}
