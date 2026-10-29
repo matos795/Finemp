@@ -26,6 +26,16 @@ V41 guarda somente recibos operacionais. Os eventos CREATED/UPDATED/DELETED ampl
 
 Nove contratos PostgreSQL cobrem transições exatas sem efeito no pai, versões atuais, Company/permissões/revogação, fechamento/replay, remoção do recurso, identidade do comando, rollback de cada ação no recibo e concorrência. A API seguirá o mesmo contrato, com JSON estrito, sessão/CSRF e limites compartilhados.
 
+## API — #177
+
+/api/companies/{companyId}/financial-entries/{entryId}/withholdings oferece POST de criação, GET paginado com treatment e GET/PUT no recurso. POST /{id}/deletions recebe entryVersion/expectedVersion; não depende de corpo de DELETE. POST/PUT recebem JSON estrito, entryVersion e values; PUT também exige expectedVersion. Amount é texto decimal exato. A criação retorna201/Location; demais comandos retornam200 com recibo. Não há mudança de vínculo ao pai.
+
+Leitura exige FINANCIAL_ENTRY_VIEW ou MANAGE ALL. Escrita reutiliza exatamente o gate da família financeira, FINANCIAL_ENTRY_MANAGE ALL, sessão/CSRF e Idempotency-Key UUID, inclusive rotas codificadas. Disponibilidade exige FINEMP_FINANCE_WITHHOLDINGS_ENABLED; mutações também exigem FINEMP_FINANCE_ENTRIES_ENABLED e FINEMP_FINANCE_ENTRY_COMMANDS_ENABLED. Não há outro orçamento/marker que possa contornar os limites ou a autorização existentes.
+
+GET /{id}/history pagina o diário oficial pelo recurso, Company e entryId do snapshot. Não depende da existência atual do pai/filho; mantém visibilidade autorizada do histórico após exclusão. Não mistura eventos de outro recurso nem de outra Empresa. Consultas têm timeout5s e paginação1–100 no servidor.409 distingue versões obsoletas, conteúdo de chave divergente e competência fechada; as mensagens não contêm SQL ou payload privado.
+
+Dois testes locais do parser e cinco contratos PostgreSQL/HTTP verificam representação/alteração/consulta, histórico e replay após remoção do pai, autorização antes do corpo na rota normalizada, tenant, competência e precondições estritas. As regras transacionais e de concorrência já são verificadas na #175.
+
 ## Validação da persistência
 
 Três testes locais cobrem dinheiro exato/limites, tratamento declarado e entradas textuais inválidas. Seis contratos PostgreSQL verificam persistência exata sem efeito no lançamento, FK de outra Company, consultas paginadas isoladas, versão concorrente, proteção da exclusão e checks monetários/tipo/código. Dados exclusivamente sintéticos; compilação local não substitui execução PostgreSQL na CI.
