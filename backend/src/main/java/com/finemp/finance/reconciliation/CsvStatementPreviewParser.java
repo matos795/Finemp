@@ -119,6 +119,7 @@ public class CsvStatementPreviewParser {
             if(amount>=0 && (credit>=0 || debit>=0))throw invalid();
             if(date<0 || amount<0 && credit<0 && debit<0)return null;
             int direction=-1;for(int i=0;i<names.size();i++)if(Set.of("d/c","c/d","tipo").contains(names.get(i))){if(direction>=0)throw invalid();direction=i;}
+            if(amount<0 && direction>=0)throw invalid();
             return new Header(date,amount,credit,debit,find(names,"historico","descricao","lancamento","memo","detalhe"),find(names,"documento","doc","n doc","numero"),direction,fields.size());
         }
         private static int find(List<String> names,String...aliases){

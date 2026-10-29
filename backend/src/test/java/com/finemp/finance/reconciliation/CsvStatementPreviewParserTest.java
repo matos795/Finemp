@@ -92,4 +92,8 @@ class CsvStatementPreviewParserTest {
         assertThat(parser.parse(directed.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("3.00"));
         assertThatThrownBy(()->parser.parse("Data;Valor;D/C;C/D\n2026-07-01;10;C;D\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void separateCreditDebitColumnsCannotIgnoreAdditionalDirection() {
+        var csv="Data;Crédito;Débito;D/C\n2026-07-01;10;0;D\n2026-07-01;0;10;C\n";
+        assertThatThrownBy(()->parser.parse(csv.getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
+    }
 }
