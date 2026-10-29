@@ -39,5 +39,16 @@ public class MonthlyCashTotalsService {
     private static BigDecimal money(BigDecimal value){return value.setScale(2,RoundingMode.UNNECESSARY);}
     public record Month(int month,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal realIncome,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal realExpense,
             @JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openIncome,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openExpense){}
-    public record Report(int year,List<Month> months){public Report{months=List.copyOf(months);}}
+    public record Report(int year,List<Month> months){
+        public Report{months=List.copyOf(months);}
+        @com.fasterxml.jackson.annotation.JsonProperty @JsonFormat(shape=JsonFormat.Shape.STRING)
+        public BigDecimal totalRealIncome(){return sum(Month::realIncome);}
+        @com.fasterxml.jackson.annotation.JsonProperty @JsonFormat(shape=JsonFormat.Shape.STRING)
+        public BigDecimal totalRealExpense(){return sum(Month::realExpense);}
+        @com.fasterxml.jackson.annotation.JsonProperty @JsonFormat(shape=JsonFormat.Shape.STRING)
+        public BigDecimal totalOpenIncome(){return sum(Month::openIncome);}
+        @com.fasterxml.jackson.annotation.JsonProperty @JsonFormat(shape=JsonFormat.Shape.STRING)
+        public BigDecimal totalOpenExpense(){return sum(Month::openExpense);}
+        private BigDecimal sum(java.util.function.Function<Month,BigDecimal> amount){return months.stream().map(amount).reduce(zero(),BigDecimal::add);}
+    }
 }

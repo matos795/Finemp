@@ -1516,9 +1516,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [year, months]
+                required: [year, months, totalRealIncome, totalRealExpense, totalOpenIncome, totalOpenExpense]
                 properties:
                   year: {type: integer}
+                  totalRealIncome: {type: string, description: Soma das entradas realizadas dos 12 meses.}
+                  totalRealExpense: {type: string, description: Soma das saídas realizadas dos 12 meses.}
+                  totalOpenIncome: {type: string, description: Soma das entradas em aberto dos 12 meses.}
+                  totalOpenExpense: {type: string, description: Soma das saídas em aberto dos 12 meses.}
                   months:
                     type: array
                     minItems: 12
