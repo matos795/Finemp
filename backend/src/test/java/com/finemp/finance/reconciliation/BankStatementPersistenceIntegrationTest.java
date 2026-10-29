@@ -24,14 +24,14 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.statement-read.enabled=true","finemp.finance.aging.enabled=true","finemp.finance.monthly-cash.enabled=true","finemp.finance.daily-cash.enabled=true","finemp.finance.statement-actions.enabled=true","finemp.finance.entries.enabled=true","finemp.finance.entries.commands.enabled=true"})
+@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.statement-read.enabled=true","finemp.finance.aging.enabled=true","finemp.finance.open-titles.enabled=true","finemp.finance.monthly-cash.enabled=true","finemp.finance.daily-cash.enabled=true","finemp.finance.statement-actions.enabled=true","finemp.finance.entries.enabled=true","finemp.finance.entries.commands.enabled=true"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class BankStatementPersistenceIntegrationTest {
     @Autowired BankStatementItemRepository statements;@Autowired BankAccountRepository banks;@Autowired BankAccountService bankService;
     @Autowired FinancialEntryRepository entries;@Autowired FinancialCategoryRepository categories;@Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;@Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialStatementBankReferences") BankAccountReferenceGuard guard;
-    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;@Autowired StatementCandidateReadService candidates;@Autowired StatementItemReadService statementReads;@Autowired StatementIgnoreCommandService ignores;@Autowired com.finemp.finance.reporting.OpenTitlesAgingService aging;@Autowired com.finemp.finance.reporting.MonthlyCashTotalsService monthly;@Autowired com.finemp.finance.reporting.DailyCashTotalsService daily;@Autowired org.springframework.test.web.servlet.MockMvc mvc;
+    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;@Autowired StatementCandidateReadService candidates;@Autowired StatementItemReadService statementReads;@Autowired StatementIgnoreCommandService ignores;@Autowired com.finemp.finance.reporting.OpenTitlesAgingService aging;@Autowired com.finemp.finance.reporting.OpenTitlesReadService openTitles;@Autowired com.finemp.finance.reporting.MonthlyCashTotalsService monthly;@Autowired com.finemp.finance.reporting.DailyCashTotalsService daily;@Autowired org.springframework.test.web.servlet.MockMvc mvc;
     Company owner,other;BankAccount bank,second,foreignBank;FinancialEntry entry,foreignEntry;UserAccount actor;final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>();final Map<UUID,UUID> categoryIds=new HashMap<>();
     @BeforeEach void prepare(){
         owner=company("Owner","70707070000170");other=company("Other","80808080000180");actor=users.saveAndFlush(new UserAccount("Synthetic Statement Actor",UUID.randomUUID()+"@example.invalid","hash"));
@@ -250,6 +250,20 @@ class BankStatementPersistenceIntegrationTest {
         var route="/api/companies/"+owner.getId()+"/bank-accounts/"+bank.getId()+"/statement-items";
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("status","PENDING"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].values.signedAmount").value("-1.20"));
+    }
+    @Test void openTitlesDetailMatchesAgingWithAsOfCompetenceAndPagination()throws Exception{
+        LocalDate base=LocalDate.of(2026,7,1);var late=entry(owner,bank);var future=entry(owner,bank);var settled=entry(owner,bank);
+        jdbc.update("UPDATE financial_entries SET due_date=?,payment_date=? WHERE id=?",base.minusDays(31),base.plusDays(1),late.getId());
+        jdbc.update("UPDATE financial_entries SET due_date=?,competence='2026-08' WHERE id=?",base.plusDays(31),future.getId());jdbc.update("UPDATE financial_entries SET payment_date=? WHERE id=?",base,settled.getId());
+        var first=openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL,0,1);
+        assertThat(first.totalItems()).isEqualTo(3);assertThat(first.items().getFirst().id()).isEqualTo(late.getId());assertThat(first.items().getFirst().daysLate()).isEqualTo(31);assertThat(first.items().getFirst().band()).isEqualTo(com.finemp.finance.reporting.OpenTitlesAgingService.Band.OVERDUE_31_60);
+        var second=openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL,1,1);assertThat(second.items().getFirst().band()).isEqualTo(com.finemp.finance.reporting.OpenTitlesAgingService.Band.DUE_0_30);
+        assertThat(openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.COMPETENCE,0,20).totalItems()).isEqualTo(2);
+        assertThat(first.totalItems()).isEqualTo(aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).totalCount());
+        assertThatThrownBy(()->openTitles.list(actor.getId(),other.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL,0,10)).isInstanceOf(OrganizationAccessDeniedException.class);
+        var route="/api/companies/"+owner.getId()+"/financial-reports/open-titles";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE").param("asOf","2026-07-01").param("size","1"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].nominalAmount").value("1.00"));
     }
     void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}

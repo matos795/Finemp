@@ -42,7 +42,10 @@ public class OpenTitlesAgingService {
         return new Report(asOf,direction,scope,count,total,bands);
     }
     public enum Scope { ALL,COMPETENCE }
-    public enum Band { DUE_0_30,DUE_31_60,DUE_61_90,DUE_OVER_90,OVERDUE_1_30,OVERDUE_31_60,OVERDUE_61_90,OVERDUE_OVER_90 }
+    public enum Band {
+        DUE_0_30,DUE_31_60,DUE_61_90,DUE_OVER_90,OVERDUE_1_30,OVERDUE_31_60,OVERDUE_61_90,OVERDUE_OVER_90;
+        public static Band forDays(int days){if(days<=0)return days>=-30?DUE_0_30:days>=-60?DUE_31_60:days>=-90?DUE_61_90:DUE_OVER_90;return days<=30?OVERDUE_1_30:days<=60?OVERDUE_31_60:days<=90?OVERDUE_61_90:OVERDUE_OVER_90;}
+    }
     public record BandTotal(Band band,long count,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal amount){}
     public record Report(LocalDate asOf,FinancialDirection direction,Scope scope,long totalCount,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal totalAmount,List<BandTotal> bands){public Report{bands=List.copyOf(bands);}}
 }
