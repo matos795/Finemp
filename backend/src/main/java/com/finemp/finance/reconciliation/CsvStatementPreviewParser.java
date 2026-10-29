@@ -37,8 +37,17 @@ public class CsvStatementPreviewParser {
         try {
             LocalDate date=date(rawDate);BigDecimal value;
             if(h.amount()>=0) {
-                value=money(cell(fields,h.amount()),false);
-                if(cell(fields,h.direction()).stripLeading().toLowerCase(Locale.ROOT).startsWith("d"))value=value.abs().negate();
+                String raw=cell(fields,h.amount());value=money(raw,false);
+                String direction=StatementValues.normalize(cell(fields,h.direction()));
+                if(!direction.isEmpty()) {
+                    boolean debit=Set.of("d","debito").contains(direction),credit=Set.of("c","credito").contains(direction);
+                    if(!debit && !credit)throw new Problem(Error.BAD_AMOUNT);
+                    var marker=MONEY.matcher(raw);if(!marker.matches())throw new Problem(Error.BAD_AMOUNT);
+                    boolean explicitCredit="C".equalsIgnoreCase(marker.group(1)) || "C".equalsIgnoreCase(marker.group(8)) || "+".equals(marker.group(4));
+                    boolean explicitDebit="D".equalsIgnoreCase(marker.group(1)) || "D".equalsIgnoreCase(marker.group(8)) || "-".equals(marker.group(4)) || marker.group(2)!=null;
+                    if(debit && explicitCredit || credit && explicitDebit)throw new Problem(Error.BAD_AMOUNT);
+                    if(debit)value=value.abs().negate();
+                }
             }else {
                 BigDecimal credit=money(cell(fields,h.credit()),true).abs(),debit=money(cell(fields,h.debit()),true).abs();value=exact(credit.subtract(debit),false);
             }
@@ -72,7 +81,7 @@ public class CsvStatementPreviewParser {
     }
     private static LocalDate date(String raw) {
         String value=raw.trim();try {
-            if(value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}.*")){int year=Integer.parseInt(value.substring(0,4));if(year<1)throw new Problem(Error.BAD_DATE);return LocalDate.of(year,Integer.parseInt(value.substring(5,7)),Integer.parseInt(value.substring(8,10)));}
+            if(value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")){var result=LocalDate.parse(value);if(result.getYear()<1)throw new Problem(Error.BAD_DATE);return result;}
             var matcher=Pattern.compile("^([0-9]{1,2})/([0-9]{1,2})/([0-9]{2}|[0-9]{4})$").matcher(value);
             if(matcher.matches()){int year=Integer.parseInt(matcher.group(3));if(matcher.group(3).length()==2)year+=2000;if(year<1)throw new Problem(Error.BAD_DATE);return LocalDate.of(year,Integer.parseInt(matcher.group(2)),Integer.parseInt(matcher.group(1)));}
         }catch(DateTimeException invalid){throw new Problem(Error.BAD_DATE);}throw new Problem(Error.BAD_DATE);

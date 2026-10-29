@@ -56,4 +56,10 @@ class CsvStatementPreviewParserTest {
         assertThat(parser.parse(columns.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("-100.00"));
         assertThatThrownBy(()->parser.parse("Data;Valor;Valor débito\n2026-07-01;1;2\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void conflictingDirectionAndTruncatedDatesCannotProduceMovements() {
+        var csv="Data;Valor;D/C\n2026-07-01;10,00 C;D\n2026-07-01;-10,00;C\n2026-07-011;10,00;C\n2026-07-01INVALID;10,00;C\n";
+        var rows=parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows();
+        assertThat(rows).extracting(CsvStatementPreviewParser.Row::error).containsExactly(CsvStatementPreviewParser.Error.BAD_AMOUNT,CsvStatementPreviewParser.Error.BAD_AMOUNT,CsvStatementPreviewParser.Error.BAD_DATE,CsvStatementPreviewParser.Error.BAD_DATE);
+        assertThat(rows).allSatisfy(row->assertThat(row.values()).isNull());
+    }
 }
