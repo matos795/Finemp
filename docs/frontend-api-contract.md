@@ -495,7 +495,15 @@ POST /{period}/closures exige FINANCIAL_PERIOD_CLOSE, corpo com expectedVersion 
 
 Permissão é verificada na rota normalizada antes do corpo64KiB; serviços verificam novamente antes e depois da trava. Fechar e reabrir não concedem a permissão um do outro.409 distingue versão obsoleta, chave com conteúdo diferente ou estado já fechado/aberto. Reabrir preserva recurso/histórico e incrementa versão. Histórico inclui ator, comando, instante, estados anterior/novo e motivo; o primeiro fechamento tem beforeState nulo. Não há edição/exclusão de histórico.
 
-## 22. Compatibilidade
+## 22. Retenções explícitas
+
+/companies/{companyId}/financial-entries/{entryId}/withholdings aceita POST de criação e GET paginado (treatment opcional, page/size1–100); /{id} aceita GET/PUT; /{id}/deletions aceita POST; /{id}/history pagina o diário oficial inclusive após exclusão. Não há DELETE com corpo nem edição de vínculo.
+
+CREATE recebe entryVersion e values (taxCode, treatment PAYABLE ou RECOVERABLE, amount textual exato e documentReference opcional). UPDATE acrescenta expectedVersion. DELETION recebe somente as duas versões. Respostas usam WithholdingReceipt; criar retorna201/Location, demais comandos200. Valores são informados: não calcular percentuais, líquido/bruto, vencimento ou lançamento derivado no frontend.
+
+Leitura usa FINANCIAL_ENTRY_VIEW/MANAGE ALL vigente; escrita usa MANAGE, sessão/CSRF, Idempotency-Key e gate financeiro compartilhado64KiB/4 concorrentes. Habilitar FINEMP_FINANCE_WITHHOLDINGS_ENABLED; para escrever, os dois opt-ins de entries também devem estar habilitados. O backend verifica versões do pai/filho, Company e competência atual.409 informa STALE_ENTRY_VERSION, STALE_VERSION, IDEMPOTENCY_MISMATCH ou FINANCIAL_PERIOD_CLOSED. Reenvio preserva o recibo após remoção, sem recriar dados; Location pode retornar404.
+
+## 23. Compatibilidade
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 
