@@ -38,7 +38,7 @@ class BankStatementPersistenceIntegrationTest {
     }
     @AfterEach void cleanup(){
         for(var company:List.of(owner,other)){
-            for(var table:List.of("financial_bank_statement_items","financial_entries","financial_bank_accounts","financial_categories"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
+            for(var table:List.of("financial_statement_import_receipts","financial_bank_statement_items","financial_entries","financial_bank_accounts","financial_categories"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
             jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)",company.getId());jdbc.update("DELETE FROM company_access_grants WHERE company_id=?",company.getId());companies.deleteById(company.getId());
         }
         for(var id:clientIds)clients.deleteById(id);for(var id:firmIds)firms.deleteById(id);users.deleteById(actor.getId());
@@ -85,6 +85,24 @@ class BankStatementPersistenceIntegrationTest {
         var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
         try{Callable<UUID> task=()->{if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Barrier");return save(owner,bank,value("1","Synthetic recurring debit","")).getId();};var a=pool.submit(task);var b=pool.submit(task);start.countDown();assertThat(List.of(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS))).doesNotHaveDuplicates();assertThat(statements.count()).isEqualTo(2);}finally{start.countDown();pool.shutdownNow();}
     }
+    @Test void importReceiptMustRemainScopedUniqueAndProtectTheBank(){
+        var command=UUID.randomUUID();receipt(owner,bank,command);
+        assertThat(guard.hasReferences(owner.getId(),bank.getId())).isTrue();assertThat(guard.hasReferences(other.getId(),bank.getId())).isFalse();
+        assertThatThrownBy(()->receipt(owner,bank,command)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(()->receipt(owner,foreignBank,UUID.randomUUID())).isInstanceOf(DataIntegrityViolationException.class);
+        receipt(other,foreignBank,command);
+        assertThat(bankService.delete(actor.getId(),owner.getId(),bank.getId(),0L).action()).isEqualTo(BankAccountService.DeleteAction.DEACTIVATED);
+    }
+    @Test void importReceiptAndMovementsRollBackTogether(){
+        var command=UUID.randomUUID();
+        assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->{receipt(owner,bank,command);save(owner,bank,value("1","Synthetic rollback","rollback"));throw new IllegalStateException("synthetic rollback");})).isInstanceOf(IllegalStateException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_statement_import_receipts WHERE company_id=?",Long.class,owner.getId())).isZero();assertThat(statements.count()).isZero();
+    }
+    @Test void concurrentSameImportReceiptHasExactlyOneWinner()throws Exception{
+        var command=UUID.randomUUID();var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
+        try{Callable<Boolean> task=()->{if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Barrier");try{receipt(owner,bank,command);return true;}catch(DataIntegrityViolationException expected){return false;}};var a=pool.submit(task);var b=pool.submit(task);start.countDown();assertThat(List.of(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);}finally{start.countDown();pool.shutdownNow();}
+    }
+    void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}
     BankStatementItem save(Company company,BankAccount bank,StatementValues values){return statements.saveAndFlush(new BankStatementItem(company,bank,values,actor.getId()));}
     StatementValues value(String amount,String memo,String fit){return new StatementValues(LocalDate.of(2026,7,1),new BigDecimal(amount),memo,fit,"");}
