@@ -1702,6 +1702,75 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/companies/{companyId}/bank-accounts/{bankId}/statement-items:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: bankId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      tags: [Financial bank accounts]
+      operationId: listStatementItems
+      summary: Lista movimentos de extrato armazenados na conta da empresa.
+      description: >-
+        Condicional a FINEMP_FINANCE_STATEMENT_READ_ENABLED; exige FINANCIAL_ENTRY_VIEW
+        ou FINANCIAL_ENTRY_MANAGE ALL. Filtros e paginação no PostgreSQL em snapshot
+        consistente; ordenação por data decrescente e identificador. O valor com sinal
+        é retornado como texto decimal exato. Nenhuma mutação é realizada.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+        - name: status
+          in: query
+          schema: {type: string, enum: [PENDING, IGNORED, RECONCILED]}
+        - name: from
+          in: query
+          schema: {type: string, format: date}
+        - name: to
+          in: query
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Página de movimentos sem cache.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  page: {type: integer}
+                  size: {type: integer}
+                  totalItems: {type: integer, format: int64}
+                  totalPages: {type: integer}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, bankAccountId, values, status, version]
+                      properties:
+                        id: {type: string, format: uuid}
+                        bankAccountId: {type: string, format: uuid}
+                        status: {type: string, enum: [PENDING, IGNORED, RECONCILED]}
+                        linkedEntryId: {type: string, format: uuid, nullable: true}
+                        createdBy: {type: string, format: uuid}
+                        createdAt: {type: string, format: date-time}
+                        version: {type: integer, format: int64}
+                        values:
+                          type: object
+                          required: [postedDate, signedAmount, memo, externalId, documentReference]
+                          properties:
+                            postedDate: {type: string, format: date}
+                            signedAmount: {type: string}
+                            memo: {type: string}
+                            externalId: {type: string}
+                            documentReference: {type: string}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /api/companies/{companyId}/bank-accounts/{bankId}/statement-previews:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
