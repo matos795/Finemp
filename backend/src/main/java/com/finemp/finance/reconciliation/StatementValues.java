@@ -25,7 +25,7 @@ public record StatementValues(
         String input=externalId.isEmpty()?"FALLBACK\0"+postedDate+"\0"+signedAmount.toPlainString()+"\0"+normalize(memo):"FITID\0"+externalId;
         try {return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException impossible){throw new IllegalStateException(impossible);}
     }
-    private static String normalize(String value) {
+    static String normalize(String value) {
         var input=Normalizer.normalize(value,Normalizer.Form.NFD);var result=new StringBuilder(input.length());
         for(int i=0;i<input.length();i++){char c=input.charAt(i);if(c<0x0300 || c>0x036f)result.append(c);}
         return trim(result.toString().toLowerCase(Locale.ROOT));
