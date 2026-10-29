@@ -17,3 +17,7 @@ Comparação de duplicidades já persistidas, vinculação ao lote, upload com l
 ## Validação
 
 Treze testes sintéticos cobrem SGML/XML, UTF-8/Windows-1252, campos multilinha, sinal, data/documento/saldo, erros visíveis, subcentavo, duplicidade inclusive em linhas inválidas, referências XML sem resolução externa, limites, múltiplas contas e moeda não confirmada. Não usam conexão ou dados bancários reais.
+# Proteção da segmentação
+
+CDATA não é suportado e é rejeitado antes da identificação de transações, para que texto contido em CDATA não possa ser confundido com um movimento do extrato.
+

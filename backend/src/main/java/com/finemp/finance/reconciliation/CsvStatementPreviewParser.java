@@ -61,6 +61,7 @@ public class CsvStatementPreviewParser {
         else if(!input.matches("[0-9]+(?:\\.[0-9]+)?"))throw new Problem(Error.BAD_AMOUNT);
         boolean debit="D".equalsIgnoreCase(match.group(1)) || "D".equalsIgnoreCase(match.group(8));
         boolean credit="C".equalsIgnoreCase(match.group(1)) || "C".equalsIgnoreCase(match.group(8));
+        if(debit && credit || credit && (match.group(2)!=null || "-".equals(match.group(4))) || debit && "+".equals(match.group(4)) || match.group(2)!=null && "+".equals(match.group(4)))throw new Problem(Error.BAD_AMOUNT);
         boolean negative="-".equals(match.group(4)) || (match.group(2)!=null || debit) && !credit;
         try{BigDecimal result=exact(new BigDecimal(normalized),true);return negative?result.negate():result;}catch(NumberFormatException invalid){throw new Problem(Error.BAD_AMOUNT);}
     }
@@ -97,12 +98,14 @@ public class CsvStatementPreviewParser {
     private static class Problem extends RuntimeException {final Error error;Problem(Error error){this.error=error;}}
     private record Header(int date,int amount,int credit,int debit,int memo,int document,int direction,int columns) {
         static Header find(List<String> fields) {
-            var names=fields.stream().map(StatementValues::normalize).toList();int date=find(names,"data"),amount=find(names,"valor","montante","quantia"),credit=find(names,"credito","entrada"),debit=find(names,"debito","saida");
+            var names=fields.stream().map(StatementValues::normalize).toList();int date=find(names,"data"),amount=findAmount(names),credit=find(names,"credito","entrada","valor credito","valor entrada"),debit=find(names,"debito","saida","valor debito","valor saida");
+            if(amount>=0 && (credit>=0 || debit>=0))throw invalid();
             if(date<0 || amount<0 && credit<0 && debit<0)return null;
             int direction=-1;for(int i=0;i<names.size();i++)if(Set.of("d/c","c/d","tipo").contains(names.get(i))){direction=i;break;}
             return new Header(date,amount,credit,debit,find(names,"historico","descricao","lancamento","memo","detalhe"),find(names,"documento","doc","n doc","numero"),direction,fields.size());
         }
         private static int find(List<String> names,String...aliases){for(int i=0;i<names.size();i++)for(var alias:aliases)if(names.get(i).equals(alias) || names.get(i).startsWith(alias))return i;return -1;}
+        private static int findAmount(List<String> names){for(int i=0;i<names.size();i++){String name=names.get(i);if((name.startsWith("valor") || name.startsWith("montante") || name.startsWith("quantia")) && !name.contains("credito") && !name.contains("debito") && !name.contains("entrada") && !name.contains("saida"))return i;}return -1;}
     }
     public enum Error { BAD_DATE,BAD_AMOUNT,BAD_COLUMN_COUNT,SUBCENT_AMOUNT,AMBIGUOUS_AMOUNT,OUT_OF_RANGE,ZERO_AMOUNT,INVALID_TEXT }
     public enum Warning { FALLBACK_IDENTITY,DUPLICATE_IN_FILE,BALANCE_ROW,CURRENCY_UNCONFIRMED }

@@ -49,4 +49,11 @@ class CsvStatementPreviewParserTest {
         var csv="Data;Valor;Histórico\n2026-07-01;-R$ 1.234,56;A\n2026-07-01;D R$ 2,00;B\n";
         var rows=parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows();assertThat(rows.getFirst().values().signedAmount()).isEqualTo(new BigDecimal("-1234.56"));assertThat(rows.get(1).values().signedAmount()).isEqualTo(new BigDecimal("-2.00"));
     }
+    @Test void conflictingSignIndicatorsAreRejectedAndDebitCreditHeadersRetainDirection() {
+        var bad="Data;Valor\n2026-07-01;C 10,00 D\n2026-07-01;(10,00) C\n2026-07-01;-10,00 C\n";
+        assertThat(parser.parse(bad.getBytes(StandardCharsets.UTF_8),';').rows()).allSatisfy(row->assertThat(row.error()).isEqualTo(CsvStatementPreviewParser.Error.BAD_AMOUNT));
+        var columns="Data;Valor débito;Valor crédito;Histórico\n2026-07-01;100,00;0;Compra\n";
+        assertThat(parser.parse(columns.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("-100.00"));
+        assertThatThrownBy(()->parser.parse("Data;Valor;Valor débito\n2026-07-01;1;2\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
+    }
 }

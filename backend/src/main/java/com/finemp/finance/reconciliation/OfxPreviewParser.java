@@ -18,7 +18,7 @@ public class OfxPreviewParser {
     private static final Map<String,Pattern> XML_TAGS=TAGS.keySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(name->name,name->Pattern.compile("<"+name+">([^<]*)</"+name+">",Pattern.CASE_INSENSITIVE)));
     private static final Map<String,Pattern> TAG_OPEN=TAGS.keySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(name->name,name->Pattern.compile("<"+name+"(?:\\s[^>]*)?>",Pattern.CASE_INSENSITIVE)));
     public Preview parse(byte[] bytes) {
-        String source=StatementTextDecoder.decodeOfx(bytes);boolean xml=isXml(source);source=stripCommentsAndInstructions(source);
+        String source=StatementTextDecoder.decodeOfx(bytes);if(source.contains("<![CDATA["))throw invalid();boolean xml=isXml(source);source=stripCommentsAndInstructions(source);
         if(Pattern.compile("<!(?:DOCTYPE|ENTITY)\\b",Pattern.CASE_INSENSITIVE).matcher(source).find() || xml && Pattern.compile("<STMTTRN\\s",Pattern.CASE_INSENSITIVE).matcher(source).find())throw invalid();
         var rows=new ArrayList<Row>();var identities=new HashMap<String,List<Integer>>();
         var open=OPEN.matcher(source);int position=0;
