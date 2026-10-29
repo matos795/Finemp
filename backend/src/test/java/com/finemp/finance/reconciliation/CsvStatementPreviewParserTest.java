@@ -62,4 +62,15 @@ class CsvStatementPreviewParserTest {
         assertThat(rows).extracting(CsvStatementPreviewParser.Row::error).containsExactly(CsvStatementPreviewParser.Error.BAD_AMOUNT,CsvStatementPreviewParser.Error.BAD_AMOUNT,CsvStatementPreviewParser.Error.BAD_DATE,CsvStatementPreviewParser.Error.BAD_DATE);
         assertThat(rows).allSatisfy(row->assertThat(row.values()).isNull());
     }
+    @Test void balanceColumnMustNotOverrideMovementAndAmbiguousColumnsMustBeRejected() {
+        var csv="Data;Valor saldo;Valor;Histórico\n2026-07-01;1000,00;-20,00;Compra\n";
+        assertThat(parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("-20.00"));
+        assertThatThrownBy(()->parser.parse("Data;Valor movimento;Valor lançado\n2026-07-01;1;2\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->parser.parse("Data;Valor saldo\n2026-07-01;1000\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test void salaryBalanceDescriptionMustRemainAValidMovement() {
+        var csv="Data;Valor;Histórico\n2026-07-01;10,00;Saldo de salário\n";
+        var row=parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows().getFirst();
+        assertThat(row.values().signedAmount()).isEqualTo(new BigDecimal("10.00"));assertThat(row.error()).isNull();assertThat(row.warnings()).doesNotContain(CsvStatementPreviewParser.Warning.BALANCE_ROW);
+    }
 }

@@ -33,7 +33,7 @@ public class CsvStatementPreviewParser {
         String rawAmount=h.amount()>=0?cell(fields,h.amount()):cell(fields,h.credit())+" | "+cell(fields,h.debit());
         if(fields.size()!=h.columns())return new Row(number,safe(rawDate,64),safe(rawAmount,64),safe(memo,4000),null,Error.BAD_COLUMN_COUNT,List.of());
         String normalized=StatementValues.normalize(memo);
-        if(normalized.startsWith("saldo") || memo.matches("(?i)^s\\s*a\\s*l\\s*d\\s*o.*"))return new Row(number,safe(rawDate,64),safe(rawAmount,64),safe(memo,4000),null,null,List.of(Warning.BALANCE_ROW));
+        if(Set.of("saldo","saldo anterior","saldo inicial","saldo final","saldo do dia").contains(normalized))return new Row(number,safe(rawDate,64),safe(rawAmount,64),safe(memo,4000),null,null,List.of(Warning.BALANCE_ROW));
         try {
             LocalDate date=date(rawDate);BigDecimal value;
             if(h.amount()>=0) {
@@ -114,7 +114,15 @@ public class CsvStatementPreviewParser {
             return new Header(date,amount,credit,debit,find(names,"historico","descricao","lancamento","memo","detalhe"),find(names,"documento","doc","n doc","numero"),direction,fields.size());
         }
         private static int find(List<String> names,String...aliases){for(int i=0;i<names.size();i++)for(var alias:aliases)if(names.get(i).equals(alias) || names.get(i).startsWith(alias))return i;return -1;}
-        private static int findAmount(List<String> names){for(int i=0;i<names.size();i++){String name=names.get(i);if((name.startsWith("valor") || name.startsWith("montante") || name.startsWith("quantia")) && !name.contains("credito") && !name.contains("debito") && !name.contains("entrada") && !name.contains("saida"))return i;}return -1;}
+        private static int findAmount(List<String> names){
+            int exact=-1,other=-1;
+            for(int i=0;i<names.size();i++){
+                String name=names.get(i);if(name.contains("saldo") || name.contains("credito") || name.contains("debito") || name.contains("entrada") || name.contains("saida"))continue;
+                if(Set.of("valor","montante","quantia").contains(name)){if(exact>=0)throw invalid();exact=i;}
+                else if(name.startsWith("valor ") || name.startsWith("montante ") || name.startsWith("quantia ")){if(other>=0)throw invalid();other=i;}
+            }
+            return exact>=0?exact:other;
+        }
     }
     public enum Error { BAD_DATE,BAD_AMOUNT,BAD_COLUMN_COUNT,SUBCENT_AMOUNT,AMBIGUOUS_AMOUNT,OUT_OF_RANGE,ZERO_AMOUNT,INVALID_TEXT }
     public enum Warning { FALLBACK_IDENTITY,DUPLICATE_IN_FILE,BALANCE_ROW,CURRENCY_UNCONFIRMED }
