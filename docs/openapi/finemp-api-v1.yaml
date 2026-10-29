@@ -1500,6 +1500,59 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/statement-items/{statementId}/ignore:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - name: statementId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Financial bank accounts]
+      operationId: ignoreStatementItem
+      summary: Marca um movimento de extrato pendente como ignorado.
+      description: >-
+        Exige FINEMP_FINANCE_STATEMENT_ACTIONS_ENABLED, os opt-ins de comandos
+        financeiros, sessão, CSRF e FINANCIAL_ENTRY_MANAGE ALL. O corpo é JSON
+        estrito e limitado pelo filtro financeiro. O mês da data do extrato deve
+        estar aberto; versão divergente ou movimento já conciliado/ignorado conflita.
+        A operação não altera lançamento, baixa ou saldo. Repetição idêntica devolve
+        o recibo, inclusive após fechamento; outra solicitação com a mesma chave conflita.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - $ref: '#/components/parameters/FinancialCommandKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion]
+              properties:
+                expectedVersion: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Recibo idempotente com versão e evento de auditoria.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyId, itemId, commandId, version, auditEventId]
+                properties:
+                  companyId: {type: string, format: uuid}
+                  itemId: {type: string, format: uuid}
+                  commandId: {type: string, format: uuid}
+                  version: {type: integer, format: int64}
+                  auditEventId: {type: string, format: uuid}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: Período fechado, versão, estado ou chave conflitante.}
+        '413': {description: Corpo excede limite do filtro financeiro.}
+        '415': {description: Tipo ou codificação não suportada.}
+        '429': {description: Limite de comandos simultâneos atingido.}
   /api/companies/{companyId}/statement-items/{statementId}/candidates:
     parameters:
       - $ref: '#/components/parameters/CompanyId'

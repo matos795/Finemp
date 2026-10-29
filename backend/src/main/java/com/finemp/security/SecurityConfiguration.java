@@ -169,6 +169,7 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/financial-entries",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/withholdings",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}/deletions",
+                                                                "/api/companies/{companyId}/statement-items/{statementId}/ignore",
                                                                 "/api/companies/{companyId}/financial-entry-series/monthly",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlements",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlement-reversals")

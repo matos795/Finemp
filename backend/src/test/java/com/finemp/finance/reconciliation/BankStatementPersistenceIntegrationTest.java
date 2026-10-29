@@ -24,14 +24,14 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.aging.enabled=true"})
+@SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.aging.enabled=true","finemp.finance.statement-actions.enabled=true","finemp.finance.entries.enabled=true","finemp.finance.entries.commands.enabled=true"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class BankStatementPersistenceIntegrationTest {
     @Autowired BankStatementItemRepository statements;@Autowired BankAccountRepository banks;@Autowired BankAccountService bankService;
     @Autowired FinancialEntryRepository entries;@Autowired FinancialCategoryRepository categories;@Autowired CompanyRepository companies;@Autowired ClientRepository clients;@Autowired AccountingFirmRepository firms;@Autowired UserAccountRepository users;@Autowired CompanyAccessGrantRepository grants;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialStatementBankReferences") BankAccountReferenceGuard guard;
-    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;@Autowired StatementCandidateReadService candidates;@Autowired com.finemp.finance.reporting.OpenTitlesAgingService aging;@Autowired org.springframework.test.web.servlet.MockMvc mvc;
+    @Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager transactions;@Autowired StatementImportCommandService imports;@Autowired StatementCandidateReadService candidates;@Autowired StatementIgnoreCommandService ignores;@Autowired com.finemp.finance.reporting.OpenTitlesAgingService aging;@Autowired org.springframework.test.web.servlet.MockMvc mvc;
     Company owner,other;BankAccount bank,second,foreignBank;FinancialEntry entry,foreignEntry;UserAccount actor;final List<UUID> firmIds=new ArrayList<>(),clientIds=new ArrayList<>();final Map<UUID,UUID> categoryIds=new HashMap<>();
     @BeforeEach void prepare(){
         owner=company("Owner","70707070000170");other=company("Other","80808080000180");actor=users.saveAndFlush(new UserAccount("Synthetic Statement Actor",UUID.randomUUID()+"@example.invalid","hash"));
@@ -40,7 +40,7 @@ class BankStatementPersistenceIntegrationTest {
     }
     @AfterEach void cleanup(){
         for(var company:List.of(owner,other)){
-            for(var table:List.of("financial_statement_import_receipts","financial_bank_statement_items","financial_entries","financial_periods","financial_bank_accounts","financial_categories","access_audit_events"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
+            for(var table:List.of("financial_statement_action_receipts","financial_statement_import_receipts","financial_bank_statement_items","financial_entries","financial_periods","financial_bank_accounts","financial_categories","access_audit_events"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
             jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)",company.getId());jdbc.update("DELETE FROM company_access_grants WHERE company_id=?",company.getId());companies.deleteById(company.getId());
         }
         for(var id:clientIds)clients.deleteById(id);for(var id:firmIds)firms.deleteById(id);users.deleteById(actor.getId());
@@ -178,6 +178,39 @@ class BankStatementPersistenceIntegrationTest {
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalAmount").value("9.08"));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+    }
+    @Test void ignoreIsIdempotentAuditedScopedAndCannotBypassClosedPeriod()throws Exception{
+        var statement=save(owner,bank,value("-1","Synthetic ignore","ignore"));var command=UUID.randomUUID();var result=ignores.ignore(actor.getId(),owner.getId(),command,statement.getId(),0L);
+        assertThat(ignores.ignore(actor.getId(),owner.getId(),command,statement.getId(),0L)).isEqualTo(result);assertThat(statements.findById(statement.getId()).orElseThrow().getStatus()).isEqualTo(StatementStatus.IGNORED);
+        assertThatThrownBy(()->ignores.ignore(actor.getId(),owner.getId(),command,statement.getId(),1L)).isInstanceOf(StatementActionConflictException.class);
+        assertThatThrownBy(()->ignores.ignore(actor.getId(),other.getId(),UUID.randomUUID(),statement.getId(),0L)).isInstanceOf(OrganizationAccessDeniedException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM access_audit_events WHERE company_id=? AND action='FINANCIAL_STATEMENT_IGNORED'",Long.class,owner.getId())).isEqualTo(1);
+        var pending=save(owner,bank,value("-2","Synthetic closed","closed"));jdbc.update("INSERT INTO financial_periods(id,company_id,period,closed,version,updated_by,updated_at) VALUES(?,?,'2026-07',true,0,?,now())",UUID.randomUUID(),owner.getId(),actor.getId());
+        assertThatThrownBy(()->ignores.ignore(actor.getId(),owner.getId(),UUID.randomUUID(),pending.getId(),0L)).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
+        assertThat(ignores.ignore(actor.getId(),owner.getId(),command,statement.getId(),0L)).isEqualTo(result);assertThat(statements.findById(pending.getId()).orElseThrow().getStatus()).isEqualTo(StatementStatus.PENDING);
+    }
+    @Test void ignoreRejectsAlreadyReconciledAndForeignItems(){
+        var statement=save(owner,bank,value("-1","Synthetic linked","linked-ignore"));jdbc.update("UPDATE financial_bank_statement_items SET status='RECONCILED',linked_entry_id=? WHERE id=?",entry.getId(),statement.getId());
+        assertThatThrownBy(()->ignores.ignore(actor.getId(),owner.getId(),UUID.randomUUID(),statement.getId(),0L)).isInstanceOf(StatementActionConflictException.class);
+        var foreign=save(other,foreignBank,value("-1","Synthetic foreign","foreign-ignore"));assertThatThrownBy(()->ignores.ignore(actor.getId(),owner.getId(),UUID.randomUUID(),foreign.getId(),0L)).isInstanceOf(SaasResourceNotFoundException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_statement_action_receipts WHERE company_id=?",Long.class,owner.getId())).isZero();
+    }
+    @Test void ignoreRollsBackWithOuterTransactionAndConcurrentRetriesReturnOneResult()throws Exception{
+        var statement=save(owner,bank,value("-1","Synthetic ignore","ignore"));var command=UUID.randomUUID();
+        assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->{ignores.ignore(actor.getId(),owner.getId(),command,statement.getId(),0L);throw new IllegalStateException("synthetic rollback");})).isInstanceOf(IllegalStateException.class);
+        assertThat(statements.findById(statement.getId()).orElseThrow().getStatus()).isEqualTo(StatementStatus.PENDING);
+        var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
+        try{Callable<StatementIgnoreCommandService.Receipt> task=()->{if(!start.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Barrier");return ignores.ignore(actor.getId(),owner.getId(),command,statement.getId(),0L);};var a=pool.submit(task);var b=pool.submit(task);start.countDown();assertThat(a.get(15,TimeUnit.SECONDS)).isEqualTo(b.get(15,TimeUnit.SECONDS));}finally{start.countDown();pool.shutdownNow();}
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_statement_action_receipts WHERE company_id=?",Long.class,owner.getId())).isEqualTo(1);
+    }
+    @Test void ignoreHttpRequiresCsrfAndStrictBody()throws Exception{
+        var statement=save(owner,bank,value("-1","Synthetic http","http"));var route="/api/companies/"+owner.getId()+"/statement-items/"+statement.getId()+"/ignore";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"expectedVersion\":0}"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"expectedVersion\":0,\"extra\":1}"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"expectedVersion\":0}"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.version").value(1));
     }
     void receipt(Company company,BankAccount bank,UUID command){jdbc.update("INSERT INTO financial_statement_import_receipts(company_id,actor_id,command_id,bank_account_id,fingerprint,result_state,committed_at) VALUES (?,?,?,?,?,?::text,now())",company.getId(),actor.getId(),command,bank.getId(),"a".repeat(64),"{}");}
     void fails(String sql,Object...args){assertThatThrownBy(()->new TransactionTemplate(transactions).execute(status->jdbc.update(sql,args))).isInstanceOf(DataIntegrityViolationException.class);}
