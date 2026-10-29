@@ -77,6 +77,7 @@ class StatementPreviewHttpIntegrationTest {
         mvc.perform(post(importRoute(owner,bank)).with(user(principal(viewer))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isForbidden());
         mvc.perform(post(importRoute(owner,foreign)).with(user(principal(actor))).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isNotFound());
         mvc.perform(post(importRoute(owner,bank)).with(user(principal(actor))).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post(importRoute(owner,bank)).with(csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(body)).andExpect(status().isUnauthorized());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM financial_bank_statement_items WHERE company_id=?",Long.class,owner.getId())).isZero();
     }
     @Test void confirmationCannotBypassClosedMonth()throws Exception{

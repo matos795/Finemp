@@ -42,6 +42,12 @@ class StatementImportControllerTest {
         }
         verifyNoInteractions(commands);
     }
+    @Test void rejectsChunkedOversizedBodyWithoutInvokingCommand()throws Exception{
+        authorize();var input=new java.io.ByteArrayInputStream(new byte[StatementImportRequestDecoder.MAX_BODY+1]);
+        var stream=new jakarta.servlet.ServletInputStream(){public int read(){return input.read();}public boolean isFinished(){return input.available()==0;}public boolean isReady(){return true;}public void setReadListener(jakarta.servlet.ReadListener listener){throw new UnsupportedOperationException();}};
+        var request=mock(HttpServletRequest.class);when(request.getHeaders("Content-Encoding")).thenReturn(Collections.emptyEnumeration());when(request.getContentLengthLong()).thenReturn(-1L);when(request.getInputStream()).thenReturn(stream);
+        assertThat(controller.confirm(actor,company,bank,key,request).getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);verifyNoInteractions(commands);
+    }
     String body(String file,String hash,String rows){return "{\"format\":\"CSV\",\"separator\":\"SEMICOLON\",\"fileBase64\":\""+Base64.getEncoder().encodeToString(file.getBytes(StandardCharsets.UTF_8))+"\",\"fileSha256\":\""+hash+"\",\"selectedRows\":"+rows+",\"accountConfirmed\":true,\"currencyConfirmed\":true,\"warningsConfirmed\":true}";}
     MockHttpServletRequest request(String payload){var request=new MockHttpServletRequest();request.setContent(payload.getBytes(StandardCharsets.UTF_8));return request;}
 }
