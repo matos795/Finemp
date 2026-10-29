@@ -124,7 +124,10 @@ public class SecurityConfiguration {
 
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/financial-entries",
-                                                                "/api/companies/{companyId}/financial-entries/{entryId}")
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}",
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/withholdings",
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}",
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}/history")
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.GET,
@@ -151,6 +154,8 @@ public class SecurityConfiguration {
 
                                                 .requestMatchers(HttpMethod.POST,
                                                                 "/api/companies/{companyId}/financial-entries",
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/withholdings",
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}/deletions",
                                                                 "/api/companies/{companyId}/financial-entry-series/monthly",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlements",
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}/settlement-reversals")
@@ -158,6 +163,10 @@ public class SecurityConfiguration {
 
                                                 .requestMatchers(HttpMethod.PUT,
                                                                 "/api/companies/{companyId}/financial-entries/{entryId}")
+                                                .access(financialCommands)
+
+                                                .requestMatchers(HttpMethod.PUT,
+                                                                "/api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}")
                                                 .access(financialCommands)
 
                                                 .requestMatchers(HttpMethod.DELETE,

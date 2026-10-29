@@ -27,7 +27,236 @@ tags:
   - name: Financial entries
   - name: Financial bank transfers
   - name: Financial periods
+  - name: Financial withholdings
 paths:
+  /api/companies/{companyId}/financial-entries/{entryId}/withholdings:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/WithholdingEntryId'
+    get:
+      tags:
+        - Financial withholdings
+      operationId: listFinancialWithholdings
+      summary: Lista retenções informadas, sem agregação tributária.
+      parameters:
+        - name: treatment
+          in: query
+          schema:
+            type: string
+            enum:
+              - PAYABLE
+              - RECOVERABLE
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Dados autorizados da Company/lançamento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialWithholdingPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/FinancialEntryUnavailable'
+    post:
+      tags:
+        - Financial withholdings
+      operationId: createFinancialWithholding
+      summary: Registra retenção explícita; Location aponta ao GET do recurso.
+      description: >-
+        Exige withholdings.enabled e os opt-ins de escrita financeira existentes (entries.enabled/entries.commands.enabled), FINANCIAL_ENTRY_MANAGE ALL vigente,
+        sessão/CSRF e chave UUID. Reutiliza gate financeiro64KiB/4 concorrentes. Versões do pai/filho e competência atual são verificadas no backend. Nenhum
+        cálculo tributário ou alteração de bruto/líquido.
+      parameters:
+        - $ref: '#/components/parameters/FinancialCommandKey'
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithholdingCreateCommand'
+      responses:
+        '201':
+          description: Recibo idempotente; DELETE informa última versão persistida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithholdingReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: STALE_ENTRY_VERSION, STALE_VERSION, IDEMPOTENCY_MISMATCH, FINANCIAL_PERIOD_CLOSED ou conflito de integridade.
+        '413':
+          $ref: '#/components/responses/FinancialEntryPayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/FinancialEntryUnsupportedEncoding'
+        '429':
+          $ref: '#/components/responses/FinancialEntryBusy'
+        '503':
+          $ref: '#/components/responses/FinancialEntryUnavailable'
+  /api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/WithholdingEntryId'
+      - $ref: '#/components/parameters/WithholdingId'
+    get:
+      tags:
+        - Financial withholdings
+      operationId: getFinancialWithholding
+      summary: Consulta retenção por Company e lançamento.
+      parameters: []
+      responses:
+        '200':
+          description: Dados autorizados da Company/lançamento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialWithholding'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/FinancialEntryUnavailable'
+    put:
+      tags:
+        - Financial withholdings
+      operationId: updateFinancialWithholding
+      summary: Altera somente valores informados da retenção.
+      description: >-
+        Exige withholdings.enabled e os opt-ins de escrita financeira existentes (entries.enabled/entries.commands.enabled), FINANCIAL_ENTRY_MANAGE ALL vigente,
+        sessão/CSRF e chave UUID. Reutiliza gate financeiro64KiB/4 concorrentes. Versões do pai/filho e competência atual são verificadas no backend. Nenhum
+        cálculo tributário ou alteração de bruto/líquido.
+      parameters:
+        - $ref: '#/components/parameters/FinancialCommandKey'
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithholdingUpdateCommand'
+      responses:
+        '200':
+          description: Recibo idempotente; DELETE informa última versão persistida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithholdingReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: STALE_ENTRY_VERSION, STALE_VERSION, IDEMPOTENCY_MISMATCH, FINANCIAL_PERIOD_CLOSED ou conflito de integridade.
+        '413':
+          $ref: '#/components/responses/FinancialEntryPayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/FinancialEntryUnsupportedEncoding'
+        '429':
+          $ref: '#/components/responses/FinancialEntryBusy'
+        '503':
+          $ref: '#/components/responses/FinancialEntryUnavailable'
+  /api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}/deletions:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/WithholdingEntryId'
+      - $ref: '#/components/parameters/WithholdingId'
+    post:
+      tags:
+        - Financial withholdings
+      operationId: deleteFinancialWithholding
+      summary: Remove retenção com precondições e histórico preservado.
+      description: >-
+        Exige withholdings.enabled e os opt-ins de escrita financeira existentes (entries.enabled/entries.commands.enabled), FINANCIAL_ENTRY_MANAGE ALL vigente,
+        sessão/CSRF e chave UUID. Reutiliza gate financeiro64KiB/4 concorrentes. Versões do pai/filho e competência atual são verificadas no backend. Nenhum
+        cálculo tributário ou alteração de bruto/líquido.
+      parameters:
+        - $ref: '#/components/parameters/FinancialCommandKey'
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithholdingDeleteCommand'
+      responses:
+        '200':
+          description: Recibo idempotente; DELETE informa última versão persistida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithholdingReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: STALE_ENTRY_VERSION, STALE_VERSION, IDEMPOTENCY_MISMATCH, FINANCIAL_PERIOD_CLOSED ou conflito de integridade.
+        '413':
+          $ref: '#/components/responses/FinancialEntryPayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/FinancialEntryUnsupportedEncoding'
+        '429':
+          $ref: '#/components/responses/FinancialEntryBusy'
+        '503':
+          $ref: '#/components/responses/FinancialEntryUnavailable'
+  /api/companies/{companyId}/financial-entries/{entryId}/withholdings/{id}/history:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+      - $ref: '#/components/parameters/WithholdingEntryId'
+      - $ref: '#/components/parameters/WithholdingId'
+    get:
+      tags:
+        - Financial withholdings
+      operationId: listFinancialWithholdingHistory
+      summary: Diário oficial paginado, inclusive após exclusão do recurso/pai.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Dados autorizados da Company/lançamento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithholdingHistoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/FinancialEntryUnavailable'
   /api/companies/{companyId}/financial-periods:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -2581,6 +2810,20 @@ components:
       name: JSESSIONID
       description: Sessão HTTP mantida em cookie HttpOnly.
   parameters:
+    WithholdingEntryId:
+      name: entryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    WithholdingId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     FinancialPeriodMonth:
       name: period
       in: path
@@ -2729,6 +2972,288 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    WithholdingInputValues:
+      type: object
+      additionalProperties: false
+      required:
+        - taxCode
+        - treatment
+        - amount
+      properties:
+        taxCode:
+          type: string
+          minLength: 1
+          maxLength: 40
+        treatment:
+          type: string
+          enum:
+            - PAYABLE
+            - RECOVERABLE
+        amount:
+          type: string
+          pattern: ^[0-9]{1,17}([.][0-9]{1,2})?$
+        documentReference:
+          type:
+            - string
+            - 'null'
+          maxLength: 255
+    WithholdingValues:
+      type: object
+      additionalProperties: false
+      required:
+        - taxCode
+        - treatment
+        - amount
+        - documentReference
+      properties:
+        taxCode:
+          type: string
+          minLength: 1
+          maxLength: 40
+        treatment:
+          type: string
+          enum:
+            - PAYABLE
+            - RECOVERABLE
+        amount:
+          type: string
+          pattern: ^[0-9]{1,17}([.][0-9]{1,2})?$
+        documentReference:
+          type: string
+          maxLength: 255
+    WithholdingCreateCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - entryVersion
+        - values
+      properties:
+        entryVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        values:
+          $ref: '#/components/schemas/WithholdingInputValues'
+    WithholdingUpdateCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - entryVersion
+        - expectedVersion
+        - values
+      properties:
+        entryVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        values:
+          $ref: '#/components/schemas/WithholdingInputValues'
+    WithholdingDeleteCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - entryVersion
+        - expectedVersion
+      properties:
+        entryVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+    WithholdingReceipt:
+      type: object
+      required:
+        - companyId
+        - commandId
+        - entryId
+        - withholdingId
+        - action
+        - version
+        - auditEventId
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        commandId:
+          type: string
+          format: uuid
+        entryId:
+          type: string
+          format: uuid
+        withholdingId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum:
+            - CREATED
+            - UPDATED
+            - DELETED
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        auditEventId:
+          type: string
+          format: uuid
+    FinancialWithholding:
+      type: object
+      required:
+        - id
+        - companyId
+        - entryId
+        - values
+        - version
+        - createdBy
+        - updatedBy
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        entryId:
+          type: string
+          format: uuid
+        values:
+          $ref: '#/components/schemas/WithholdingValues'
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        createdBy:
+          type: string
+          format: uuid
+        updatedBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    WithholdingAuditState:
+      type: object
+      required:
+        - id
+        - entryId
+        - values
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        entryId:
+          type: string
+          format: uuid
+        values:
+          $ref: '#/components/schemas/WithholdingValues'
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+    WithholdingHistory:
+      type: object
+      required:
+        - id
+        - action
+        - actorId
+        - occurredAt
+        - beforeState
+        - afterState
+        - commandId
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum:
+            - FINANCIAL_WITHHOLDING_CREATED
+            - FINANCIAL_WITHHOLDING_UPDATED
+            - FINANCIAL_WITHHOLDING_DELETED
+        actorId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+        beforeState:
+          anyOf:
+            - $ref: '#/components/schemas/WithholdingAuditState'
+            - type: 'null'
+        afterState:
+          anyOf:
+            - $ref: '#/components/schemas/WithholdingAuditState'
+            - type: 'null'
+        commandId:
+          type: string
+          format: uuid
+    FinancialWithholdingPage:
+      type: object
+      required:
+        - items
+        - page
+        - size
+        - totalItems
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialWithholding'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    WithholdingHistoryPage:
+      type: object
+      required:
+        - items
+        - page
+        - size
+        - totalItems
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WithholdingHistory'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
     FinancialPeriod:
       type: object
       required:

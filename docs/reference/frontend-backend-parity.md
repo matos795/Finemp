@@ -71,8 +71,12 @@
 - **FATO CONFIRMADO:** #171/PR172 integrada: API de fechamento/reabertura e
   consultas/histórico oficial; seis contratos PG/HTTP e CI827/0 falhas/2 skips.
   #158 concluída, com opt-ins e comandos desabilitados por padrão.
-- **EM IMPLEMENTAÇÃO:** #159, fundação de retenções informadas na #173,
-  sem motor tributário ou alteração de líquido/bruto.
+- **FATO CONFIRMADO:** #173/PR174 integrada: persistência de retenções explícitas,
+  seis contratos PG e CI836/0 falhas/2 skips, sem cálculo tributário.
+- **FATO CONFIRMADO:** #175/PR176 integrada: comandos, versões pai/filho,
+  competência, recibos e diário oficial; nove contratos PG e CI845/0 falhas/2 skips.
+- **EM IMPLEMENTAÇÃO:** #177, contrato HTTP/OpenAPI das retenções; #159 continua
+  aberta até a API integrada, sem motor tributário ou alteração de líquido/bruto.
   #39 continua aberta pela política monetária isolada na #128.
   #128 registra
   diferenças binárias em parcelas antes de decidir a política monetária.
