@@ -1,0 +1,39 @@
+/*
+ * Complementos mínimos ao CSS do protótipo para o React.
+ * Itens/ações ainda não ligados à API ficam inativos (D5).
+ */
+.fin .mod-h:disabled,
+.fin .mi:disabled,
+.fin .icobtn:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.fin .mod-h:disabled:hover,
+.fin .mi:disabled:hover {
+  background: transparent;
+}
+
+.fin .icobtn:disabled:hover {
+  border-color: var(--bd);
+  color: #fff;
+}
+
+.fin a.mod-h,
+.fin a.mi {
+  text-decoration: none;
+}
+
+/*
+ * O protótipo usa os estilos padrão do navegador em títulos e parágrafos;
+ * o preflight do Tailwind os zera. Restaurados só dentro de .fin.
+ */
+.fin h1,
+.fin h2,
+.fin h3 {
+  font-weight: 700;
+}
+
+.fin p {
+  margin-block: 1em;
+}
