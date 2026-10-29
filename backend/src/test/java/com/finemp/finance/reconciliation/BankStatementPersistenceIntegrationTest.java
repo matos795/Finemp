@@ -169,6 +169,8 @@ class BankStatementPersistenceIntegrationTest {
         var closed=entry(owner,bank);jdbc.update("UPDATE financial_entries SET payment_date=? WHERE id=?",base,closed.getId());
         var result=aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL);
         assertThat(result.totalCount()).isEqualTo(9);assertThat(result.totalAmount()).isEqualByComparingTo("9.08");assertThat(result.bands()).hasSize(8);
+        assertThat(result.overdueCount()).isEqualTo(4);assertThat(result.overdueAmount()).isEqualByComparingTo("4.04");assertThat(result.dueWithin30Count()).isEqualTo(2);assertThat(result.dueWithin30Amount()).isEqualByComparingTo("2.01");
+        var empty=aging.report(actor.getId(),owner.getId(),FinancialDirection.INCOME,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL);assertThat(empty.overdueCount()).isZero();assertThat(empty.overdueAmount()).isEqualByComparingTo("0.00");assertThat(empty.dueWithin30Amount()).isEqualByComparingTo("0.00");
         assertThat(result.bands()).allSatisfy(band->assertThat(band.count()).isGreaterThanOrEqualTo(1));
         var restricted=aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.COMPETENCE);
         assertThat(restricted.totalCount()).isEqualTo(8);assertThat(restricted.totalAmount()).isEqualByComparingTo("8.07");
