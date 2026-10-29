@@ -17,6 +17,8 @@ spring:
 
 finemp:
   finance:
+    withholdings:
+      enabled: ${FINEMP_FINANCE_WITHHOLDINGS_ENABLED:false}
     periods:
       enabled: ${FINEMP_FINANCE_PERIODS_ENABLED:false}
       commands:
