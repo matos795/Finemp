@@ -49,12 +49,20 @@ public class CsvStatementPreviewParser {
                     if(debit)value=value.abs().negate();
                 }
             }else {
-                BigDecimal credit=money(cell(fields,h.credit()),true).abs(),debit=money(cell(fields,h.debit()),true).abs();value=exact(credit.subtract(debit),false);
+                BigDecimal credit=columnMoney(cell(fields,h.credit()),false),debit=columnMoney(cell(fields,h.debit()),true);value=exact(credit.subtract(debit),false);
             }
             if(value.signum()==0)throw new Problem(Error.ZERO_AMOUNT);
             StatementValues values;try{values=new StatementValues(date,value,memo,"",cell(fields,h.document()));}catch(IllegalArgumentException invalid){throw new Problem(Error.INVALID_TEXT);}
             return new Row(number,safe(rawDate,64),safe(rawAmount,64),safe(memo,4000),values,null,List.of(Warning.FALLBACK_IDENTITY));
         }catch(Problem problem){return new Row(number,safe(rawDate,64),safe(rawAmount,64),safe(memo,4000),null,problem.error,List.of());}
+    }
+    private static BigDecimal columnMoney(String raw,boolean debitColumn) {
+        var result=money(raw,true);if(raw.isBlank())return result;
+        var marker=MONEY.matcher(raw);if(!marker.matches())throw new Problem(Error.BAD_AMOUNT);
+        boolean explicitCredit="C".equalsIgnoreCase(marker.group(1)) || "C".equalsIgnoreCase(marker.group(8)) || "+".equals(marker.group(4));
+        boolean explicitDebit="D".equalsIgnoreCase(marker.group(1)) || "D".equalsIgnoreCase(marker.group(8)) || "-".equals(marker.group(4)) || marker.group(2)!=null;
+        if(debitColumn && explicitCredit || !debitColumn && explicitDebit)throw new Problem(Error.BAD_AMOUNT);
+        return result.abs();
     }
     private static BigDecimal money(String raw,boolean emptyAsZero) {
         if(raw.isBlank()){if(emptyAsZero)return BigDecimal.ZERO.setScale(2);throw new Problem(Error.BAD_AMOUNT);}
@@ -107,13 +115,24 @@ public class CsvStatementPreviewParser {
     private static class Problem extends RuntimeException {final Error error;Problem(Error error){this.error=error;}}
     private record Header(int date,int amount,int credit,int debit,int memo,int document,int direction,int columns) {
         static Header find(List<String> fields) {
-            var names=fields.stream().map(StatementValues::normalize).toList();int date=find(names,"data"),amount=findAmount(names),credit=find(names,"credito","entrada","valor credito","valor entrada"),debit=find(names,"debito","saida","valor debito","valor saida");
+            var names=fields.stream().map(StatementValues::normalize).toList();int date=find(names,"data"),amount=findAmount(names),credit=findDirected(names,"credito","entrada","valor credito","valor entrada"),debit=findDirected(names,"debito","saida","valor debito","valor saida");
             if(amount>=0 && (credit>=0 || debit>=0))throw invalid();
             if(date<0 || amount<0 && credit<0 && debit<0)return null;
             int direction=-1;for(int i=0;i<names.size();i++)if(Set.of("d/c","c/d","tipo").contains(names.get(i))){direction=i;break;}
             return new Header(date,amount,credit,debit,find(names,"historico","descricao","lancamento","memo","detalhe"),find(names,"documento","doc","n doc","numero"),direction,fields.size());
         }
         private static int find(List<String> names,String...aliases){for(int i=0;i<names.size();i++)for(var alias:aliases)if(names.get(i).equals(alias) || names.get(i).startsWith(alias))return i;return -1;}
+        private static int findDirected(List<String> names,String...aliases){
+            int exact=-1,other=-1;
+            for(int i=0;i<names.size();i++){
+                String name=names.get(i);if(name.contains("saldo"))continue;
+                for(String alias:aliases){
+                    if(name.equals(alias)){if(exact>=0 && exact!=i)throw invalid();exact=i;break;}
+                    if(name.startsWith(alias+" ")){if(other>=0 && other!=i)throw invalid();other=i;break;}
+                }
+            }
+            return exact>=0?exact:other;
+        }
         private static int findAmount(List<String> names){
             int exact=-1,other=-1;
             for(int i=0;i<names.size();i++){

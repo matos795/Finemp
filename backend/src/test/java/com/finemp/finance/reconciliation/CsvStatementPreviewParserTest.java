@@ -73,4 +73,11 @@ class CsvStatementPreviewParserTest {
         var row=parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows().getFirst();
         assertThat(row.values().signedAmount()).isEqualTo(new BigDecimal("10.00"));assertThat(row.error()).isNull();assertThat(row.warnings()).doesNotContain(CsvStatementPreviewParser.Warning.BALANCE_ROW);
     }
+    @Test void separateColumnsRejectConflictingSignsAndPreferExactHeader() {
+        var csv="Data;Crédito;Débito\n2026-07-01;10,00 D;0\n2026-07-01;0;10,00 C\n2026-07-01;-10,00;0\n2026-07-01;0;+10,00\n";
+        assertThat(parser.parse(csv.getBytes(StandardCharsets.UTF_8),';').rows()).allSatisfy(row->{assertThat(row.error()).isEqualTo(CsvStatementPreviewParser.Error.BAD_AMOUNT);assertThat(row.values()).isNull();});
+        var exact="Data;Valor crédito previsto;Valor crédito;Valor débito\n2026-07-01;1000,00;10,00;0\n";
+        assertThat(parser.parse(exact.getBytes(StandardCharsets.UTF_8),';').rows().getFirst().values().signedAmount()).isEqualTo(new BigDecimal("10.00"));
+        assertThatThrownBy(()->parser.parse("Data;Crédito previsto;Crédito futuro;Débito\n2026-07-01;1;2;0\n".getBytes(StandardCharsets.UTF_8),';')).isInstanceOf(IllegalArgumentException.class);
+    }
 }
