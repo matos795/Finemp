@@ -1633,13 +1633,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [asOf, direction, scope, totalCount, totalAmount, bands]
+                required: [asOf, direction, scope, totalCount, totalAmount, overdueCount, overdueAmount, dueWithin30Count, dueWithin30Amount, bands]
                 properties:
                   asOf: {type: string, format: date}
                   direction: {type: string, enum: [INCOME, EXPENSE]}
                   scope: {type: string, enum: [ALL, COMPETENCE]}
                   totalCount: {type: integer, format: int64}
                   totalAmount: {type: string}
+                  overdueCount: {type: integer, format: int64}
+                  overdueAmount: {type: string}
+                  dueWithin30Count: {type: integer, format: int64}
+                  dueWithin30Amount: {type: string}
                   bands:
                     type: array
                     minItems: 8

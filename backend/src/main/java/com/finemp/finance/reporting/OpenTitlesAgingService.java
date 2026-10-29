@@ -39,7 +39,9 @@ public class OpenTitlesAgingService {
         var data=new EnumMap<Band,BandTotal>(Band.class);jdbc.query(sql,params,rs->{var band=Band.valueOf(rs.getString("band"));data.put(band,new BandTotal(band,rs.getLong("item_count"),rs.getBigDecimal("amount").setScale(2,RoundingMode.UNNECESSARY)));});
         var bands=Arrays.stream(Band.values()).map(band->data.getOrDefault(band,new BandTotal(band,0,BigDecimal.ZERO.setScale(2)))).toList();
         long count=bands.stream().mapToLong(BandTotal::count).sum();BigDecimal total=bands.stream().map(BandTotal::amount).reduce(BigDecimal.ZERO.setScale(2),BigDecimal::add);
-        return new Report(asOf,direction,scope,count,total,bands);
+        var overdue=bands.stream().filter(band->Set.of(Band.OVERDUE_1_30,Band.OVERDUE_31_60,Band.OVERDUE_61_90,Band.OVERDUE_OVER_90).contains(band.band())).toList();
+        long overdueCount=overdue.stream().mapToLong(BandTotal::count).sum();BigDecimal overdueAmount=overdue.stream().map(BandTotal::amount).reduce(BigDecimal.ZERO.setScale(2),BigDecimal::add);
+        var due30=data.getOrDefault(Band.DUE_0_30,new BandTotal(Band.DUE_0_30,0,BigDecimal.ZERO.setScale(2)));return new Report(asOf,direction,scope,count,total,overdueCount,overdueAmount,due30.count(),due30.amount(),bands);
     }
     public enum Scope { ALL,COMPETENCE }
     public enum Band {
@@ -47,5 +49,6 @@ public class OpenTitlesAgingService {
         public static Band forDays(int days){if(days<=0)return days>=-30?DUE_0_30:days>=-60?DUE_31_60:days>=-90?DUE_61_90:DUE_OVER_90;return days<=30?OVERDUE_1_30:days<=60?OVERDUE_31_60:days<=90?OVERDUE_61_90:OVERDUE_OVER_90;}
     }
     public record BandTotal(Band band,long count,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal amount){}
-    public record Report(LocalDate asOf,FinancialDirection direction,Scope scope,long totalCount,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal totalAmount,List<BandTotal> bands){public Report{bands=List.copyOf(bands);}}
+    public record Report(LocalDate asOf,FinancialDirection direction,Scope scope,long totalCount,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal totalAmount,
+            long overdueCount,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal overdueAmount,long dueWithin30Count,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal dueWithin30Amount,List<BandTotal> bands){public Report{bands=List.copyOf(bands);}}
 }
