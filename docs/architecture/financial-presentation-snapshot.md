@@ -10,7 +10,9 @@ O primeiro agregador interno reúne esses quatro blocos numa única transação 
 
 Mês do caixa, data-base do aging e escopo ALL/COMPETENCE são obrigatórios e independentes: nenhum é inferido do outro. O caixa anual usa o ano do mês informado. A resposta informa schemaVersion=1 e partial=true; isso não representa relatório completo ou fechamento. A autorização financeira ALL e a Company são verificadas no servidor.
 
-Opt-in: finemp.finance.presentation.enabled e os três produtores aging, daily-cash e monthly-cash devem estar habilitados. Sem eles, o agregador não é registrado. Este incremento não abre rota HTTP nem persiste ou compartilha apresentações.
+Opt-in: finemp.finance.presentation.enabled e os três produtores aging, daily-cash e monthly-cash devem estar habilitados. Sem eles, o agregador e a rota não são registrados. Não persiste ou compartilha apresentações.
+
+GET /api/companies/{companyId}/financial-reports/presentation-snapshot exige month, asOf e scope explícitos. Responde sem cache com cashMonth, cashYear, payables e receivables, além dos parâmetros de contexto. Dinheiro mantém texto decimal exato. A composição usa os mesmos esquemas dos endpoints individuais. Parâmetros ausentes/inválidos retornam 400; Company sem permissão financeira retorna 403.
 
 ## PONTO ABERTO
 
@@ -18,4 +20,4 @@ Período padrão e comportamento sem período fechado. A escolha de último mês
 
 ## PROPOSTA
 
-Expor API aditiva do agregador e reutilizar futuramente seus mesmos dados na geração backend do PDF. Blocos adicionais só entram quando seus domínios e regras estiverem implementados e validados.
+Reutilizar futuramente os mesmos dados na geração backend do PDF. Blocos adicionais só entram quando seus domínios e regras estiverem implementados e validados.

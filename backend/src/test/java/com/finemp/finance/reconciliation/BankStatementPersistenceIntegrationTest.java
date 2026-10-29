@@ -322,6 +322,23 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT actual_paid_amount FROM financial_entries WHERE id=?",BigDecimal.class,entry.getId())).isEqualByComparingTo("2.00");
         assertThat(aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).totalCount()).isZero();
     }
+    @Test void presentationHttpRequiresExplicitInputsAndReturnsExactPartialBlocks()throws Exception{
+        String route="/api/companies/"+owner.getId()+"/financial-reports/presentation-snapshot";
+        var principal=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("month","2026-07").param("asOf","2026-07-31").param("scope","ALL"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.partial").value(true))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.cashYear.totalOpenExpense").value("1.00"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.payables.totalAmount").value("1.00"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.receivables.totalAmount").value("0.00"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("month","2026-07").param("asOf","2026-07-31"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("month","0000-07").param("asOf","2026-07-31").param("scope","ALL"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+other.getId()+"/financial-reports/presentation-snapshot").with(principal).param("month","2026-07").param("asOf","2026-07-31").param("scope","ALL"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+    }
     @Test void presentationRequiresExplicitParametersPermissionAndConsistentIsolation(){
         var scope=com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL;var date=LocalDate.of(2026,7,31);
         assertThatThrownBy(()->presentation.snapshot(actor.getId(),other.getId(),"2026-07",date,scope)).isInstanceOf(OrganizationAccessDeniedException.class);
