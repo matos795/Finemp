@@ -41,7 +41,7 @@ class BankAccountIntegrationTest{
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;
     @Autowired PlatformTransactionManager transactions;
-    @MockitoBean BankAccountReferenceGuard usage;
+    @MockitoBean(name="financialStatementBankReferences") BankAccountReferenceGuard usage;
     private UserAccount actor,viewer,admin,restricted;
     private Company owner,other;
     private UUID firmId,clientId,bankId,foreignId;
