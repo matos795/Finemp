@@ -19,3 +19,7 @@ DECISÃO: activityMonths retorna 36 combinações, mês crescente e atividades O
 Esta classificação é a vigente no catálogo, não uma reconstrução histórica. Continuam fora saldo, transferências, projeções, orçamento e DRE operacional.
 
 O resumo não inclui saldos, transferências, projeções, classificação por forma efetiva ou reconstrução fiel de estado histórico. A forma prevista e a efetiva continuam informações distintas; nenhuma é inferida aqui. Isto não substitui o fluxo completo nem a DRE operacional ou contábil. O período padrão da apresentação segue decisão separada.
+
+## Trimestres e semestres (#236)
+
+FATO CONFIRMADO: a referência mensal permite visualizar meses, trimestres e semestres. DECISÃO: quarters (4) e halfYears (2) são derivados no backend dos mesmos 12 meses, sem SQL adicional. Cada item informa period, firstMonth, lastMonth e as quatro medidas exatas. Períodos civis: Jan–Mar/Abr–Jun/Jul–Set/Out–Dez e Jan–Jun/Jul–Dez. Soma dos períodos preserva os totais anuais. Esses campos também integram cashYear no snapshot da apresentação. Não há média, variação percentual, saldo ou período padrão novo.

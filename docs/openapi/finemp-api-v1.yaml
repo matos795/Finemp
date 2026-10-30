@@ -1716,9 +1716,41 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [year, months, activityMonths, totalRealIncome, totalRealExpense, totalOpenIncome, totalOpenExpense]
+                required: [year, months, activityMonths, quarters, halfYears, totalRealIncome, totalRealExpense, totalOpenIncome, totalOpenExpense]
                 properties:
                   year: {type: integer}
+                  quarters:
+                    type: array
+                    minItems: 4
+                    maxItems: 4
+                    description: Trimestres civis, derivados dos mesmos meses no backend.
+                    items:
+                      type: object
+                      required: [period, firstMonth, lastMonth, realIncome, realExpense, openIncome, openExpense]
+                      properties:
+                        period: {type: integer, minimum: 1, maximum: 4}
+                        firstMonth: {type: integer, minimum: 1, maximum: 12}
+                        lastMonth: {type: integer, minimum: 1, maximum: 12}
+                        realIncome: {type: string}
+                        realExpense: {type: string}
+                        openIncome: {type: string}
+                        openExpense: {type: string}
+                  halfYears:
+                    type: array
+                    minItems: 2
+                    maxItems: 2
+                    description: Semestres civis, janeiro a junho e julho a dezembro.
+                    items:
+                      type: object
+                      required: [period, firstMonth, lastMonth, realIncome, realExpense, openIncome, openExpense]
+                      properties:
+                        period: {type: integer, minimum: 1, maximum: 2}
+                        firstMonth: {type: integer, minimum: 1, maximum: 12}
+                        lastMonth: {type: integer, minimum: 1, maximum: 12}
+                        realIncome: {type: string}
+                        realExpense: {type: string}
+                        openIncome: {type: string}
+                        openExpense: {type: string}
                   activityMonths:
                     type: array
                     minItems: 36
