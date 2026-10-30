@@ -1727,6 +1727,9 @@ paths:
                         dueDate: {type: string, format: date}
                         paymentDate: {type: string, format: date, nullable: true}
                         daysLate: {type: integer}
+                        documentNumber: {type: string, description: Documento informado no lançamento; pode ser vazio.}
+                        documentDate: {type: string, format: date}
+                        categoryId: {type: string, format: uuid}
                         band: {type: string, enum: [DUE_0_30, DUE_31_60, DUE_61_90, DUE_OVER_90, OVERDUE_1_30, OVERDUE_31_60, OVERDUE_61_90, OVERDUE_OVER_90]}
                         bankAccountId: {type: string, format: uuid}
                         partnerId: {type: string, format: uuid, nullable: true}

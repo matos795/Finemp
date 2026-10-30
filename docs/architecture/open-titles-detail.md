@@ -18,4 +18,6 @@ PONTO ABERTO: hierarquia de centros, percentuais/prazos e reconstrução histór
 
 ## Drill-down de grupo
 
+Cada título também retorna documentNumber, documentDate e categoryId já persistidos, na mesma projeção SQL. Documento pode ser vazio quando não informado. Esses campos não alteram seleção por data-base, competência ou vencimento, não acrescentam consultas por linha e não inferem forma efetiva de pagamento.
+
 Em incremento separado, o GET `open-titles` aceita `partnerId` opcional ou `unassignedPartner=true`. A combinação é rejeitada com 400. O filtro é aplicado na mesma consulta de Company, antes de contar e paginar, cumulativamente com data-base, escopo e faixa. Não existe consulta ao parceiro fora da Company: identificadores alheios ou inexistentes resultam em página vazia. Sem esses parâmetros, a lista anterior é preservada. A resposta não altera lançamentos nem a baixa.

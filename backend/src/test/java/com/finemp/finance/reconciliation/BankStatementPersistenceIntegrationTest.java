@@ -328,6 +328,7 @@ class BankStatementPersistenceIntegrationTest {
         var a=partner(owner,"12ABC34501DE35",true);var b=partner(owner,"98ZYX76543WV39",false);var foreign=partner(other,"12ABC34501DE35",true);
         var first=entry(owner,bank);var secondEntry=entry(owner,bank);var third=entry(owner,bank);var base=LocalDate.of(2026,7,1);
         jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=1.23,due_date=?,payment_date=? WHERE id=?",a.getId(),base.minusDays(31),base.plusDays(1),first.getId());
+        jdbc.update("UPDATE financial_entries SET document_number='SYNTHETIC-DOC-41',document_date=? WHERE id=?",base.minusDays(40),first.getId());
         jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=0.10,due_date=?,competence='2026-08' WHERE id=?",a.getId(),base.plusDays(31),secondEntry.getId());
         jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=2.34 WHERE id=?",b.getId(),third.getId());
         jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=999.99 WHERE id=?",foreign.getId(),foreignEntry.getId());
@@ -353,7 +354,11 @@ class BankStatementPersistenceIntegrationTest {
         String route="/api/companies/"+owner.getId()+"/financial-reports/open-titles";
         var principal=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("direction","EXPENSE").param("asOf","2026-07-01").param("partnerId",a.getId().toString()).param("band","OVERDUE_31_60"))
-            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalItems").value(1)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].id").value(first.getId().toString()));
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalItems").value(1)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].id").value(first.getId().toString()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].documentNumber").value("SYNTHETIC-DOC-41"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].documentDate").value(base.minusDays(40).toString()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].categoryId").value(categoryIds.get(owner.getId()).toString()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].nominalAmount").value("1.23"));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("direction","EXPENSE").param("asOf","2026-07-01").param("partnerId",a.getId().toString()).param("unassignedPartner","true"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
     }
