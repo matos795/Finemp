@@ -10,11 +10,15 @@ Serviço interno opt-in `finemp.finance.operational-dre.enabled`, desabilitado q
 
 Joins de categoria e grupo exigem a mesma Company. Cada lançamento passa pelo calculador de efeitos F06; somente efeitos do mês solicitado são agregados. Não confundir mês do vencimento com competência. A resposta contém as 12 linhas existentes exceto NAO, com competenceAmount, settlementDifference e amount, inclusive zeros. Valores exatos e textuais na serialização. Ordem segue os identificadores existentes, sem decidir hierarquia/drill-down oficial.
 
-Report informa Company, mês, partial=true e coverage=[FINANCIAL_ENTRIES]. Não calcula LL/EBITDA ou margens nesta fatia. Classificações e estados são os atuais no snapshot da consulta; não há reconstrução histórica. Nenhuma escrita ou efeito de encerramento.
+Report informa Company, mês, partial=true e coverage=[FINANCIAL_ENTRIES]. Subtotais F07 são derivados dessas mesmas linhas; não inclui margens. Classificações e estados são os atuais no snapshot da consulta; não há reconstrução histórica. Nenhuma escrita ou efeito de encerramento.
+
+## Subtotais monetários (#246)
+
+FATO CONFIRMADO: F07/DRE_EST define RL=REC+DED; LB=RL+CUS; EBITDA=LB+DCOM+DADM+DPES+DTRI+OUT; EBIT=EBITDA+DEP; LAIR=EBIT+RFIN+DFIN; LL=LAIR+IR. DECISÃO: subtotals retorna netRevenue, grossProfit, ebitda, ebit, profitBeforeTax e netResult, derivados no backend das mesmas linhas, sem SQL extra, divisão ou arredondamento. Sinais classificados são preservados. IR é valor já classificado, não imposto calculado. Todos os subtotais estão sujeitos à mesma cobertura parcial: não representam fontes ausentes como implementadas.
 
 ## PROPOSTA
 
-Após validar esta leitura, expor contrato HTTP/OpenAPI separado e incorporar o bloco ao mesmo snapshot consistente da Apresentação. Fórmulas de subtotais/indicadores exigem paridade própria; não delegar cálculos ao frontend.
+Ampliar a cobertura somente quando os domínios correspondentes estiverem homologados e implementados. Indicadores de razão exigem regras e precisão próprias; não delegar cálculos ao frontend. A API e a incorporação opcional no snapshot são descritas nos contratos entregues.
 
 ## PONTO ABERTO
 

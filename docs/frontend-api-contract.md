@@ -517,7 +517,7 @@ O resumo `monthly-cash-totals` e o bloco `cashYear` do snapshot incluem `activit
 
 GET `/api/companies/{companyId}/financial-reports/presentation-snapshot?month=2026-07&asOf=2026-07-31&scope=ALL` reúne caixa diário, caixa mensal/anual e aging de pagar/receber em uma única transação consistente. As três escolhas são obrigatórias e independentes; não há default de período. Exige os opt-ins de presentation, aging, daily-cash e monthly-cash, sessão e FINANCIAL_ENTRY_VIEW ou FINANCIAL_ENTRY_MANAGE ALL vigente.
 
-A resposta `schemaVersion=1`, `partial=true` contém `cashMonth`, `cashYear`, `payables` e `receivables`. O React apresenta valores, totais e faixas retornados; não soma dinheiro nem recalcula indicadores. Os valores monetários são texto decimal exato. Não combinar chamadas individuais como se fossem o mesmo snapshot, nem rotular os blocos como DRE operacional, saldo ou fluxo completo. A resposta é no-store, não uma apresentação persistida. Ver [escopo e pontos abertos](architecture/financial-presentation-snapshot.md) e OpenAPI.
+A resposta `schemaVersion=1`, `partial=true` contém `cashMonth`, `cashYear`, `payables` e `receivables`, além de `operationalDre` quando habilitado. O React apresenta valores, totais e faixas retornados; não soma dinheiro nem recalcula indicadores. Os valores monetários são texto decimal exato. Não combinar chamadas individuais como se fossem o mesmo snapshot, nem rotular a cobertura parcial como DRE completa, saldo ou fluxo completo. A resposta é no-store, não uma apresentação persistida. Ver [escopo e pontos abertos](architecture/financial-presentation-snapshot.md) e OpenAPI.
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 
@@ -541,3 +541,7 @@ GET /api/companies/{companyId}/financial-reports/operational-dre?month=2026-07 u
 ### DRE no snapshot da Apresentação (#244)
 
 Com o opt-in operacional-dre habilitado, presentation-snapshot inclui operationalDre na mesma transação dos demais blocos e no mesmo mês/Company. Prefira esse bloco para a Apresentação; não combine a API isolada com outras chamadas como se fossem consistentes. Campo ausente significa que o bloco não foi habilitado, não resultado zero. Preserve a indicação parcial e coverage do backend. Não calcule DRE/indicadores no frontend.
+
+### Subtotais monetários da DRE (#246)
+
+O relatório operacional e o bloco correspondente do snapshot incluem subtotals: netRevenue, grossProfit, ebitda, ebit, profitBeforeTax e netResult. Valores textuais são calculados das MESMAS linhas no backend. Toda medida mantém a cobertura parcial FINANCIAL_ENTRIES; não apresentar como resultado completo. IR é apenas o valor classificado existente. Não calcular impostos, margens ou completar fontes ausentes no frontend.

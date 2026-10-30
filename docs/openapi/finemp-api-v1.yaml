@@ -1496,7 +1496,7 @@ paths:
     get:
       tags: [Financial reports]
       operationId: getPartialPresentationSnapshot
-      summary: Reúne caixa parcial e aging em um único snapshot consistente.
+      summary: Reúne caixa, aging e DRE operacional opcional em um snapshot consistente.
       description: >-
         Exige sessão e FINANCIAL_ENTRY_VIEW ou FINANCIAL_ENTRY_MANAGE ALL.
         Habilitar FINEMP_FINANCE_PRESENTATION_ENABLED e os produtores
@@ -1504,7 +1504,8 @@ paths:
         FINEMP_FINANCE_MONTHLY_CASH_ENABLED. Mês, data-base e escopo são explícitos
         e independentes; não há período padrão ou fallback. Caixa anual usa o ano
         de month. Todos os blocos são calculados pelo backend na mesma transação.
-        Não inclui DRE operacional, indicadores, saldo, projeção ou orçamento.
+        Com o opt-in operacional-dre, inclui sua cobertura parcial no mesmo snapshot.
+        Não inclui DRE completa, margens, saldo, projeção ou orçamento.
         O aging aplica a data-base ao estado atual, sem reconstrução histórica.
       parameters:
         - name: month
@@ -1578,11 +1579,22 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [companyId, month, partial, coverage, lines]
+                required: [companyId, month, partial, coverage, lines, subtotals]
                 properties:
                   companyId: {type: string, format: uuid}
                   month: {type: string}
                   partial: {type: boolean, const: true}
+                  subtotals:
+                    type: object
+                    description: Fórmulas F07 sobre as mesmas linhas e cobertura parcial. IR é valor classificado, não imposto calculado. Não representa resultado completo de fontes ausentes.
+                    required: [netRevenue, grossProfit, ebitda, ebit, profitBeforeTax, netResult]
+                    properties:
+                      netRevenue: {type: string, description: REC + DED.}
+                      grossProfit: {type: string, description: Receita líquida + CUS.}
+                      ebitda: {type: string, description: Lucro bruto + DCOM + DADM + DPES + DTRI + OUT.}
+                      ebit: {type: string, description: EBITDA + DEP.}
+                      profitBeforeTax: {type: string, description: EBIT + RFIN + DFIN.}
+                      netResult: {type: string, description: Resultado antes de impostos + IR.}
                   coverage:
                     type: array
                     minItems: 1

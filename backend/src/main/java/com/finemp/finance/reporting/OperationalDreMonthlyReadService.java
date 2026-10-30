@@ -63,5 +63,20 @@ public class OperationalDreMonthlyReadService {
             @JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal settlementDifference,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal amount){}
     public record Report(UUID companyId,String month,boolean partial,List<String> coverage,List<Line> lines){
         public Report{coverage=List.copyOf(coverage);lines=List.copyOf(lines);}
+        @com.fasterxml.jackson.annotation.JsonProperty public Subtotals subtotals(){
+            var values=new EnumMap<OperationalDreLine,BigDecimal>(OperationalDreLine.class);
+            for(var line:lines)values.merge(line.line(),line.amount(),BigDecimal::add);
+            var netRevenue=sum(values,OperationalDreLine.REC,OperationalDreLine.DED);
+            var grossProfit=netRevenue.add(sum(values,OperationalDreLine.CUS));
+            var ebitda=grossProfit.add(sum(values,OperationalDreLine.DCOM,OperationalDreLine.DADM,OperationalDreLine.DPES,OperationalDreLine.DTRI,OperationalDreLine.OUT));
+            var ebit=ebitda.add(sum(values,OperationalDreLine.DEP));
+            var beforeTax=ebit.add(sum(values,OperationalDreLine.RFIN,OperationalDreLine.DFIN));
+            return new Subtotals(netRevenue,grossProfit,ebitda,ebit,beforeTax,beforeTax.add(sum(values,OperationalDreLine.IR)));
+        }
+        private static BigDecimal sum(Map<OperationalDreLine,BigDecimal> values,OperationalDreLine... lines){var total=zero();for(var line:lines)total=total.add(values.getOrDefault(line,zero()));return total;}
     }
+    /** F07 amounts within the report's declared partial coverage, never inferred taxes. */
+    public record Subtotals(@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal netRevenue,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal grossProfit,
+            @JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal ebitda,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal ebit,
+            @JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal profitBeforeTax,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal netResult){}
 }
