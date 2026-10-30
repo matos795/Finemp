@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.*;
 @org.springframework.test.context.TestPropertySource(properties="finemp.finance.presentation.enabled=true")
 class BankStatementPersistenceIntegrationTest {
     @Autowired BusinessPartnerRepository partners;
+    @Autowired com.finemp.finance.reporting.CashTitlesReadService cashTitles;
     @Autowired com.finemp.finance.reporting.FinancialPresentationSnapshotService presentation;
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean(name="dailyCashTotalsService")
     com.finemp.finance.reporting.DailyCashTotalsService dailySnapshotProbe;
@@ -348,6 +349,41 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(monthly.report(actor.getId(),owner.getId(),9999).activityMonths()).allSatisfy(a->{assertThat(a.realExpense()).isEqualByComparingTo("0.00");assertThat(a.openExpense()).isEqualByComparingTo("0.00");});
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+owner.getId()+"/financial-reports/monthly-cash-totals").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("year","2026"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.activityMonths.length()").value(36)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.activityMonths[22].realExpense").value("2.30"));
+    }
+    @Test void cashTitleDetailMatchesMonthlyAmountsAndFiltersBeforePagination()throws Exception{
+        var realized=com.finemp.finance.reporting.CashTitlesReadService.State.REALIZED;var open=com.finemp.finance.reporting.CashTitlesReadService.State.OPEN;
+        var category=categories.findById(categoryIds.get(owner.getId())).orElseThrow();
+        jdbc.update("UPDATE financial_categories SET cash_activity='FINANCING' WHERE id=?",category.getParentId());
+        var override=categories.saveAndFlush(FinancialCategory.subcategory(categories.findById(category.getParentId()).orElseThrow(),2,"Synthetic investment"));
+        jdbc.update("UPDATE financial_categories SET cash_activity='INVESTING' WHERE id=?",override.getId());
+        var first=entry(owner,bank);var next=entry(owner,bank);var fallback=entry(owner,bank);
+        jdbc.update("UPDATE financial_entries SET category_id=?,nominal_amount=2.34,payment_date=DATE '2026-08-05',actual_paid_amount=2.30 WHERE id=?",override.getId(),first.getId());
+        jdbc.update("UPDATE financial_entries SET category_id=?,nominal_amount=0.10,payment_date=DATE '2026-08-06',actual_paid_amount=0.10 WHERE id=?",override.getId(),next.getId());
+        jdbc.update("UPDATE financial_entries SET nominal_amount=0.20,payment_date=DATE '2026-08-07' WHERE id=?",fallback.getId());
+        jdbc.update("UPDATE financial_entries SET payment_date=DATE '2026-08-05',actual_paid_amount=999.99 WHERE id=?",foreignEntry.getId());
+        var a=cashTitles.list(actor.getId(),owner.getId(),"2026-08",FinancialDirection.EXPENSE,realized,CashActivity.INVESTING,0,1);
+        var b=cashTitles.list(actor.getId(),owner.getId(),"2026-08",FinancialDirection.EXPENSE,realized,CashActivity.INVESTING,1,1);
+        assertThat(a.totalItems()).isEqualTo(2);assertThat(a.totalPages()).isEqualTo(2);assertThat(a.items().getFirst().id()).isEqualTo(first.getId());assertThat(b.items().getFirst().id()).isEqualTo(next.getId());
+        assertThat(a.items().getFirst().nominalAmount()).isEqualByComparingTo("2.34");assertThat(a.items().getFirst().amount()).isEqualByComparingTo("2.30");assertThat(a.items().getFirst().cashDate()).isEqualTo(LocalDate.of(2026,8,5));
+        var subtotal=monthly.report(actor.getId(),owner.getId(),2026).activityMonths().stream().filter(m->m.month()==8 && m.activity()==CashActivity.INVESTING).findFirst().orElseThrow();
+        assertThat(a.items().getFirst().amount().add(b.items().getFirst().amount())).isEqualByComparingTo(subtotal.realExpense());
+        assertThat(cashTitles.list(actor.getId(),owner.getId(),"2026-08",FinancialDirection.EXPENSE,realized,null,0,100).items().stream().map(com.finemp.finance.reporting.CashTitlesReadService.View::amount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("2.60");
+        var unpaid=cashTitles.list(actor.getId(),owner.getId(),"2026-07",FinancialDirection.EXPENSE,open,CashActivity.FINANCING,0,20);
+        assertThat(unpaid.totalItems()).isEqualTo(1);assertThat(unpaid.items().getFirst().id()).isEqualTo(entry.getId());assertThat(unpaid.items().getFirst().amount()).isEqualByComparingTo("1.00");
+        assertThat(cashTitles.list(actor.getId(),owner.getId(),"2026-07",FinancialDirection.EXPENSE,realized,null,0,20).totalItems()).isZero();
+        assertThat(cashTitles.list(actor.getId(),owner.getId(),"2026-08",FinancialDirection.INCOME,realized,null,0,20).totalItems()).isZero();
+        assertThat(cashTitles.list(actor.getId(),owner.getId(),"9999-12",FinancialDirection.EXPENSE,open,null,0,20).totalItems()).isZero();
+        var route="/api/companies/"+owner.getId()+"/financial-reports/monthly-cash-totals/titles";
+        var principal=new com.finemp.security.UserAccountPrincipal(actor);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-08").param("direction","EXPENSE").param("state","REALIZED").param("activity","INVESTING").param("size","1"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalItems").value(2)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].amount").value("2.30"));
+        for(String invalid:List.of("0000-01","2026-13","2026-1"))mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month",invalid).param("direction","EXPENSE").param("state","OPEN")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07").param("direction","EXPENSE")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07").param("direction","EXPENSE").param("state","OPEN").param("size","101")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route.replace(owner.getId().toString(),other.getId().toString())).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07").param("direction","EXPENSE").param("state","OPEN")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE user_account_id=?)",actor.getId());
+        assertThatThrownBy(()->cashTitles.list(actor.getId(),owner.getId(),"2026-07",FinancialDirection.EXPENSE,open,null,0,20)).isInstanceOf(OrganizationAccessDeniedException.class);
     }
     @Test void partnerSubtotalsSeparateHomonymsKeepUnassignedAndApplyTheSameFilters()throws Exception{
         var a=partner(owner,"12ABC34501DE35",true);var b=partner(owner,"98ZYX76543WV39",false);var foreign=partner(other,"12ABC34501DE35",true);

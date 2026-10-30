@@ -1547,6 +1547,77 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/financial-reports/monthly-cash-totals/titles:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: listMonthlyCashTitles
+      summary: Detalha títulos que compõem o fluxo mensal, com paginação no servidor.
+      description: >-
+        Requer FINEMP_FINANCE_MONTHLY_CASH_ENABLED e FINANCIAL_ENTRY_VIEW ou
+        FINANCIAL_ENTRY_MANAGE ALL vigente. REALIZED usa data de pagamento e
+        valor efetivo, com fallback nominal; OPEN exige ausência de pagamento e
+        usa vencimento e nominal. Atividade atual herda do grupo, com fallback OPERATING.
+        Ordena por cashDate e id. Contagem e página compartilham snapshot nesta
+        requisição; não há snapshot entre requisições de resumo e detalhe.
+        Não representa reconstrução histórica, saldo, transferência ou DRE.
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', example: '2026-07'}
+          description: Mês explícito, ano de 0001 a 9999.
+        - name: direction
+          in: query
+          required: true
+          schema: {type: string, enum: [INCOME, EXPENSE]}
+        - name: state
+          in: query
+          required: true
+          schema: {type: string, enum: [REALIZED, OPEN]}
+        - name: activity
+          in: query
+          schema: {type: string, enum: [OPERATING, INVESTING, FINANCING]}
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Títulos e contagem no PostgreSQL; dinheiro textual e no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  page: {type: integer}
+                  size: {type: integer}
+                  totalItems: {type: integer, format: int64}
+                  totalPages: {type: integer}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, description, direction, state, activity, cashDate, amount, nominalAmount, dueDate, categoryId, bankAccountId]
+                      properties:
+                        id: {type: string, format: uuid}
+                        description: {type: string}
+                        direction: {type: string, enum: [INCOME, EXPENSE]}
+                        state: {type: string, enum: [REALIZED, OPEN]}
+                        activity: {type: string, enum: [OPERATING, INVESTING, FINANCING]}
+                        cashDate: {type: string, format: date}
+                        amount: {type: string, description: Valor usado no resumo mensal para este estado.}
+                        nominalAmount: {type: string}
+                        dueDate: {type: string, format: date}
+                        paymentDate: {type: [string, 'null'], format: date}
+                        categoryId: {type: string, format: uuid}
+                        partnerId: {type: [string, 'null'], format: uuid}
+                        bankAccountId: {type: string, format: uuid}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/financial-reports/monthly-cash-totals:
     parameters:
       - $ref: '#/components/parameters/CompanyId'

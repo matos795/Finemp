@@ -6,7 +6,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@RestControllerAdvice(assignableTypes=MonthlyCashTotalsController.class)
+@RestControllerAdvice(assignableTypes={MonthlyCashTotalsController.class,CashTitlesReadController.class})
 public class MonthlyCashTotalsExceptionHandler {
     @ExceptionHandler({IllegalArgumentException.class,MissingServletRequestParameterException.class,MethodArgumentTypeMismatchException.class}) ResponseEntity<?> invalid(){return result(HttpStatus.BAD_REQUEST,"INVALID_MONTHLY_CASH_TOTALS");}
     @ExceptionHandler(OrganizationAccessDeniedException.class) ResponseEntity<?> denied(){return result(HttpStatus.FORBIDDEN,"MONTHLY_CASH_ACCESS_DENIED");}
