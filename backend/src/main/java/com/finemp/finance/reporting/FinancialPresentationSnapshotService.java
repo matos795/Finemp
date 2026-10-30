@@ -39,10 +39,12 @@ public class FinancialPresentationSnapshotService {
         var receivables=aging.report(actor,company,FinancialDirection.INCOME,asOf,scope);
         var dreReader=operationalDre.getIfAvailable();
         var dre=dreReader==null?null:dreReader.report(actor,company,month);
-        return new Snapshot(1,true,company,month,asOf,scope,cashMonth,cashYear,payables,receivables,dre);
+        var indicators=FinancialPresentationIndicators.calculate(month,cashYear,receivables,dre);
+        return new Snapshot(1,true,company,month,asOf,scope,cashMonth,cashYear,payables,receivables,dre,indicators);
     }
     private static IllegalArgumentException invalid(){return new IllegalArgumentException("Mês, data-base e escopo explícitos são obrigatórios.");}
     public record Snapshot(int schemaVersion,boolean partial,UUID companyId,String month,LocalDate asOf,OpenTitlesAgingService.Scope scope,
             DailyCashTotalsService.Report cashMonth,MonthlyCashTotalsService.Report cashYear,OpenTitlesAgingService.Report payables,OpenTitlesAgingService.Report receivables,
-            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) OperationalDreMonthlyReadService.Report operationalDre){}
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) OperationalDreMonthlyReadService.Report operationalDre,
+            FinancialPresentationIndicators.Report indicators){}
 }
