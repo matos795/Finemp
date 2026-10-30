@@ -525,3 +525,7 @@ Até a introdução de versionamento explícito, alterações aditivas são pref
 ### Títulos do fluxo mensal (#232)
 
 GET /api/companies/{companyId}/financial-reports/monthly-cash-totals/titles recebe month=AAAA-MM, direction=INCOME/EXPENSE e state=REALIZED/OPEN obrigatórios; activity opcional e page/size (máximo 100). Usa a flag mensal e permissão financeira ALL. Selecionar REALIZED para os totais realIncome/realExpense e OPEN para openIncome/openExpense. amount é o valor do resumo; nominalAmount é separado. Não somar páginas incompletas para substituir totais do backend. Classificação atual, sem snapshot compartilhado entre requisições. Resposta no-store. Ver docs/architecture/monthly-cash-title-detail.md e OpenAPI.
+
+### Subtotais do fluxo por categoria (#234)
+
+GET /api/companies/{companyId}/financial-reports/monthly-cash-totals/by-category usa month/direction/state obrigatórios, activity opcional e page/size. totalItems conta categorias. Use categoryId no endpoint /titles, mantendo os mesmos filtros, para abrir o subtotal; nomes são rótulos atuais, nunca chaves. Valores são calculados pelo backend. Requisições separadas podem observar alterações concorrentes.

@@ -1547,6 +1547,70 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/financial-reports/monthly-cash-totals/by-category:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: listMonthlyCashCategoryTotals
+      summary: Subtotais paginados de caixa por identidade da categoria.
+      description: >-
+        Mesma flag, autorização financeira ALL, mês, direção, estado e atividade
+        do detalhe. Agrupa por categoria, com rótulos atuais da categoria e grupo;
+        homônimos não são combinados. totalItems/totalPages contam categorias.
+        Ordenação pela chave do catálogo e UUID. Usa soma exata de amount no
+        PostgreSQL e no-store; não reconstrói classificação histórica.
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'}
+          description: Mês explícito, ano de 0001 a 9999.
+        - name: direction
+          in: query
+          required: true
+          schema: {type: string, enum: [INCOME, EXPENSE]}
+        - name: state
+          in: query
+          required: true
+          schema: {type: string, enum: [REALIZED, OPEN]}
+        - name: activity
+          in: query
+          schema: {type: string, enum: [OPERATING, INVESTING, FINANCING]}
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Categorias com subtotal exato e quantidade de títulos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  page: {type: integer}
+                  size: {type: integer}
+                  totalItems: {type: integer, format: int64}
+                  totalPages: {type: integer}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [categoryId, activity, titleCount, amount]
+                      properties:
+                        categoryId: {type: string, format: uuid}
+                        categoryName: {type: [string, 'null']}
+                        categoryCode: {type: [string, 'null']}
+                        groupId: {type: [string, 'null'], format: uuid}
+                        groupName: {type: [string, 'null']}
+                        activity: {type: string, enum: [OPERATING, INVESTING, FINANCING]}
+                        titleCount: {type: integer, format: int64}
+                        amount: {type: string}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/financial-reports/monthly-cash-totals/titles:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
@@ -1562,7 +1626,12 @@ paths:
         Ordena por cashDate e id. Contagem e página compartilham snapshot nesta
         requisição; não há snapshot entre requisições de resumo e detalhe.
         Não representa reconstrução histórica, saldo, transferência ou DRE.
+        categoryId é opcional e cumulativo; categoria externa/desconhecida
+        produz lista vazia sem revelar existência.
       parameters:
+        - name: categoryId
+          in: query
+          schema: {type: string, format: uuid}
         - name: month
           in: query
           required: true
