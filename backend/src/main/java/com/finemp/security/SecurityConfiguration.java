@@ -99,6 +99,7 @@ public class SecurityConfiguration {
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/financial-reports/open-titles/aging",
                                                                 "/api/companies/{companyId}/financial-reports/open-titles",
+                                                                "/api/companies/{companyId}/financial-reports/open-titles/by-partner",
                                                                 "/api/companies/{companyId}/financial-reports/monthly-cash-totals",
                                                                 "/api/companies/{companyId}/financial-reports/presentation-snapshot",
                                                                 "/api/companies/{companyId}/financial-reports/daily-cash-totals")

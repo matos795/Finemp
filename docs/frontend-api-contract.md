@@ -507,6 +507,8 @@ Leitura usa FINANCIAL_ENTRY_VIEW/MANAGE ALL vigente; escrita usa MANAGE, sessão
 
 ### Snapshot parcial de Apresentação de Resultados
 
+O detalhamento de pagar/receber também oferece GET `/api/companies/{companyId}/financial-reports/open-titles/by-partner`, com direction/asOf obrigatórios, scope e band opcionais e page/size. A resposta pagina grupos e fornece partnerId/partnerName, titleCount e nominalAmount. Não somar títulos no React para reconstruir subtotais. Grupo sem parceiro possui ID/nome nulos; homônimos têm IDs distintos e parceiros inativos podem conter títulos históricos. Não inferir que totalItems representa quantidade de títulos: neste endpoint ele conta grupos.
+
 GET `/api/companies/{companyId}/financial-reports/presentation-snapshot?month=2026-07&asOf=2026-07-31&scope=ALL` reúne caixa diário, caixa mensal/anual e aging de pagar/receber em uma única transação consistente. As três escolhas são obrigatórias e independentes; não há default de período. Exige os opt-ins de presentation, aging, daily-cash e monthly-cash, sessão e FINANCIAL_ENTRY_VIEW ou FINANCIAL_ENTRY_MANAGE ALL vigente.
 
 A resposta `schemaVersion=1`, `partial=true` contém `cashMonth`, `cashYear`, `payables` e `receivables`. O React apresenta valores, totais e faixas retornados; não soma dinheiro nem recalcula indicadores. Os valores monetários são texto decimal exato. Não combinar chamadas individuais como se fossem o mesmo snapshot, nem rotular os blocos como DRE operacional, saldo ou fluxo completo. A resposta é no-store, não uma apresentação persistida. Ver [escopo e pontos abertos](architecture/financial-presentation-snapshot.md) e OpenAPI.
