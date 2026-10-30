@@ -1559,6 +1559,9 @@ paths:
         FINANCIAL_ENTRY_VIEW ou FINANCIAL_ENTRY_MANAGE ALL. Realizado usa data
         de pagamento e valor efetivo; em aberto usa vencimento e valor nominal.
         Retorna os 12 meses do ano informado, com valores decimais exatos em texto.
+        activityMonths abre os mesmos valores por atividade atual da subcategoria,
+        herdando do grupo quando ausente e usando OPERATING como fallback existente.
+        Inclui 36 combinações de mês/atividade, inclusive zeros. Não é classificação histórica.
         É uma fatia do fluxo atual; não inclui saldos, transferências, forma de
         pagamento ou reconstrução histórica. Não escolhe período padrão.
       parameters:
@@ -1573,9 +1576,24 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [year, months, totalRealIncome, totalRealExpense, totalOpenIncome, totalOpenExpense]
+                required: [year, months, activityMonths, totalRealIncome, totalRealExpense, totalOpenIncome, totalOpenExpense]
                 properties:
                   year: {type: integer}
+                  activityMonths:
+                    type: array
+                    minItems: 36
+                    maxItems: 36
+                    description: Mês crescente; dentro de cada mês OPERATING, INVESTING e FINANCING.
+                    items:
+                      type: object
+                      required: [month, activity, realIncome, realExpense, openIncome, openExpense]
+                      properties:
+                        month: {type: integer, minimum: 1, maximum: 12}
+                        activity: {type: string, enum: [OPERATING, INVESTING, FINANCING]}
+                        realIncome: {type: string}
+                        realExpense: {type: string}
+                        openIncome: {type: string}
+                        openExpense: {type: string}
                   totalRealIncome: {type: string, description: Soma das entradas realizadas dos 12 meses.}
                   totalRealExpense: {type: string, description: Soma das saídas realizadas dos 12 meses.}
                   totalOpenIncome: {type: string, description: Soma das entradas em aberto dos 12 meses.}
