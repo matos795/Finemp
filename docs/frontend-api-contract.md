@@ -521,3 +521,7 @@ A resposta `schemaVersion=1`, `partial=true` contém `cashMonth`, `cashYear`, `p
 
 Até a introdução de versionamento explícito, alterações aditivas são preferidas. Renomear campos, alterar significado ou remover operações exige migração coordenada. O endpoint atual `/api/companies/{companyId}/dre` permanece canônico para a DRE inicial; uma futura família `/reporting` deve ser adicionada ou migrada por uma decisão documentada, não por troca silenciosa.
 
+
+### Títulos do fluxo mensal (#232)
+
+GET /api/companies/{companyId}/financial-reports/monthly-cash-totals/titles recebe month=AAAA-MM, direction=INCOME/EXPENSE e state=REALIZED/OPEN obrigatórios; activity opcional e page/size (máximo 100). Usa a flag mensal e permissão financeira ALL. Selecionar REALIZED para os totais realIncome/realExpense e OPEN para openIncome/openExpense. amount é o valor do resumo; nominalAmount é separado. Não somar páginas incompletas para substituir totais do backend. Classificação atual, sem snapshot compartilhado entre requisições. Resposta no-store. Ver docs/architecture/monthly-cash-title-detail.md e OpenAPI.
