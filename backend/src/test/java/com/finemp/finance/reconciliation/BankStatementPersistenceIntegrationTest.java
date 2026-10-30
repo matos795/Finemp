@@ -28,9 +28,10 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties={"finemp.finance.catalog.enabled=true","finemp.finance.statement-import.enabled=true","finemp.finance.statement-candidates.enabled=true","finemp.finance.statement-read.enabled=true","finemp.finance.aging.enabled=true","finemp.finance.open-titles.enabled=true","finemp.finance.monthly-cash.enabled=true","finemp.finance.daily-cash.enabled=true","finemp.finance.statement-actions.enabled=true","finemp.finance.entries.enabled=true","finemp.finance.entries.commands.enabled=true"})
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
-@org.springframework.test.context.TestPropertySource(properties="finemp.finance.presentation.enabled=true")
+@org.springframework.test.context.TestPropertySource(properties={"finemp.finance.presentation.enabled=true","finemp.finance.operational-dre.enabled=true"})
 class BankStatementPersistenceIntegrationTest {
     @Autowired BusinessPartnerRepository partners;
+    @Autowired com.finemp.finance.reporting.OperationalDreMonthlyReadService operationalDre;
     @Autowired com.finemp.finance.reporting.CashTitlesReadService cashTitles;
     @Autowired com.finemp.finance.reporting.FinancialPresentationSnapshotService presentation;
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean(name="dailyCashTotalsService")
@@ -417,6 +418,36 @@ class BankStatementPersistenceIntegrationTest {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route.replace(owner.getId().toString(),other.getId().toString())+"/by-category").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07").param("direction","EXPENSE").param("state","OPEN"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
     }
+    @Test void operationalDreSeparatesCompetenceAndSettlementAcrossYearsAndCompanies(){
+        var original=categories.findById(categoryIds.get(owner.getId())).orElseThrow();var parent=categories.findById(original.getParentId()).orElseThrow();
+        jdbc.update("UPDATE financial_categories SET dre_line='DCOM' WHERE id=?",parent.getId());
+        jdbc.update("UPDATE financial_entries SET competence='2026-12',payment_date=DATE '2027-01-05',actual_paid_amount=1.01 WHERE id=?",entry.getId());
+        var incomeGroup=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"Synthetic DRE income"));
+        var incomeCategory=categories.saveAndFlush(FinancialCategory.subcategory(incomeGroup,1,"Synthetic DRE revenue"));var date=LocalDate.of(2026,7,1);
+        entries.saveAndFlush(new FinancialEntry(owner,new FinancialEntryValues(FinancialDirection.INCOME,"Synthetic DRE income",new BigDecimal("2.34"),date,date,YearMonth.of(2026,12),date,LocalDate.of(2027,1,1),new BigDecimal("2.30"),bank.getId(),incomeCategory.getId(),null,null,null,"","",""),actor.getId()));
+        var override=categories.saveAndFlush(FinancialCategory.subcategory(parent,2,"Synthetic DRE override"));jdbc.update("UPDATE financial_categories SET dre_line='DADM' WHERE id=?",override.getId());
+        var discount=entry(owner,bank);jdbc.update("UPDATE financial_entries SET category_id=?,nominal_amount=3.45,competence='2027-01',payment_date=DATE '2026-12-31',actual_paid_amount=3.40 WHERE id=?",override.getId(),discount.getId());
+        var excluded=categories.saveAndFlush(FinancialCategory.subcategory(parent,3,"Synthetic excluded"));jdbc.update("UPDATE financial_categories SET dre_line='NAO' WHERE id=?",excluded.getId());
+        var nao=entry(owner,bank);jdbc.update("UPDATE financial_entries SET category_id=?,nominal_amount=4.00,competence='2026-12',payment_date=DATE '2027-01-01',actual_paid_amount=4.01 WHERE id=?",excluded.getId(),nao.getId());
+        jdbc.update("UPDATE financial_entries SET competence='2026-12',nominal_amount=999.99,payment_date=DATE '2027-01-01',actual_paid_amount=888.88 WHERE id=?",foreignEntry.getId());
+        var december=operationalDre.report(actor.getId(),owner.getId(),"2026-12");var january=operationalDre.report(actor.getId(),owner.getId(),"2027-01");
+        assertThat(december.partial()).isTrue();assertThat(december.coverage()).containsExactly("FINANCIAL_ENTRIES");assertThat(december.companyId()).isEqualTo(owner.getId());assertThat(december.lines()).hasSize(12);
+        assertThat(dreLine(december,OperationalDreLine.REC).competenceAmount()).isEqualByComparingTo("2.34");
+        assertThat(dreLine(december,OperationalDreLine.DCOM).competenceAmount()).isEqualByComparingTo("-1.00");
+        assertThat(dreLine(december,OperationalDreLine.RFIN).settlementDifference()).isEqualByComparingTo("0.05");
+        assertThat(dreLine(december,OperationalDreLine.DADM).amount()).isEqualByComparingTo("0.00");
+        assertThat(dreLine(january,OperationalDreLine.DADM).competenceAmount()).isEqualByComparingTo("-3.45");
+        assertThat(dreLine(january,OperationalDreLine.DFIN).settlementDifference()).isEqualByComparingTo("-0.05");
+        for(var report:List.of(december,january))assertThat(report.lines()).allSatisfy(line->assertThat(line.amount()).isEqualByComparingTo(line.competenceAmount().add(line.settlementDifference())));
+        assertThat(december.lines().stream().map(com.finemp.finance.reporting.OperationalDreMonthlyReadService.Line::amount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("1.39");
+        assertThat(january.lines().stream().map(com.finemp.finance.reporting.OperationalDreMonthlyReadService.Line::amount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("-3.50");
+        assertThat(operationalDre.report(actor.getId(),owner.getId(),"9999-12").lines()).allSatisfy(line->assertThat(line.amount()).isEqualTo(new BigDecimal("0.00")));
+        for(String invalid:List.of("0000-01","2026-13","2026-1"))assertThatThrownBy(()->operationalDre.report(actor.getId(),owner.getId(),invalid)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->operationalDre.report(actor.getId(),other.getId(),"2026-12")).isInstanceOf(OrganizationAccessDeniedException.class);
+        jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE user_account_id=?)",actor.getId());
+        assertThatThrownBy(()->operationalDre.report(actor.getId(),owner.getId(),"2026-12")).isInstanceOf(OrganizationAccessDeniedException.class);
+    }
+    private com.finemp.finance.reporting.OperationalDreMonthlyReadService.Line dreLine(com.finemp.finance.reporting.OperationalDreMonthlyReadService.Report report,OperationalDreLine line){return report.lines().stream().filter(l->l.line()==line).findFirst().orElseThrow();}
     @Test void partnerSubtotalsSeparateHomonymsKeepUnassignedAndApplyTheSameFilters()throws Exception{
         var a=partner(owner,"12ABC34501DE35",true);var b=partner(owner,"98ZYX76543WV39",false);var foreign=partner(other,"12ABC34501DE35",true);
         var first=entry(owner,bank);var secondEntry=entry(owner,bank);var third=entry(owner,bank);var base=LocalDate.of(2026,7,1);
