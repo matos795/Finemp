@@ -54,8 +54,22 @@ public class MonthlyCashTotalsService {
             @JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openIncome,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openExpense){}
     public record ActivityMonth(int month,CashActivity activity,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal realIncome,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal realExpense,
             @JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openIncome,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openExpense){}
+    public record PeriodTotal(int period,int firstMonth,int lastMonth,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal realIncome,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal realExpense,
+            @JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openIncome,@JsonFormat(shape=JsonFormat.Shape.STRING) BigDecimal openExpense){}
     public record Report(int year,List<Month> months,List<ActivityMonth> activityMonths){
         public Report{months=List.copyOf(months);activityMonths=List.copyOf(activityMonths);}
+        @com.fasterxml.jackson.annotation.JsonProperty public List<PeriodTotal> quarters(){return periods(3);}
+        @com.fasterxml.jackson.annotation.JsonProperty public List<PeriodTotal> halfYears(){return periods(6);}
+        private List<PeriodTotal> periods(int length){
+            var result=new ArrayList<PeriodTotal>(12/length);
+            for(int first=1;first<=12;first+=length){
+                int start=first,end=first+length-1;
+                var slice=months.stream().filter(m->m.month()>=start && m.month()<=end).toList();
+                result.add(new PeriodTotal((first-1)/length+1,start,end,sum(slice,Month::realIncome),sum(slice,Month::realExpense),sum(slice,Month::openIncome),sum(slice,Month::openExpense)));
+            }
+            return List.copyOf(result);
+        }
+        private static BigDecimal sum(List<Month> months,java.util.function.Function<Month,BigDecimal> amount){return months.stream().map(amount).reduce(zero(),BigDecimal::add);}
         @com.fasterxml.jackson.annotation.JsonProperty @JsonFormat(shape=JsonFormat.Shape.STRING)
         public BigDecimal totalRealIncome(){return sum(Month::realIncome);}
         @com.fasterxml.jackson.annotation.JsonProperty @JsonFormat(shape=JsonFormat.Shape.STRING)

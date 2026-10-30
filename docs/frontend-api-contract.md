@@ -529,3 +529,7 @@ GET /api/companies/{companyId}/financial-reports/monthly-cash-totals/titles rece
 ### Subtotais do fluxo por categoria (#234)
 
 GET /api/companies/{companyId}/financial-reports/monthly-cash-totals/by-category usa month/direction/state obrigatórios, activity opcional e page/size. totalItems conta categorias. Use categoryId no endpoint /titles, mantendo os mesmos filtros, para abrir o subtotal; nomes são rótulos atuais, nunca chaves. Valores são calculados pelo backend. Requisições separadas podem observar alterações concorrentes.
+
+### Períodos do fluxo mensal (#236)
+
+monthly-cash-totals e presentation-snapshot.cashYear incluem quarters (4) e halfYears (2), ordenados por period, com firstMonth/lastMonth e realIncome/realExpense/openIncome/openExpense textuais. Use os totais do backend ao alternar a visualização; não recalcule no frontend. Valores derivam dos mesmos meses e não representam médias ou saldos.
