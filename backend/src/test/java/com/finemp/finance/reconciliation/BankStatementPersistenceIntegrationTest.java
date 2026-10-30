@@ -324,6 +324,31 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT actual_paid_amount FROM financial_entries WHERE id=?",BigDecimal.class,entry.getId())).isEqualByComparingTo("2.00");
         assertThat(aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).totalCount()).isZero();
     }
+    @Test void monthlyActivityBreakdownUsesCurrentInheritanceAndPreservesExactTotals()throws Exception{
+        UUID inherited=categoryIds.get(owner.getId());var parent=categories.findById(categories.findById(inherited).orElseThrow().getParentId()).orElseThrow();
+        jdbc.update("UPDATE financial_categories SET cash_activity='FINANCING' WHERE id=?",parent.getId());
+        var override=categories.saveAndFlush(FinancialCategory.subcategory(parent,2,"Synthetic investment"));
+        jdbc.update("UPDATE financial_categories SET cash_activity='INVESTING' WHERE id=?",override.getId());
+        var paid=entry(owner,bank);jdbc.update("UPDATE financial_entries SET category_id=?,nominal_amount=2.34,payment_date=DATE '2026-08-05',actual_paid_amount=2.30 WHERE id=?",override.getId(),paid.getId());
+        var incomeGroup=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"Synthetic operating income"));
+        var incomeCategory=categories.saveAndFlush(FinancialCategory.subcategory(incomeGroup,1,"Synthetic income"));var date=LocalDate.of(2026,7,1);
+        entries.saveAndFlush(new FinancialEntry(owner,new FinancialEntryValues(FinancialDirection.INCOME,"Synthetic activity income",new BigDecimal("0.10"),date,date,YearMonth.of(2026,7),date,null,null,bank.getId(),incomeCategory.getId(),null,null,null,"","",""),actor.getId()));
+        var result=monthly.report(actor.getId(),owner.getId(),2026);assertThat(result.activityMonths()).hasSize(36);
+        assertThat(result.activityMonths().stream().filter(a->a.month()==7 && a.activity()==CashActivity.FINANCING).findFirst().orElseThrow().openExpense()).isEqualByComparingTo("1.00");
+        assertThat(result.activityMonths().stream().filter(a->a.month()==8 && a.activity()==CashActivity.INVESTING).findFirst().orElseThrow().realExpense()).isEqualByComparingTo("2.30");
+        assertThat(result.activityMonths().stream().filter(a->a.month()==7 && a.activity()==CashActivity.OPERATING).findFirst().orElseThrow().openIncome()).isEqualByComparingTo("0.10");
+        for(var month:result.months()){
+            var slices=result.activityMonths().stream().filter(a->a.month()==month.month()).toList();assertThat(slices).hasSize(3);
+            assertThat(slices.stream().map(com.finemp.finance.reporting.MonthlyCashTotalsService.ActivityMonth::realIncome).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(month.realIncome());
+            assertThat(slices.stream().map(com.finemp.finance.reporting.MonthlyCashTotalsService.ActivityMonth::realExpense).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(month.realExpense());
+            assertThat(slices.stream().map(com.finemp.finance.reporting.MonthlyCashTotalsService.ActivityMonth::openIncome).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(month.openIncome());
+            assertThat(slices.stream().map(com.finemp.finance.reporting.MonthlyCashTotalsService.ActivityMonth::openExpense).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(month.openExpense());
+        }
+        assertThat(result.totalRealExpense()).isEqualByComparingTo("2.30");assertThat(result.totalOpenExpense()).isEqualByComparingTo("1.00");
+        assertThat(monthly.report(actor.getId(),owner.getId(),9999).activityMonths()).allSatisfy(a->{assertThat(a.realExpense()).isEqualByComparingTo("0.00");assertThat(a.openExpense()).isEqualByComparingTo("0.00");});
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+owner.getId()+"/financial-reports/monthly-cash-totals").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("year","2026"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.activityMonths.length()").value(36)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.activityMonths[22].realExpense").value("2.30"));
+    }
     @Test void partnerSubtotalsSeparateHomonymsKeepUnassignedAndApplyTheSameFilters()throws Exception{
         var a=partner(owner,"12ABC34501DE35",true);var b=partner(owner,"98ZYX76543WV39",false);var foreign=partner(other,"12ABC34501DE35",true);
         var first=entry(owner,bank);var secondEntry=entry(owner,bank);var third=entry(owner,bank);var base=LocalDate.of(2026,7,1);

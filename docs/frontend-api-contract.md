@@ -513,6 +513,8 @@ Para abrir um grupo, consultar GET `open-titles` com o mesmo contexto e `partner
 
 As linhas de `open-titles` incluem `documentNumber`, `documentDate` e `categoryId`, além do contexto financeiro existente. Usar os valores retornados; documento vazio significa não informado. Não consultar cada lançamento individualmente apenas para completar esses metadados.
 
+O resumo `monthly-cash-totals` e o bloco `cashYear` do snapshot incluem `activityMonths`: 12 meses × OPERATING/INVESTING/FINANCING, com entradas/saídas realizadas e em aberto. Usar os totais mensais/anuais já fornecidos, sem recompor valores no React. A atividade vem da classificação atual do catálogo, com a herança existente; não representa classificação histórica, saldo ou DRE.
+
 GET `/api/companies/{companyId}/financial-reports/presentation-snapshot?month=2026-07&asOf=2026-07-31&scope=ALL` reúne caixa diário, caixa mensal/anual e aging de pagar/receber em uma única transação consistente. As três escolhas são obrigatórias e independentes; não há default de período. Exige os opt-ins de presentation, aging, daily-cash e monthly-cash, sessão e FINANCIAL_ENTRY_VIEW ou FINANCIAL_ENTRY_MANAGE ALL vigente.
 
 A resposta `schemaVersion=1`, `partial=true` contém `cashMonth`, `cashYear`, `payables` e `receivables`. O React apresenta valores, totais e faixas retornados; não soma dinheiro nem recalcula indicadores. Os valores monetários são texto decimal exato. Não combinar chamadas individuais como se fossem o mesmo snapshot, nem rotular os blocos como DRE operacional, saldo ou fluxo completo. A resposta é no-store, não uma apresentação persistida. Ver [escopo e pontos abertos](architecture/financial-presentation-snapshot.md) e OpenAPI.
