@@ -1551,6 +1551,75 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/financial-reports/operational-dre/effects:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: listOperationalDreEffects
+      summary: Rastreia os efeitos que compõem as linhas mensais da DRE operacional.
+      description: >-
+        Mesmo opt-in e permissão financeira ALL da DRE operacional. Company e
+        mês explícitos, linha opcional cumulativa. Lista plana, não define nova
+        hierarquia. Um lançamento pode gerar dois itens distintos por source,
+        inclusive na mesma linha; totalItems conta efeitos, não lançamentos.
+        Filtros/contagem/paginação PostgreSQL, ordenação por entryId/source.
+        Mesmas regras F06 e exclusão observada de NAO; categoria original é
+        preservada também na diferença de baixa. Classificação atual, sem
+        reconstrução histórica. Contagem e página são consistentes nesta
+        requisição, sem token de snapshot entre requisições de resumo e detalhe.
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'}
+          description: Mês explícito entre 0001-01 e 9999-12.
+        - name: line
+          in: query
+          schema: {type: string, enum: [REC, DED, CUS, DCOM, DADM, DPES, DTRI, OUT, DEP, RFIN, DFIN, IR, NAO]}
+          description: Ausente retorna todas; NAO retorna vazio pela exclusão observada atual.
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Efeitos exatos paginados, cobertura parcial e no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyId, month, partial, coverage, items, page, size, totalItems, totalPages]
+                properties:
+                  companyId: {type: string, format: uuid}
+                  month: {type: string}
+                  partial: {type: boolean, const: true}
+                  coverage:
+                    type: array
+                    minItems: 1
+                    maxItems: 1
+                    items: {type: string, enum: [FINANCIAL_ENTRIES]}
+                  page: {type: integer}
+                  size: {type: integer}
+                  totalItems: {type: integer, format: int64}
+                  totalPages: {type: integer}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [entryId, description, categoryId, competence, line, source, amount]
+                      properties:
+                        entryId: {type: string, format: uuid}
+                        description: {type: string}
+                        categoryId: {type: string, format: uuid}
+                        competence: {type: string}
+                        paymentDate: {type: [string, 'null'], format: date}
+                        line: {type: string, enum: [REC, DED, CUS, DCOM, DADM, DPES, DTRI, OUT, DEP, RFIN, DFIN, IR]}
+                        source: {type: string, enum: [COMPETENCE, SETTLEMENT_DIFFERENCE]}
+                        amount: {type: string, description: Efeito assinado exato; não é sempre o nominal do título.}
+        '400': {$ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1operational-dre/get/responses/400'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1operational-dre/get/responses/403'}
   /api/companies/{companyId}/financial-reports/operational-dre:
     parameters:
       - $ref: '#/components/parameters/CompanyId'

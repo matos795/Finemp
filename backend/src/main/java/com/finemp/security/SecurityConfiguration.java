@@ -105,6 +105,7 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/financial-reports/monthly-cash-totals/by-category",
                                                                 "/api/companies/{companyId}/financial-reports/presentation-snapshot",
                                                                 "/api/companies/{companyId}/financial-reports/operational-dre",
+                                                                "/api/companies/{companyId}/financial-reports/operational-dre/effects",
                                                                 "/api/companies/{companyId}/financial-reports/daily-cash-totals")
                                                 .authenticated()
 
