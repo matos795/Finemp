@@ -1490,6 +1490,63 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/financial-reports/presentation-snapshot:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: getPartialPresentationSnapshot
+      summary: Reúne caixa parcial e aging em um único snapshot consistente.
+      description: >-
+        Exige sessão e FINANCIAL_ENTRY_VIEW ou FINANCIAL_ENTRY_MANAGE ALL.
+        Habilitar FINEMP_FINANCE_PRESENTATION_ENABLED e os produtores
+        FINEMP_FINANCE_AGING_ENABLED, FINEMP_FINANCE_DAILY_CASH_ENABLED e
+        FINEMP_FINANCE_MONTHLY_CASH_ENABLED. Mês, data-base e escopo são explícitos
+        e independentes; não há período padrão ou fallback. Caixa anual usa o ano
+        de month. Todos os blocos são calculados pelo backend na mesma transação.
+        Não inclui DRE operacional, indicadores, saldo, projeção ou orçamento.
+        O aging aplica a data-base ao estado atual, sem reconstrução histórica.
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'}
+          description: Mês de caixa YYYY-MM entre 0001-01 e 9999-12.
+        - name: asOf
+          in: query
+          required: true
+          schema: {type: string, format: date}
+          description: Data-base explícita do aging entre os anos 1 e 9999.
+        - name: scope
+          in: query
+          required: true
+          schema: {type: string, enum: [ALL, COMPETENCE]}
+      responses:
+        '200':
+          description: Blocos parciais consistentes, sem cache e com valores monetários em texto.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schemaVersion, partial, companyId, month, asOf, scope, cashMonth, cashYear, payables, receivables]
+                properties:
+                  schemaVersion: {type: integer, enum: [1]}
+                  partial: {type: boolean, enum: [true]}
+                  companyId: {type: string, format: uuid}
+                  month: {type: string}
+                  asOf: {type: string, format: date}
+                  scope: {type: string, enum: [ALL, COMPETENCE]}
+                  cashMonth:
+                    $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1daily-cash-totals/get/responses/200/content/application~1json/schema'
+                  cashYear:
+                    $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1monthly-cash-totals/get/responses/200/content/application~1json/schema'
+                  payables:
+                    $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1open-titles~1aging/get/responses/200/content/application~1json/schema'
+                  receivables:
+                    $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1open-titles~1aging/get/responses/200/content/application~1json/schema'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/financial-reports/monthly-cash-totals:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
