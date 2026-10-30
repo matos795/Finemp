@@ -19,3 +19,7 @@ Após validar esta leitura, expor contrato HTTP/OpenAPI separado e incorporar o 
 ## PONTO ABERTO
 
 NAO conserva exclusão observada isolada, inclusive sua diferença de baixa, sem declarar metodologia definitiva. Efeitos de bens/depreciação/alienação dependem de #47. Fontes ausentes não são representadas como implementadas. #197/#128 permanecem isoladas. Não inclui tributos automáticos, saldo, projeção, orçamento ou nova competência inferida.
+
+## API (#242)
+
+GET /api/companies/{companyId}/financial-reports/operational-dre exige month explícito, sessão e permissão financeira vigente; a rota está na allowlist autenticada e o serviço valida Company/ALL. Resposta no-store. Erros 400 INVALID_OPERATIONAL_DRE e 403 OPERATIONAL_DRE_ACCESS_DENIED são fixos. O contrato retorna somente a fatia descrita acima, preservando partial/coverage. A DRE Questor não muda. Incorporar ao snapshot da Apresentação continua incremento separado.

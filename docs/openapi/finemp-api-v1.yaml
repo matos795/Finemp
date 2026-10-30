@@ -1547,6 +1547,76 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/financial-reports/operational-dre:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: getMonthlyOperationalDre
+      summary: DRE operacional mensal parcial, limitada aos efeitos de lançamentos.
+      description: >-
+        Requer finemp.finance.operational-dre.enabled=true e FINANCIAL_ENTRY_VIEW
+        ou FINANCIAL_ENTRY_MANAGE ALL vigente. Mês explícito, sem default.
+        Nominal assinado por competência; diferença efetiva por mês de baixa.
+        Classificação atual da categoria/grupo, sem reconstrução histórica.
+        NAO mantém a exclusão observada ainda sujeita a validação de negócio.
+        Não inclui bens/depreciação/alienação, saldo, orçamento ou projeção.
+        Não é a DRE contábil Questor nem uma DRE operacional completa.
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', example: '2026-07'}
+          description: Mês explícito; ano entre 0001 e 9999.
+      responses:
+        '200':
+          description: Linhas calculadas pelo backend em snapshot consistente; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyId, month, partial, coverage, lines]
+                properties:
+                  companyId: {type: string, format: uuid}
+                  month: {type: string}
+                  partial: {type: boolean, const: true}
+                  coverage:
+                    type: array
+                    minItems: 1
+                    maxItems: 1
+                    items: {type: string, enum: [FINANCIAL_ENTRIES]}
+                  lines:
+                    type: array
+                    minItems: 12
+                    maxItems: 12
+                    description: Linhas existentes na ordem dos identificadores abaixo, inclusive zeros; não define hierarquia oficial.
+                    items:
+                      type: object
+                      required: [line, competenceAmount, settlementDifference, amount]
+                      properties:
+                        line: {type: string, enum: [REC, DED, CUS, DCOM, DADM, DPES, DTRI, OUT, DEP, RFIN, DFIN, IR]}
+                        competenceAmount: {type: string, description: Valor nominal assinado por competência.}
+                        settlementDifference: {type: string, description: Diferença da baixa no mês de pagamento.}
+                        amount: {type: string, description: Soma exata das duas origens no backend.}
+        '400':
+          description: Mês obrigatório ou parâmetros inválidos; resposta no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code]
+                properties:
+                  code: {type: string, const: INVALID_OPERATIONAL_DRE}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403':
+          description: Sem permissão financeira vigente na Company; resposta no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code]
+                properties:
+                  code: {type: string, const: OPERATIONAL_DRE_ACCESS_DENIED}
   /api/companies/{companyId}/financial-reports/monthly-cash-totals/by-category:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
