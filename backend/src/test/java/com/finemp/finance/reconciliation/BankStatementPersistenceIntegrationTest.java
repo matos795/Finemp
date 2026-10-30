@@ -312,6 +312,23 @@ class BankStatementPersistenceIntegrationTest {
         tx.executeWithoutResult(status->{companies.findLockedById(owner.getId());entryGuard.requireLinkedStatementPeriodsOpen(owner.getId(),List.of(entry.getId(),foreignEntry.getId()));});
         assertThatThrownBy(()->tx.executeWithoutResult(status->{companies.findLockedById(other.getId());entryGuard.requireLinkedStatementPeriodsOpen(other.getId(),List.of(foreignEntry.getId()));})).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
     }
+    @Test void presentationIndicatorsUsePersistedAmountsAndSelectedMonth()throws Exception{
+        var incomeGroup=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"Synthetic indicator income"));
+        var incomeCategory=categories.saveAndFlush(FinancialCategory.subcategory(incomeGroup,1,"Synthetic revenue"));
+        jdbc.update("UPDATE financial_categories SET dre_line='REC' WHERE id=?",incomeCategory.getId());
+        var date=LocalDate.of(2026,7,1);
+        entries.saveAndFlush(new FinancialEntry(owner,new FinancialEntryValues(FinancialDirection.INCOME,"Synthetic indicator receipt",new BigDecimal("3.00"),date,date,YearMonth.of(2026,7),date,date,new BigDecimal("3.00"),bank.getId(),incomeCategory.getId(),null,null,null,"","",""),actor.getId()));
+        jdbc.update("UPDATE financial_entries SET payment_date=DATE '2026-07-02' WHERE id=?",entry.getId());
+        var july=presentation.snapshot(actor.getId(),owner.getId(),"2026-07",LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL);
+        assertThat(july.indicators().cash().generation()).isEqualByComparingTo("2.00");
+        assertThat(july.indicators().cash().margin().percent()).isEqualTo(new BigDecimal("66.7"));
+        assertThat(july.indicators().dre().netMargin().percent()).isEqualTo(new BigDecimal("66.7"));
+        assertThat(presentation.snapshot(actor.getId(),owner.getId(),"2026-08",LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).indicators().cash().generation()).isEqualByComparingTo("0.00");
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+owner.getId()+"/financial-reports/presentation-snapshot").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("month","2026-07").param("asOf","2026-07-31").param("scope","ALL"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.indicators.cash.margin.percent").value("66.7"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.indicators.dre.netMargin.availability").value("AVAILABLE"));
+    }
     @Test void presentationKeepsOneSnapshotWhenPaymentCommitsBetweenBlocks(){
         org.mockito.Mockito.doAnswer(call->{
             Object firstBlock=call.callRealMethod();
@@ -327,6 +344,10 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(snapshot.operationalDre()).isNotNull();assertThat(snapshot.operationalDre().partial()).isTrue();assertThat(snapshot.operationalDre().month()).isEqualTo("2026-07");
         assertThat(dreLine(snapshot.operationalDre(),OperationalDreLine.DADM).amount()).isEqualByComparingTo("-1.00");
         assertThat(dreLine(snapshot.operationalDre(),OperationalDreLine.DFIN).settlementDifference()).isEqualByComparingTo("0.00");
+        assertThat(snapshot.indicators().cash().generation()).isEqualByComparingTo("0.00");
+        assertThat(snapshot.indicators().dre().netMargin().numerator()).isEqualByComparingTo("-1.00");
+        assertThat(snapshot.indicators().dre().netMargin().percent()).isNull();
+        assertThat(snapshot.indicators().receivables().overdueRate().percent()).isNull();
         assertThat(jdbc.queryForObject("SELECT actual_paid_amount FROM financial_entries WHERE id=?",BigDecimal.class,entry.getId())).isEqualByComparingTo("2.00");
         assertThat(aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).totalCount()).isZero();
         assertThat(dreLine(operationalDre.report(actor.getId(),owner.getId(),"2026-07"),OperationalDreLine.DFIN).settlementDifference()).isEqualByComparingTo("-1.00");
@@ -569,6 +590,10 @@ class BankStatementPersistenceIntegrationTest {
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.operationalDre.coverage[0]").value("FINANCIAL_ENTRIES"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.operationalDre.lines[4].amount").value("-1.00"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.payables.totalAmount").value("1.00"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.indicators.percentUnit").value("PERCENT"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.indicators.cash.generation").value("0.00"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.indicators.dre.netMargin.numerator").value("-1.00"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.indicators.dre.netMargin.availability").value("UNAVAILABLE_BASE"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.receivables.totalAmount").value("0.00"));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("month","2026-07").param("asOf","2026-07-31"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());

@@ -549,3 +549,10 @@ O relatório operacional e o bloco correspondente do snapshot incluem subtotals:
 ### Rastreabilidade da DRE (#248)
 
 GET /api/companies/{companyId}/financial-reports/operational-dre/effects recebe month obrigatório, line opcional e page/size (máximo 100). Retorna contexto/cobertura parcial e itens calculados no backend. totalItems conta efeitos; use entryId + source como identidade, pois o mesmo título pode aparecer por competência e diferença de baixa, inclusive na mesma linha. amount é o efeito assinado, não necessariamente o nominal. Não somar uma página como total nem recalcular DRE no frontend. Resumo e detalhe em requisições distintas não compartilham snapshot. Consulte architecture/operational-dre-trace.md e OpenAPI.
+
+
+## Indicadores essenciais no snapshot (#250)
+
+`indicators` deriva exclusivamente dos blocos da mesma resposta: caixa realizado do mês, recebíveis na data-base/escopo explícitos e DRE opcional. O frontend apresenta `percent` textual sem recalcular: unidade PERCENT (100 = 100%), uma casa decimal, HALF_UP direto sem arredondamento intermediário. Numerador e denominador monetários permanecem exatos. `UNAVAILABLE_BASE` traz percentual null; exibir indisponível, não zero. Margens DRE permitem receita líquida negativa, mas não zero; caixa e recebíveis exigem denominador positivo. DRE ausente omite `indicators.dre`; cobertura parcial acompanha a DRE. Geração de caixa é entradas realizadas menos saídas realizadas, não saldo bancário. Não combinar data-base do aging com competência por suposição.
+
+Ver [checkpoint de MVP](architecture/presentation-mvp-checkpoint.md) para cobertura e próximos passos.

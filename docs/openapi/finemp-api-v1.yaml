@@ -1529,9 +1529,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [schemaVersion, partial, companyId, month, asOf, scope, cashMonth, cashYear, payables, receivables]
+                required: [schemaVersion, partial, companyId, month, asOf, scope, cashMonth, cashYear, payables, receivables, indicators]
                 properties:
                   schemaVersion: {type: integer, enum: [1]}
+                  indicators:
+                    $ref: '#/components/schemas/PresentationIndicators'
                   partial: {type: boolean, enum: [true]}
                   companyId: {type: string, format: uuid}
                   month: {type: string}
@@ -4006,6 +4008,49 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    PresentationRatio:
+      type: object
+      required: [numerator, denominator, percent, availability]
+      description: Razão calculada no backend. Numerador e denominador monetários exatos; percentual direto numerator*100/denominator com uma casa decimal e HALF_UP, sem arredondamento intermediário. Base inválida retorna null, não zero.
+      properties:
+        numerator: {type: string}
+        denominator: {type: string}
+        percent: {type: string, nullable: true, pattern: '^-?[0-9]+\.[0-9]$'}
+        availability: {type: string, enum: [AVAILABLE, UNAVAILABLE_BASE]}
+    PresentationIndicators:
+      type: object
+      required: [percentUnit, percentDecimalPlaces, cash, receivables]
+      description: Derivado somente dos relatórios lidos no mesmo snapshot. Caixa e DRE usam month; recebíveis usam asOf/scope explícitos e independentes. DRE omitida sem opt-in. Sem reconstrução histórica ou novas fontes presumidas.
+      properties:
+        percentUnit: {type: string, enum: [PERCENT]}
+        percentDecimalPlaces: {type: integer, enum: [1]}
+        cash:
+          type: object
+          required: [realizedIncome, realizedExpense, generation, margin]
+          properties:
+            realizedIncome: {type: string}
+            realizedExpense: {type: string}
+            generation: {type: string, description: Entradas realizadas menos saídas realizadas do mês.}
+            margin:
+              description: Geração sobre entradas realizadas, disponível apenas com entradas positivas.
+              $ref: '#/components/schemas/PresentationRatio'
+        receivables:
+          type: object
+          required: [overdueRate]
+          properties:
+            overdueRate:
+              description: Valor nominal vencido sobre total a receber, disponível apenas com total positivo.
+              $ref: '#/components/schemas/PresentationRatio'
+        dre:
+          type: object
+          required: [partial, coverage, grossMargin, ebitdaMargin, netMargin]
+          description: Margens sobre receita líquida diferente de zero, inclusive negativa. Mesma cobertura parcial da DRE.
+          properties:
+            partial: {type: boolean, enum: [true]}
+            coverage: {type: array, items: {type: string, enum: [FINANCIAL_ENTRIES]}}
+            grossMargin: {$ref: '#/components/schemas/PresentationRatio'}
+            ebitdaMargin: {$ref: '#/components/schemas/PresentationRatio'}
+            netMargin: {$ref: '#/components/schemas/PresentationRatio'}
     WithholdingInputValues:
       type: object
       additionalProperties: false
