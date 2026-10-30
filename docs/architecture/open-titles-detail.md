@@ -14,4 +14,8 @@ DECISÃO: GET `open-titles/by-partner` usa a mesma seleção do detalhamento e a
 
 A paginação e totalItems contam grupos; titleCount conta os títulos de cada grupo. Valores nominais são somados no backend e serializados como texto. A ordem determinística usa a chave normalizada do catálogo e ID, com sem-parceiro ao final; não se afirma equivalência integral à ordenação por locale do navegador. Filtros de data-base, competência e faixa são aplicados antes de agrupar.
 
-PONTO ABERTO: hierarquia de centros, percentuais/prazos e reconstrução histórica não são implementados aqui. O drill-down de um grupo permanece contrato separado.
+PONTO ABERTO: hierarquia de centros, percentuais/prazos e reconstrução histórica não são implementados aqui.
+
+## Drill-down de grupo
+
+Em incremento separado, o GET `open-titles` aceita `partnerId` opcional ou `unassignedPartner=true`. A combinação é rejeitada com 400. O filtro é aplicado na mesma consulta de Company, antes de contar e paginar, cumulativamente com data-base, escopo e faixa. Não existe consulta ao parceiro fora da Company: identificadores alheios ou inexistentes resultam em página vazia. Sem esses parâmetros, a lista anterior é preservada. A resposta não altera lançamentos nem a baixa.

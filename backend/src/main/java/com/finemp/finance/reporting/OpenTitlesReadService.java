@@ -23,7 +23,13 @@ public class OpenTitlesReadService {
         return list(actor,company,direction,asOf,scope,null,page,size);
     }
     public PagedResponse<View> list(UUID actor,UUID company,FinancialDirection direction,LocalDate asOf,OpenTitlesAgingService.Scope scope,OpenTitlesAgingService.Band band,int page,int size){
+        return list(actor,company,direction,asOf,scope,band,null,false,page,size);
+    }
+    public PagedResponse<View> list(UUID actor,UUID company,FinancialDirection direction,LocalDate asOf,OpenTitlesAgingService.Scope scope,OpenTitlesAgingService.Band band,UUID partnerId,boolean unassignedPartner,int page,int size){
         var selection=selection(actor,company,direction,asOf,scope,band,page,size);var args=selection.args();String where=selection.where();
+        if(partnerId!=null && unassignedPartner)throw new IllegalArgumentException("Filtros de parceiro incompatíveis.");
+        if(partnerId!=null){where+=" AND partner_id=:partner";args.addValue("partner",partnerId);}
+        if(unassignedPartner)where+=" AND partner_id IS NULL";
         long total=Objects.requireNonNull(jdbc.queryForObject("SELECT count(*)"+where,args,Long.class));args.addValue("limit",size).addValue("offset",(long)page*size);
         var rows=jdbc.query("SELECT *,CAST(:asOf AS date)-due_date AS days_late"+where+" ORDER BY due_date ASC,id ASC LIMIT :limit OFFSET :offset",args,(rs,n)->view(rs));
         return new PagedResponse<>(rows,page,size,total,(int)Math.min(Integer.MAX_VALUE,(total+size-1)/size));
