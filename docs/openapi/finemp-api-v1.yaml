@@ -1598,9 +1598,25 @@ paths:
                         competenceAmount: {type: string, description: Valor nominal assinado por competência.}
                         settlementDifference: {type: string, description: Diferença da baixa no mês de pagamento.}
                         amount: {type: string, description: Soma exata das duas origens no backend.}
-        '400': {$ref: '#/components/responses/BadRequest'}
+        '400':
+          description: Mês obrigatório ou parâmetros inválidos; resposta no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code]
+                properties:
+                  code: {type: string, const: INVALID_OPERATIONAL_DRE}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '403':
+          description: Sem permissão financeira vigente na Company; resposta no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code]
+                properties:
+                  code: {type: string, const: OPERATIONAL_DRE_ACCESS_DENIED}
   /api/companies/{companyId}/financial-reports/monthly-cash-totals/by-category:
     parameters:
       - $ref: '#/components/parameters/CompanyId'
