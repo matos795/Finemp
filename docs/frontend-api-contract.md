@@ -537,3 +537,7 @@ monthly-cash-totals e presentation-snapshot.cashYear incluem quarters (4) e half
 ### DRE operacional mensal parcial (#242)
 
 GET /api/companies/{companyId}/financial-reports/operational-dre?month=2026-07 usa o opt-in finemp.finance.operational-dre.enabled=true e exige permissão financeira ALL vigente. Company/mês, partial=true e coverage=[FINANCIAL_ENTRIES] são contexto obrigatório. Apresente as linhas e os valores textuais competenceAmount, settlementDifference e amount já calculados pelo backend. Não rotule como DRE completa nem confunda com a DRE contábil Questor. Sem período padrão ou reconstrução histórica. Bens/fontes ausentes e NAO estão documentados como limites/pontos abertos. Esta chamada isolada não deve ser combinada com outras chamadas como se formassem um snapshot único de apresentação.
+
+### DRE no snapshot da Apresentação (#244)
+
+Com o opt-in operacional-dre habilitado, presentation-snapshot inclui operationalDre na mesma transação dos demais blocos e no mesmo mês/Company. Prefira esse bloco para a Apresentação; não combine a API isolada com outras chamadas como se fossem consistentes. Campo ausente significa que o bloco não foi habilitado, não resultado zero. Preserve a indicação parcial e coverage do backend. Não calcule DRE/indicadores no frontend.

@@ -323,8 +323,12 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(snapshot.cashMonth().days().getFirst().openExpense()).isEqualByComparingTo("1.00");
         assertThat(snapshot.cashYear().totalOpenExpense()).isEqualByComparingTo("1.00");assertThat(snapshot.cashYear().totalRealExpense()).isEqualByComparingTo("0.00");
         assertThat(snapshot.payables().totalAmount()).isEqualByComparingTo("1.00");assertThat(snapshot.receivables().totalAmount()).isEqualByComparingTo("0.00");
+        assertThat(snapshot.operationalDre()).isNotNull();assertThat(snapshot.operationalDre().partial()).isTrue();assertThat(snapshot.operationalDre().month()).isEqualTo("2026-07");
+        assertThat(dreLine(snapshot.operationalDre(),OperationalDreLine.DADM).amount()).isEqualByComparingTo("-1.00");
+        assertThat(dreLine(snapshot.operationalDre(),OperationalDreLine.DFIN).settlementDifference()).isEqualByComparingTo("0.00");
         assertThat(jdbc.queryForObject("SELECT actual_paid_amount FROM financial_entries WHERE id=?",BigDecimal.class,entry.getId())).isEqualByComparingTo("2.00");
         assertThat(aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).totalCount()).isZero();
+        assertThat(dreLine(operationalDre.report(actor.getId(),owner.getId(),"2026-07"),OperationalDreLine.DFIN).settlementDifference()).isEqualByComparingTo("-1.00");
     }
     @Test void monthlyActivityBreakdownUsesCurrentInheritanceAndPreservesExactTotals()throws Exception{
         UUID inherited=categoryIds.get(owner.getId());var parent=categories.findById(categories.findById(inherited).orElseThrow().getParentId()).orElseThrow();
@@ -517,6 +521,8 @@ class BankStatementPersistenceIntegrationTest {
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.partial").value(true))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.cashYear.totalOpenExpense").value("1.00"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.operationalDre.coverage[0]").value("FINANCIAL_ENTRIES"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.operationalDre.lines[4].amount").value("-1.00"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.payables.totalAmount").value("1.00"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.receivables.totalAmount").value("0.00"));
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("month","2026-07").param("asOf","2026-07-31"))
