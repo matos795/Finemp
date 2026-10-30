@@ -1596,6 +1596,65 @@ paths:
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /api/companies/{companyId}/financial-reports/open-titles/by-partner:
+    parameters:
+      - $ref: '#/components/parameters/CompanyId'
+    get:
+      tags: [Financial reports]
+      operationId: listOpenTitlePartnerTotals
+      summary: Subtotais de títulos por cliente ou fornecedor, paginados no servidor.
+      description: >-
+        Requer FINEMP_FINANCE_OPEN_TITLES_ENABLED e FINANCIAL_ENTRY_VIEW ou
+        FINANCIAL_ENTRY_MANAGE ALL vigente. Usa os mesmos filtros do detalhamento,
+        soma valor nominal e conta títulos por partnerId, incluindo grupo sem parceiro.
+        Parceiros inativos com títulos não são descartados. totalItems/totalPages
+        contam grupos, não títulos. Ordena pela chave de nome do catálogo e ID;
+        grupo sem parceiro ao final. Não reconstrói alterações históricas.
+      parameters:
+        - name: direction
+          in: query
+          required: true
+          schema: {type: string, enum: [INCOME, EXPENSE]}
+        - name: asOf
+          in: query
+          required: true
+          schema: {type: string, format: date}
+        - name: scope
+          in: query
+          schema: {type: string, enum: [ALL, COMPETENCE], default: ALL}
+        - name: band
+          in: query
+          schema: {type: string, enum: [DUE_0_30, DUE_31_60, DUE_61_90, DUE_OVER_90, OVERDUE_1_30, OVERDUE_31_60, OVERDUE_61_90, OVERDUE_OVER_90]}
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Grupos em snapshot consistente; dinheiro textual e no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  page: {type: integer}
+                  size: {type: integer}
+                  totalItems: {type: integer, format: int64, description: Quantidade total de grupos.}
+                  totalPages: {type: integer}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [partnerId, partnerName, titleCount, nominalAmount]
+                      properties:
+                        partnerId: {type: string, format: uuid, nullable: true}
+                        partnerName: {type: string, nullable: true}
+                        titleCount: {type: integer, format: int64}
+                        nominalAmount: {type: string}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/financial-reports/open-titles:
     parameters:
       - $ref: '#/components/parameters/CompanyId'

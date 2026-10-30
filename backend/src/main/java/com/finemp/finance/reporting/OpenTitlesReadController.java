@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.*;
 public class OpenTitlesReadController {
     private final OpenTitlesReadService reads;
     public OpenTitlesReadController(OpenTitlesReadService reads){this.reads=reads;}
+    @GetMapping("/by-partner") public ResponseEntity<PagedResponse<OpenTitlesReadService.PartnerTotal>> byPartner(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,
+            @RequestParam FinancialDirection direction,@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate asOf,@RequestParam(defaultValue="ALL") OpenTitlesAgingService.Scope scope,
+            @RequestParam(required=false) OpenTitlesAgingService.Band band,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(reads.byPartner(actor.getUserAccountId(),companyId,direction,asOf,scope,band,page,size));}
     @GetMapping public ResponseEntity<PagedResponse<OpenTitlesReadService.View>> list(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,
             @RequestParam FinancialDirection direction,@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate asOf,@RequestParam(defaultValue="ALL") OpenTitlesAgingService.Scope scope,
             @RequestParam(required=false) OpenTitlesAgingService.Band band,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size){return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(reads.list(actor.getUserAccountId(),companyId,direction,asOf,scope,band,page,size));}

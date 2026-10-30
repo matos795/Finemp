@@ -9,6 +9,7 @@ import com.finemp.company.*;
 import com.finemp.finance.bank.*;
 import com.finemp.finance.category.*;
 import com.finemp.finance.entry.*;
+import com.finemp.finance.partner.*;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
@@ -29,6 +30,7 @@ import static org.assertj.core.api.Assertions.*;
 @Import(TestcontainersConfiguration.class)
 @org.springframework.test.context.TestPropertySource(properties="finemp.finance.presentation.enabled=true")
 class BankStatementPersistenceIntegrationTest {
+    @Autowired BusinessPartnerRepository partners;
     @Autowired com.finemp.finance.reporting.FinancialPresentationSnapshotService presentation;
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean(name="dailyCashTotalsService")
     com.finemp.finance.reporting.DailyCashTotalsService dailySnapshotProbe;
@@ -48,7 +50,7 @@ class BankStatementPersistenceIntegrationTest {
     }
     @AfterEach void cleanup(){
         for(var company:List.of(owner,other)){
-            for(var table:List.of("financial_statement_action_receipts","financial_statement_import_receipts","financial_bank_statement_items","financial_entries","financial_periods","financial_bank_accounts","financial_categories","access_audit_events"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
+            for(var table:List.of("financial_statement_action_receipts","financial_statement_import_receipts","financial_bank_statement_items","financial_entries","business_partners","financial_periods","financial_bank_accounts","financial_categories","access_audit_events"))jdbc.update("DELETE FROM "+table+" WHERE company_id=?",company.getId());
             jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)",company.getId());jdbc.update("DELETE FROM company_access_grants WHERE company_id=?",company.getId());companies.deleteById(company.getId());
         }
         for(var id:clientIds)clients.deleteById(id);for(var id:firmIds)firms.deleteById(id);users.deleteById(actor.getId());
@@ -322,6 +324,29 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT actual_paid_amount FROM financial_entries WHERE id=?",BigDecimal.class,entry.getId())).isEqualByComparingTo("2.00");
         assertThat(aging.report(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL).totalCount()).isZero();
     }
+    @Test void partnerSubtotalsSeparateHomonymsKeepUnassignedAndApplyTheSameFilters()throws Exception{
+        var a=partner(owner,"12ABC34501DE35",true);var b=partner(owner,"98ZYX76543WV39",false);var foreign=partner(other,"12ABC34501DE35",true);
+        var first=entry(owner,bank);var secondEntry=entry(owner,bank);var third=entry(owner,bank);var base=LocalDate.of(2026,7,1);
+        jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=1.23,due_date=?,payment_date=? WHERE id=?",a.getId(),base.minusDays(31),base.plusDays(1),first.getId());
+        jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=0.10,due_date=?,competence='2026-08' WHERE id=?",a.getId(),base.plusDays(31),secondEntry.getId());
+        jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=2.34 WHERE id=?",b.getId(),third.getId());
+        jdbc.update("UPDATE financial_entries SET partner_id=?,nominal_amount=999.99 WHERE id=?",foreign.getId(),foreignEntry.getId());
+        var scope=com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL;
+        var result=openTitles.byPartner(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,null,0,10);
+        assertThat(result.totalItems()).isEqualTo(3);assertThat(result.items()).hasSize(3);
+        assertThat(result.items().stream().map(com.finemp.finance.reporting.OpenTitlesReadService.PartnerTotal::nominalAmount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("4.67");
+        var subtotal=result.items().stream().filter(g->a.getId().equals(g.partnerId())).findFirst().orElseThrow();assertThat(subtotal.titleCount()).isEqualTo(2);assertThat(subtotal.nominalAmount()).isEqualByComparingTo("1.33");
+        assertThat(result.items().getLast().partnerId()).isNull();assertThat(result.items().getLast().nominalAmount()).isEqualByComparingTo("1.00");
+        assertThat(openTitles.byPartner(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,null,2,1).items().getFirst().partnerId()).isNull();
+        var late=openTitles.byPartner(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,com.finemp.finance.reporting.OpenTitlesAgingService.Band.OVERDUE_31_60,0,10);
+        assertThat(late.totalItems()).isEqualTo(1);assertThat(late.items().getFirst().nominalAmount()).isEqualByComparingTo("1.23");
+        var comp=openTitles.byPartner(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,com.finemp.finance.reporting.OpenTitlesAgingService.Scope.COMPETENCE,null,0,10);
+        assertThat(comp.items().stream().filter(g->a.getId().equals(g.partnerId())).findFirst().orElseThrow().nominalAmount()).isEqualByComparingTo("1.23");
+        assertThatThrownBy(()->openTitles.byPartner(actor.getId(),other.getId(),FinancialDirection.EXPENSE,base,scope,null,0,10)).isInstanceOf(OrganizationAccessDeniedException.class);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+owner.getId()+"/financial-reports/open-titles/by-partner").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE").param("asOf","2026-07-01").param("band","OVERDUE_31_60"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].nominalAmount").value("1.23"));
+    }
+    BusinessPartner partner(Company company,String document,boolean active){return partners.saveAndFlush(new BusinessPartner(company,new BusinessPartnerProfile(PartnerPersonType.LEGAL_ENTITY,document,"Synthetic homonym","",PartnerRole.BOTH,"","","","","","","","","","","","","","",active)));}
     @Test void presentationHttpRequiresExplicitInputsAndReturnsExactPartialBlocks()throws Exception{
         String route="/api/companies/"+owner.getId()+"/financial-reports/presentation-snapshot";
         var principal=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor));
