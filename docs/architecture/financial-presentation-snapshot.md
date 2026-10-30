@@ -21,3 +21,9 @@ Período padrão e comportamento sem período fechado. A escolha de último mês
 ## PROPOSTA
 
 Reutilizar futuramente os mesmos dados na geração backend do PDF. Blocos adicionais só entram quando seus domínios e regras estiverem implementados e validados.
+
+## DRE operacional parcial opcional (#244)
+
+DECISÃO: quando finemp.finance.operational-dre.enabled=true, o mesmo snapshot inclui operationalDre usando ator, Company e mês explícitos. O serviço participa da transação existente; o teste de alteração de baixa confirmada entre blocos verifica também que a diferença financeira da DRE continua no estado anterior, enquanto a leitura posterior isolada já observa a mudança.
+
+Sem o opt-in, o endpoint anterior continua disponível e o campo é omitido, não substituído por zeros. schemaVersion=1 e partial=true permanecem; mudança aditiva. O bloco mantém coverage=FINANCIAL_ENTRIES e não afirma DRE completa. NAO e fontes ausentes continuam pontos abertos. Não são adicionados indicadores ou fórmulas no frontend.

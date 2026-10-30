@@ -1540,6 +1540,9 @@ paths:
                     $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1daily-cash-totals/get/responses/200/content/application~1json/schema'
                   cashYear:
                     $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1monthly-cash-totals/get/responses/200/content/application~1json/schema'
+                  operationalDre:
+                    description: Bloco opcional, presente somente com o opt-in operacional-dre. Mesmo mês/Company e mesma transação dos demais blocos; cobertura parcial FINANCIAL_ENTRIES.
+                    $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1operational-dre/get/responses/200/content/application~1json/schema'
                   payables:
                     $ref: '#/paths/~1api~1companies~1{companyId}~1financial-reports~1open-titles~1aging/get/responses/200/content/application~1json/schema'
                   receivables:

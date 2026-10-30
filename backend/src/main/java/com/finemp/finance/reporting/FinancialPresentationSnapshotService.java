@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.time.*;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
@@ -21,8 +22,9 @@ public class FinancialPresentationSnapshotService {
     private final DailyCashTotalsService daily;
     private final MonthlyCashTotalsService monthly;
     private final OpenTitlesAgingService aging;
-    public FinancialPresentationSnapshotService(CompanyPermissionAuthorizationService permissions,JdbcTemplate jdbc,DailyCashTotalsService daily,MonthlyCashTotalsService monthly,OpenTitlesAgingService aging){
-        this.permissions=permissions;this.jdbc=jdbc;this.daily=daily;this.monthly=monthly;this.aging=aging;
+    private final ObjectProvider<OperationalDreMonthlyReadService> operationalDre;
+    public FinancialPresentationSnapshotService(CompanyPermissionAuthorizationService permissions,JdbcTemplate jdbc,DailyCashTotalsService daily,MonthlyCashTotalsService monthly,OpenTitlesAgingService aging,ObjectProvider<OperationalDreMonthlyReadService> operationalDre){
+        this.permissions=permissions;this.jdbc=jdbc;this.daily=daily;this.monthly=monthly;this.aging=aging;this.operationalDre=operationalDre;
     }
     public Snapshot snapshot(UUID actor,UUID company,String month,LocalDate asOf,OpenTitlesAgingService.Scope scope){
         if(actor==null || company==null || !permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_VIEW) && !permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_ENTRY_MANAGE))throw new OrganizationAccessDeniedException();
@@ -35,9 +37,12 @@ public class FinancialPresentationSnapshotService {
         var cashYear=monthly.report(actor,company,period.getYear());
         var payables=aging.report(actor,company,FinancialDirection.EXPENSE,asOf,scope);
         var receivables=aging.report(actor,company,FinancialDirection.INCOME,asOf,scope);
-        return new Snapshot(1,true,company,month,asOf,scope,cashMonth,cashYear,payables,receivables);
+        var dreReader=operationalDre.getIfAvailable();
+        var dre=dreReader==null?null:dreReader.report(actor,company,month);
+        return new Snapshot(1,true,company,month,asOf,scope,cashMonth,cashYear,payables,receivables,dre);
     }
     private static IllegalArgumentException invalid(){return new IllegalArgumentException("Mês, data-base e escopo explícitos são obrigatórios.");}
     public record Snapshot(int schemaVersion,boolean partial,UUID companyId,String month,LocalDate asOf,OpenTitlesAgingService.Scope scope,
-            DailyCashTotalsService.Report cashMonth,MonthlyCashTotalsService.Report cashYear,OpenTitlesAgingService.Report payables,OpenTitlesAgingService.Report receivables){}
+            DailyCashTotalsService.Report cashMonth,MonthlyCashTotalsService.Report cashYear,OpenTitlesAgingService.Report payables,OpenTitlesAgingService.Report receivables,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) OperationalDreMonthlyReadService.Report operationalDre){}
 }
