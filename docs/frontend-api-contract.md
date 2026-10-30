@@ -533,3 +533,7 @@ GET /api/companies/{companyId}/financial-reports/monthly-cash-totals/by-category
 ### Períodos do fluxo mensal (#236)
 
 monthly-cash-totals e presentation-snapshot.cashYear incluem quarters (4) e halfYears (2), ordenados por period, com firstMonth/lastMonth e realIncome/realExpense/openIncome/openExpense textuais. Use os totais do backend ao alternar a visualização; não recalcule no frontend. Valores derivam dos mesmos meses e não representam médias ou saldos.
+
+### DRE operacional mensal parcial (#242)
+
+GET /api/companies/{companyId}/financial-reports/operational-dre?month=2026-07 usa o opt-in finemp.finance.operational-dre.enabled=true e exige permissão financeira ALL vigente. Company/mês, partial=true e coverage=[FINANCIAL_ENTRIES] são contexto obrigatório. Apresente as linhas e os valores textuais competenceAmount, settlementDifference e amount já calculados pelo backend. Não rotule como DRE completa nem confunda com a DRE contábil Questor. Sem período padrão ou reconstrução histórica. Bens/fontes ausentes e NAO estão documentados como limites/pontos abertos. Esta chamada isolada não deve ser combinada com outras chamadas como se formassem um snapshot único de apresentação.

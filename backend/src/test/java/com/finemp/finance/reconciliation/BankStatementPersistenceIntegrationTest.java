@@ -447,6 +447,28 @@ class BankStatementPersistenceIntegrationTest {
         jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE user_account_id=?)",actor.getId());
         assertThatThrownBy(()->operationalDre.report(actor.getId(),owner.getId(),"2026-12")).isInstanceOf(OrganizationAccessDeniedException.class);
     }
+    @Test void operationalDreHttpRequiresExplicitMonthAndFinancialAccess()throws Exception{
+        jdbc.update("UPDATE financial_entries SET nominal_amount=1.23,competence='2026-12',payment_date=DATE '2027-01-01',actual_paid_amount=1.24 WHERE id=?",entry.getId());
+        var route="/api/companies/"+owner.getId()+"/financial-reports/operational-dre";var principal=new com.finemp.security.UserAccountPrincipal(actor);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-12"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.companyId").value(owner.getId().toString())).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.month").value("2026-12"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.partial").value(true)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.coverage[0]").value("FINANCIAL_ENTRIES"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.lines.length()").value(12)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.lines[4].line").value("DADM"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.lines[4].competenceAmount").value("-1.23")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.lines[4].settlementDifference").value("0.00"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2027-01"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.lines[10].line").value("DFIN"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.lines[10].settlementDifference").value("-0.01"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-13"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("INVALID_OPERATIONAL_DRE"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route.replace(owner.getId().toString(),other.getId().toString())).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-12"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE user_account_id=?)",actor.getId());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-12"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("OPERATIONAL_DRE_ACCESS_DENIED"));
+    }
     private com.finemp.finance.reporting.OperationalDreMonthlyReadService.Line dreLine(com.finemp.finance.reporting.OperationalDreMonthlyReadService.Report report,OperationalDreLine line){return report.lines().stream().filter(l->l.line()==line).findFirst().orElseThrow();}
     @Test void partnerSubtotalsSeparateHomonymsKeepUnassignedAndApplyTheSameFilters()throws Exception{
         var a=partner(owner,"12ABC34501DE35",true);var b=partner(owner,"98ZYX76543WV39",false);var foreign=partner(other,"12ABC34501DE35",true);
