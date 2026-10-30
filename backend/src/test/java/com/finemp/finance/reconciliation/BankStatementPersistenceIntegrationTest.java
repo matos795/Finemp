@@ -32,6 +32,7 @@ import static org.assertj.core.api.Assertions.*;
 class BankStatementPersistenceIntegrationTest {
     @Autowired BusinessPartnerRepository partners;
     @Autowired com.finemp.finance.reporting.OperationalDreMonthlyReadService operationalDre;
+    @Autowired com.finemp.finance.reporting.OperationalDreEffectReadService dreEffects;
     @Autowired com.finemp.finance.reporting.CashTitlesReadService cashTitles;
     @Autowired com.finemp.finance.reporting.FinancialPresentationSnapshotService presentation;
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean(name="dailyCashTotalsService")
@@ -473,6 +474,49 @@ class BankStatementPersistenceIntegrationTest {
         jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE user_account_id=?)",actor.getId());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-12"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("OPERATIONAL_DRE_ACCESS_DENIED"));
+    }
+    @Test void dreTraceKeepsTwoEffectsPerTitleAndMatchesCanonicalMonthlyLines()throws Exception{
+        var original=categories.findById(categoryIds.get(owner.getId())).orElseThrow();var parent=categories.findById(original.getParentId()).orElseThrow();
+        jdbc.update("UPDATE financial_categories SET dre_line='DFIN' WHERE id=?",parent.getId());
+        jdbc.update("UPDATE financial_entries SET payment_date=DATE '2026-07-03',actual_paid_amount=1.01 WHERE id=?",entry.getId());
+        var expenseCategory=categories.saveAndFlush(FinancialCategory.subcategory(parent,2,"Synthetic trace cost"));jdbc.update("UPDATE financial_categories SET dre_line='CUS' WHERE id=?",expenseCategory.getId());
+        var discount=entry(owner,bank);jdbc.update("UPDATE financial_entries SET category_id=?,nominal_amount=2.34,competence='2026-06',payment_date=DATE '2026-07-01',actual_paid_amount=2.30 WHERE id=?",expenseCategory.getId(),discount.getId());
+        var incomeGroup=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"Synthetic trace income"));var incomeCategory=categories.saveAndFlush(FinancialCategory.subcategory(incomeGroup,1,"Synthetic trace revenue"));var date=LocalDate.of(2026,7,1);
+        entries.saveAndFlush(new FinancialEntry(owner,new FinancialEntryValues(FinancialDirection.INCOME,"Synthetic trace income",new BigDecimal("2.34"),date,date,YearMonth.of(2025,12),date,date,new BigDecimal("2.30"),bank.getId(),incomeCategory.getId(),null,null,null,"","",""),actor.getId()));
+        var excluded=categories.saveAndFlush(FinancialCategory.subcategory(parent,3,"Synthetic trace excluded"));jdbc.update("UPDATE financial_categories SET dre_line='NAO' WHERE id=?",excluded.getId());
+        var nao=entry(owner,bank);jdbc.update("UPDATE financial_entries SET category_id=?,payment_date=DATE '2026-07-01',actual_paid_amount=999.99 WHERE id=?",excluded.getId(),nao.getId());
+        jdbc.update("UPDATE financial_entries SET nominal_amount=999.99,payment_date=DATE '2026-07-01',actual_paid_amount=888.88 WHERE id=?",foreignEntry.getId());
+        var all=dreEffects.list(actor.getId(),owner.getId(),"2026-07",null,0,100);
+        assertThat(all.totalItems()).isEqualTo(4);assertThat(all.partial()).isTrue();assertThat(all.coverage()).containsExactly("FINANCIAL_ENTRIES");assertThat(all.companyId()).isEqualTo(owner.getId());
+        var originalEffects=all.items().stream().filter(e->e.entryId().equals(entry.getId())).toList();assertThat(originalEffects).hasSize(2);
+        assertThat(originalEffects).extracting(com.finemp.finance.reporting.OperationalDreEffectReadService.View::source).containsExactly(com.finemp.finance.reporting.OperationalDreEffectReadService.Source.COMPETENCE,com.finemp.finance.reporting.OperationalDreEffectReadService.Source.SETTLEMENT_DIFFERENCE);
+        assertThat(originalEffects).extracting(com.finemp.finance.reporting.OperationalDreEffectReadService.View::amount).containsExactly(new BigDecimal("-1.00"),new BigDecimal("-0.01"));
+        var monthly=operationalDre.report(actor.getId(),owner.getId(),"2026-07");
+        for(var line:monthly.lines()){
+            var detail=dreEffects.list(actor.getId(),owner.getId(),"2026-07",line.line(),0,100);
+            assertThat(detail.items().stream().map(com.finemp.finance.reporting.OperationalDreEffectReadService.View::amount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(line.amount());
+        }
+        var page0=dreEffects.list(actor.getId(),owner.getId(),"2026-07",OperationalDreLine.DFIN,0,1);var page1=dreEffects.list(actor.getId(),owner.getId(),"2026-07",OperationalDreLine.DFIN,1,1);var page2=dreEffects.list(actor.getId(),owner.getId(),"2026-07",OperationalDreLine.DFIN,2,1);
+        assertThat(page0.totalItems()).isEqualTo(3);assertThat(page0.totalPages()).isEqualTo(3);
+        assertThat(List.of(page0.items().getFirst(),page1.items().getFirst(),page2.items().getFirst())).doesNotHaveDuplicates();
+        assertThat(page0.items().getFirst().amount().add(page1.items().getFirst().amount()).add(page2.items().getFirst().amount())).isEqualByComparingTo(dreLine(monthly,OperationalDreLine.DFIN).amount());
+        assertThat(dreEffects.list(actor.getId(),owner.getId(),"2026-07",OperationalDreLine.NAO,0,20).totalItems()).isZero();
+        assertThat(dreEffects.list(actor.getId(),owner.getId(),"2025-12",OperationalDreLine.REC,0,20).items().getFirst().amount()).isEqualTo(new BigDecimal("2.34"));
+        assertThat(dreEffects.list(actor.getId(),owner.getId(),"9999-12",null,0,20).totalItems()).isZero();
+        assertThatThrownBy(()->dreEffects.list(actor.getId(),other.getId(),"2026-07",null,0,20)).isInstanceOf(OrganizationAccessDeniedException.class);
+        assertThatThrownBy(()->dreEffects.list(actor.getId(),owner.getId(),"0000-01",null,0,20)).isInstanceOf(IllegalArgumentException.class);
+        var route="/api/companies/"+owner.getId()+"/financial-reports/operational-dre/effects";var principal=new com.finemp.security.UserAccountPrincipal(actor);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07").param("line","DFIN").param("size","1"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalItems").value(3)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items.length()").value(1))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].amount").isString()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.partial").value(true));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07").param("line","invalid"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07").param("size","101"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE user_account_id=?)",actor.getId());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(principal)).param("month","2026-07"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
     }
     private com.finemp.finance.reporting.OperationalDreMonthlyReadService.Line dreLine(com.finemp.finance.reporting.OperationalDreMonthlyReadService.Report report,OperationalDreLine line){return report.lines().stream().filter(l->l.line()==line).findFirst().orElseThrow();}
     @Test void partnerSubtotalsSeparateHomonymsKeepUnassignedAndApplyTheSameFilters()throws Exception{

@@ -545,3 +545,7 @@ Com o opt-in operacional-dre habilitado, presentation-snapshot inclui operationa
 ### Subtotais monetários da DRE (#246)
 
 O relatório operacional e o bloco correspondente do snapshot incluem subtotals: netRevenue, grossProfit, ebitda, ebit, profitBeforeTax e netResult. Valores textuais são calculados das MESMAS linhas no backend. Toda medida mantém a cobertura parcial FINANCIAL_ENTRIES; não apresentar como resultado completo. IR é apenas o valor classificado existente. Não calcular impostos, margens ou completar fontes ausentes no frontend.
+
+### Rastreabilidade da DRE (#248)
+
+GET /api/companies/{companyId}/financial-reports/operational-dre/effects recebe month obrigatório, line opcional e page/size (máximo 100). Retorna contexto/cobertura parcial e itens calculados no backend. totalItems conta efeitos; use entryId + source como identidade, pois o mesmo título pode aparecer por competência e diferença de baixa, inclusive na mesma linha. amount é o efeito assinado, não necessariamente o nominal. Não somar uma página como total nem recalcular DRE no frontend. Resumo e detalhe em requisições distintas não compartilham snapshot. Consulte architecture/operational-dre-trace.md e OpenAPI.
