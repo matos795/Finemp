@@ -336,6 +336,11 @@ class BankStatementPersistenceIntegrationTest {
         assertThat(result.totalItems()).isEqualTo(3);assertThat(result.items()).hasSize(3);
         assertThat(result.items().stream().map(com.finemp.finance.reporting.OpenTitlesReadService.PartnerTotal::nominalAmount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("4.67");
         var subtotal=result.items().stream().filter(g->a.getId().equals(g.partnerId())).findFirst().orElseThrow();assertThat(subtotal.titleCount()).isEqualTo(2);assertThat(subtotal.nominalAmount()).isEqualByComparingTo("1.33");
+        var detail=openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,null,a.getId(),false,0,10);
+        assertThat(detail.totalItems()).isEqualTo(subtotal.titleCount());assertThat(detail.items().stream().map(com.finemp.finance.reporting.OpenTitlesReadService.View::nominalAmount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(subtotal.nominalAmount());
+        var nextPage=openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,null,a.getId(),false,1,1);assertThat(nextPage.totalItems()).isEqualTo(2);assertThat(nextPage.items().getFirst().id()).isEqualTo(secondEntry.getId());
+        assertThat(openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,null,foreign.getId(),false,0,10).totalItems()).isZero();
+        var unassigned=openTitles.list(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,null,null,true,0,10);assertThat(unassigned.totalItems()).isEqualTo(1);assertThat(unassigned.items().getFirst().id()).isEqualTo(entry.getId());
         assertThat(result.items().getLast().partnerId()).isNull();assertThat(result.items().getLast().nominalAmount()).isEqualByComparingTo("1.00");
         assertThat(openTitles.byPartner(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,null,2,1).items().getFirst().partnerId()).isNull();
         var late=openTitles.byPartner(actor.getId(),owner.getId(),FinancialDirection.EXPENSE,base,scope,com.finemp.finance.reporting.OpenTitlesAgingService.Band.OVERDUE_31_60,0,10);
@@ -345,6 +350,12 @@ class BankStatementPersistenceIntegrationTest {
         assertThatThrownBy(()->openTitles.byPartner(actor.getId(),other.getId(),FinancialDirection.EXPENSE,base,scope,null,0,10)).isInstanceOf(OrganizationAccessDeniedException.class);
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+owner.getId()+"/financial-reports/open-titles/by-partner").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).param("direction","EXPENSE").param("asOf","2026-07-01").param("band","OVERDUE_31_60"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].nominalAmount").value("1.23"));
+        String route="/api/companies/"+owner.getId()+"/financial-reports/open-titles";
+        var principal=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("direction","EXPENSE").param("asOf","2026-07-01").param("partnerId",a.getId().toString()).param("band","OVERDUE_31_60"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalItems").value(1)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].id").value(first.getId().toString()));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(route).with(principal).param("direction","EXPENSE").param("asOf","2026-07-01").param("partnerId",a.getId().toString()).param("unassignedPartner","true"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
     }
     BusinessPartner partner(Company company,String document,boolean active){return partners.saveAndFlush(new BusinessPartner(company,new BusinessPartnerProfile(PartnerPersonType.LEGAL_ENTITY,document,"Synthetic homonym","",PartnerRole.BOTH,"","","","","","","","","","","","","","",active)));}
     @Test void presentationHttpRequiresExplicitInputsAndReturnsExactPartialBlocks()throws Exception{

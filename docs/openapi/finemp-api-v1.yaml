@@ -1670,6 +1670,9 @@ paths:
         de atraso e faixa, e aplica paginação no banco em snapshot consistente. Estado
         atual aplicado à data-base não reconstrói alterações nem estornos históricos.
         O filtro band opcional limita linhas e contagem à mesma faixa do resumo de aging.
+        partnerId limita ao parceiro na Company; unassignedPartner=true seleciona
+        títulos sem parceiro. Não combinar ambos. Identificador externo retorna
+        página vazia sem revelar dados de outra Company.
       parameters:
         - name: direction
           in: query
@@ -1686,6 +1689,14 @@ paths:
           in: query
           description: Faixa opcional do aging; omitida retorna todas as faixas.
           schema: {type: string, enum: [DUE_0_30, DUE_31_60, DUE_61_90, DUE_OVER_90, OVERDUE_1_30, OVERDUE_31_60, OVERDUE_61_90, OVERDUE_OVER_90]}
+        - name: partnerId
+          in: query
+          schema: {type: string, format: uuid}
+          description: Parceiro do grupo consultado; incompatível com unassignedPartner=true.
+        - name: unassignedPartner
+          in: query
+          schema: {type: boolean, default: false}
+          description: Quando true, limita a títulos sem parceiro.
         - $ref: '#/components/parameters/Page'
         - name: size
           in: query
