@@ -35,7 +35,12 @@ export const navigationModules: NavigationModule[] = [
             },
             { id: "lanc", label: "Lançamentos" },
             { id: "agenda", label: "Pagar e receber" },
-            { id: "ext", label: "Extratos e conciliação" },
+            {
+                id: "ext",
+                label: "Extratos e conciliação",
+                path: "/statements",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
             { id: "mensal", label: "Fluxo mensal" },
             { id: "diario", label: "Fluxo diário" },
             { id: "bancos", label: "Contas e saldos" },

@@ -10,6 +10,7 @@ import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
 import { RequirePermission } from "../../features/auth/components/require-permission"
 import { DrePage } from "../../features/dre/pages/dre-page"
 import { BankAccountsPage } from "../../features/bank-accounts/pages/bank-accounts-page"
+import { StatementsPage } from "../../features/statements/pages/statements-page"
 
 export function AppRouter() {
     return (
@@ -50,6 +51,20 @@ export function AppRouter() {
                                 ]}
                             >
                                 <BankAccountsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/statements"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <StatementsPage />
                             </RequirePermission>
                         }
                     />
