@@ -5,7 +5,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.*;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.testcontainers.junit.jupiter.*;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.*;
@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.*;
 @Testcontainers
 class StagingSeedPostgresTest {
     @Container static final PostgreSQLContainer postgres=new PostgreSQLContainer("postgres:17");
-    static final String HASH=new BCryptPasswordEncoder().encode("Synthetic-only-password");
+    static final String HASH=StagingProvisioningMain.encodePassword("Synthetic-only-password");
     @BeforeAll static void schema(){Flyway.configure().dataSource(postgres.getJdbcUrl(),postgres.getUsername(),postgres.getPassword()).load().migrate();}
     Connection connect() throws SQLException {return DriverManager.getConnection(postgres.getJdbcUrl(),postgres.getUsername(),postgres.getPassword());}
     @AfterEach void cleanup() throws Exception {try(var c=connect();var s=c.createStatement()){
@@ -28,9 +28,9 @@ class StagingSeedPostgresTest {
             assertThat(count(c,"company_access_grant_permissions")).isEqualTo(3);assertThat(count(c,"user_account_platform_permissions")).isZero();
             assertThat(count(c,"financial_categories")).isEqualTo(4);assertThat(count(c,"financial_entries")).isZero();
             try(var s=c.createStatement()){s.executeUpdate("DELETE FROM company_access_grant_permissions WHERE permission='BANK_ACCOUNT_VIEW'");}
-            assertThat(StagingSeed.provision(c,new BCryptPasswordEncoder().encode("Another-synthetic-password"))).isFalse();
+            assertThat(StagingSeed.provision(c,PasswordEncoderFactories.createDelegatingPasswordEncoder().encode("Another-synthetic-password"))).isFalse();
             assertThat(count(c,"company_access_grant_permissions")).isEqualTo(2);
-            try(var s=c.createStatement();var r=s.executeQuery("SELECT password_hash FROM user_accounts")){r.next();assertThat(r.getString(1)).isEqualTo(HASH);}
+            try(var s=c.createStatement();var r=s.executeQuery("SELECT password_hash FROM user_accounts")){r.next();assertThat(r.getString(1)).isEqualTo(HASH);assertThat(PasswordEncoderFactories.createDelegatingPasswordEncoder().matches("Synthetic-only-password",r.getString(1))).isTrue();}
         }
     }
     @Test void refusesNonemptyUnmarkedDatabase() throws Exception {

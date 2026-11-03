@@ -6,7 +6,7 @@ import java.util.UUID;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 
 /** Standalone process. No SpringApplication, web server, external readers or automatic migrations. */
 public final class StagingProvisioningMain {
@@ -17,7 +17,7 @@ public final class StagingProvisioningMain {
             var env=System.getenv();validateTarget(env);
             String password=required(env,"FINEMP_STAGING_SEED_PASSWORD");
             if(!password.matches("[\\x21-\\x7E]{16,64}"))throw new IllegalArgumentException();
-            String hash=new BCryptPasswordEncoder().encode(password);
+            String hash=encodePassword(password);
             try(var connection=DriverManager.getConnection(required(env,"SPRING_DATASOURCE_URL"),required(env,"SPRING_DATASOURCE_USERNAME"),required(env,"SPRING_DATASOURCE_PASSWORD"))) {
                 boolean created=StagingSeed.provision(connection,hash);
                 System.out.println(created?"Synthetic staging dataset created.":"Synthetic staging dataset already exists; unchanged.");
@@ -25,6 +25,7 @@ public final class StagingProvisioningMain {
             }
         } catch(Exception failure) {System.err.println("Staging provisioning refused or failed; no configuration values logged.");System.exit(2);}
     }
+    static String encodePassword(String password) {return PasswordEncoderFactories.createDelegatingPasswordEncoder().encode(password);}
     static void validateTarget(Map<String,String> env) {
         var profiles=Arrays.stream(required(env,"SPRING_PROFILES_ACTIVE").split(",")).map(String::trim).collect(Collectors.toSet());
         if(!profiles.equals(Set.of("prod","staging")))throw new IllegalArgumentException("Staging profiles required");

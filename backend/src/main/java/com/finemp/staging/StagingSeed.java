@@ -9,7 +9,7 @@ final class StagingSeed {
     static final String KEY="finemp-synthetic-v1";
     static UUID id(String name) { return UUID.nameUUIDFromBytes((KEY+":"+name).getBytes(StandardCharsets.UTF_8)); }
     static boolean provision(Connection connection,String passwordHash) throws SQLException {
-        if(!connection.getAutoCommit() || passwordHash==null || !passwordHash.matches("\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}")) throw new IllegalArgumentException("Invalid staging seed context");
+        if(!connection.getAutoCommit() || passwordHash==null || !passwordHash.matches("\\{bcrypt\\}\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}")) throw new IllegalArgumentException("Invalid staging seed context");
         connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
         connection.setAutoCommit(false);
         try {
