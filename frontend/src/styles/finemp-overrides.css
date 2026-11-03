@@ -37,3 +37,15 @@
 .fin p {
   margin-block: 1em;
 }
+
+/* Campos de e-mail e senha (login) com o mesmo estilo dos campos de texto. */
+.fin input[type=email],
+.fin input[type=password] {
+  background: var(--fd);
+  border: 1px solid var(--bd);
+  color: #fff;
+  font: 600 14px Barlow, sans-serif;
+  padding: 7px 10px;
+  border-radius: 6px;
+  max-width: 100%;
+}
