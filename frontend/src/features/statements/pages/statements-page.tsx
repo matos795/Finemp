@@ -315,6 +315,7 @@ export function StatementsPage() {
                             <>
                                 <StatementItemsTable
                                     companyId={companyId}
+                                    canIgnore={canImport}
                                     items={items.data?.items ?? []}
                                     loading={items.isPending}
                                     dimmed={items.isPlaceholderData}

@@ -144,3 +144,34 @@ export async function listStatementCandidates(
         `/api/companies/${encodeURIComponent(companyId)}/statement-items/${encodeURIComponent(statementId)}/candidates?${params}`,
     )
 }
+
+export interface StatementIgnoreReceipt {
+    companyId: string
+    itemId: string
+    commandId: string
+    version: number
+    auditEventId: string
+}
+
+/**
+ * `POST …/statement-items/{statementId}/ignore` (ignoreStatementItem):
+ * marca o movimento pendente como ignorado, com a versão atual. Não
+ * altera lançamento, baixa ou saldo.
+ */
+export async function ignoreStatementItem(
+    companyId: string,
+    statementId: string,
+    expectedVersion: number,
+    idempotencyKey: string,
+): Promise<StatementIgnoreReceipt> {
+    return apiRequest<StatementIgnoreReceipt>(
+        `/api/companies/${encodeURIComponent(companyId)}/statement-items/${encodeURIComponent(statementId)}/ignore`,
+        {
+            method: "POST",
+            headers: {
+                "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({ expectedVersion }),
+        },
+    )
+}
