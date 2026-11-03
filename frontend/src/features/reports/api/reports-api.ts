@@ -7,6 +7,10 @@ import type {
     OpenTitlesFilter,
     OpenTitlesPage,
 } from "../types/aging.types"
+import type {
+    DailyCashTotals,
+    MonthlyCashTotals,
+} from "../types/cash-totals.types"
 
 function reportsPath(companyId: string) {
     return `/api/companies/${encodeURIComponent(companyId)}/financial-reports`
@@ -92,5 +96,29 @@ export async function listOpenTitlePartnerTotals(
     return apiRequest<OpenTitlePartnerTotalsPage>(
         `${reportsPath(companyId)}/open-titles/by-partner?${openTitlesParams(filter, page, size)}`,
         { cache: "no-store" },
+    )
+}
+
+/** `GET …/financial-reports/monthly-cash-totals?year=` (getMonthlyCashTotals). */
+export async function getMonthlyCashTotals(
+    companyId: string,
+    year: number,
+): Promise<MonthlyCashTotals> {
+    const params = new URLSearchParams({ year: String(year) })
+
+    return apiRequest<MonthlyCashTotals>(
+        `${reportsPath(companyId)}/monthly-cash-totals?${params}`,
+    )
+}
+
+/** `GET …/financial-reports/daily-cash-totals?month=YYYY-MM` (getDailyCashTotals). */
+export async function getDailyCashTotals(
+    companyId: string,
+    month: string,
+): Promise<DailyCashTotals> {
+    const params = new URLSearchParams({ month })
+
+    return apiRequest<DailyCashTotals>(
+        `${reportsPath(companyId)}/daily-cash-totals?${params}`,
     )
 }
