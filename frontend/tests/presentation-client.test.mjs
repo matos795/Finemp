@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { getPresentationSnapshot, getOperationalDreEffects } from '../src/lib/api/presentation-client.ts'
+import { getPresentationSnapshot, getOperationalDre, getOperationalDreEffects } from '../src/lib/api/presentation-client.ts'
 import { ApiError } from '../src/lib/api/api-client.ts'
 
 const originalFetch = globalThis.fetch
@@ -51,4 +51,19 @@ test('cancelled requests remain cancelled rather than falling back to cached fin
   controller.abort()
   globalThis.fetch = async (_path, options) => { options.signal.throwIfAborted() }
   await assert.rejects(getOperationalDreEffects('company', { month: '2026-07', page: 0, size: 20 }, controller.signal), { name: 'AbortError' })
+})
+
+test('operational DRE asks one explicit month and keeps lines and subtotals as exact text', async () => {
+  const payload = { partial: true, month: '2026-07', lines: [{ line: 'REC', competenceAmount: '0.10', settlementDifference: '0.20', amount: '0.30' }], subtotals: { netResult: '-99999999999999999.99' } }
+  const abort = new AbortController()
+  let calls = 0
+  globalThis.fetch = async (path, options) => {
+    calls++
+    assert.equal(path, '/api/companies/company/financial-reports/operational-dre?month=2026-07')
+    assert.equal(options.cache, 'no-store')
+    assert.equal(options.signal, abort.signal)
+    return Response.json(payload)
+  }
+  assert.deepEqual(await getOperationalDre('company', '2026-07', abort.signal), payload)
+  assert.equal(calls, 1)
 })
