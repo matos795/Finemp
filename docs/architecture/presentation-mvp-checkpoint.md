@@ -31,3 +31,23 @@ Evidência de formato: fmtPct na referência apresenta percentual com uma casa d
 3. Exibir os valores do backend na Apresentação homologada; sem fórmulas locais. A conexão/validação visual do frontend é uma etapa distinta, não alegada pronta pelo backend headless.
 
 Isto define uma demonstração do núcleo parcial, não encerramento da #41, homologação operacional completa ou liberação de produção. Não exigir completar todos os módulos para demonstrar com limites claros; tampouco ocultar fontes ausentes.
+
+
+## Checkpoint obrigatório do MVP financeiro — 02/11/2026
+
+### FATO CONFIRMADO
+1. **Implementado no recorte atual:** DRE por competência e diferença de baixa, subtotais F07 e rastreabilidade por linha; caixa diário/mensal/anual realizado e aberto; pagar/receber, aging e agrupamento por parceiro; indicadores essenciais; snapshot consistente com Company, mês/data-base/escopo explícitos.
+2. **Parcial:** DRE limitada a FINANCIAL_ENTRIES, caixa sem saldo/projeção completos, Apresentação sem interface integrada validada. Detalhes em requisições posteriores não são congelados no mesmo snapshot.
+3. **Indisponível na Apresentação atual:** recebimentos por forma efetiva, orçamento, fontes automáticas de bens, balanço/NCG completos, PDF oficial, persistência/compartilhamento e apresentação consolidada. Não significa que cada ausência seja uma regra desconhecida; várias são entregas pendentes.
+4. **Decisão de negócio pendente:** #197 (alteração/estorno de baixa conciliada em período aberto), #128, tratamento futuro de NAO, hierarquia oficial, fallback de período sem fechamento, regras/fontes gerenciais ainda não homologadas e colaboração/consolidação. Nenhuma foi resolvida por hipótese.
+5. **Novos domínios relevantes:** bens/depreciação/alienação #47 e orçamento #44; forma efetiva precisa existir na baixa antes do relatório por forma (a prevista não a substitui). Balanço e capital de giro dependem também de fontes hoje ausentes. Não bloquear o recorte demonstrável com esses módulos.
+6. **Demonstrável?** Sim, de ponta a ponta dos contratos de LEITURA PostgreSQL/HTTP com dados sintéticos, conforme #252/#253. Fixture direto não demonstra o fluxo interativo de criação/baixa, login real de navegador ou frontend integrado. O cenário fecha DRE, efeitos, caixa, títulos e indicadores; não equivale a homologação completa ou produção.
+
+### DECISÃO
+Não encerrar #41 e não abrir mais micro-relatórios. Priorizar #53: client fino para contratos implementados, validação de paridade e ambiente sintético de uso. Backend permanece a fonte dos cálculos, permissões e persistência.
+
+### PROPOSTA — menor conjunto restante para chamar o recorte de MVP financeiro
+7. Entregar consumo tipado do snapshot e efeitos com cookies, cancelamento e erros sem fallback inventado; preparar ambiente descartável acessível com usuário/Company sintéticos por fluxo autorizado; executar roteiro interativo autenticação → lançamento/baixa → Apresentação, conferir valores contra backend e validar cobertura/limites com João. Registrar evidência de isolamento e não acesso entre empresas. Confirmar o aceite deste recorte como MVP, sem exigir antes todos os domínios grandes nem presumir esse aceite.
+
+### PONTO ABERTO operacional
+Não há evidência nesta entrega de staging publicado/configurado nem integração visual homologada. O próximo incremento seguro da #53 é o client e seus testes/CI; preparação de staging e validação visual seguem como entregas explícitas, sem publicar dados reais ou alegar prontidão.

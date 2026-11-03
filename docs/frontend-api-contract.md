@@ -556,3 +556,8 @@ GET /api/companies/{companyId}/financial-reports/operational-dre/effects recebe 
 `indicators` deriva exclusivamente dos blocos da mesma resposta: caixa realizado do mês, recebíveis na data-base/escopo explícitos e DRE opcional. O frontend apresenta `percent` textual sem recalcular: unidade PERCENT (100 = 100%), uma casa decimal, HALF_UP direto sem arredondamento intermediário. Numerador e denominador monetários permanecem exatos. `UNAVAILABLE_BASE` traz percentual null; exibir indisponível, não zero. Margens DRE permitem receita líquida negativa, mas não zero; caixa e recebíveis exigem denominador positivo. DRE ausente omite `indicators.dre`; cobertura parcial acompanha a DRE. Geração de caixa é entradas realizadas menos saídas realizadas, não saldo bancário. Não combinar data-base do aging com competência por suposição.
 
 Ver [checkpoint de MVP](architecture/presentation-mvp-checkpoint.md) para cobertura e próximos passos.
+
+
+## Client tipado de Apresentação (#254 / #53)
+
+Disponível em frontend/src/lib/api/presentation-client.ts para snapshot e efeitos, sem cálculos financeiros. Ver [integração e limites](architecture/presentation-client.md). Staging e paridade visual continuam entregas separadas; o client não conclui #41/#53.
