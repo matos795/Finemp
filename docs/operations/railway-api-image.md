@@ -8,4 +8,4 @@ Variáveis fornecidas pela plataforma: `SPRING_PROFILES_ACTIVE=prod,staging`, PO
 
 CI de imagem constrói o Dockerfile, verifica UID não root e executa a imagem com profile staging incompleto, provando rejeição antes do datasource. O teste não substitui health/login HTTPS com banco real no staging. Docker local indisponível: evidência de build vem do CI.
 
-Provisionamento sintético explícito continua gate separado antes de publicar. Sem novos serviços ou deploy nesta entrega. Fontes: [configuração Railway](https://docs.railway.com/config-as-code/reference).
+O incremento #262 acrescenta um segundo JAR, `/app/staging-provisioner.jar`, para execução explícita conforme [provisionamento sintético](staging-provisioning.md). ENTRYPOINT permanece a API; o provisionador não é executado automaticamente. Não inclui JAR Connector. Sem novos serviços ou deploy só por esse empacotamento. Fontes: [configuração Railway](https://docs.railway.com/config-as-code/reference).
