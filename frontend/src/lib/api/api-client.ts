@@ -64,10 +64,15 @@ async function getCsrfToken(): Promise<CsrfResponse> {
   return response.json()
 }
 
-export async function apiRequest<T>(
+/**
+ * Requisição autenticada que devolve a Response (para quem precisa de
+ * cabeçalhos, como X-Statement-SHA256). Mesmo tratamento de sessão,
+ * CSRF e erro de apiRequest.
+ */
+export async function apiFetch(
   path: string,
   options: RequestInit = {},
-): Promise<T> {
+): Promise<Response> {
   const method = options.method?.toUpperCase() ?? "GET"
 
   const headers = new Headers(options.headers)
@@ -96,6 +101,15 @@ export async function apiRequest<T>(
       await readProblemCode(response),
     )
   }
+
+  return response
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const response = await apiFetch(path, options)
 
   if (response.status === 204) {
     return undefined as T
