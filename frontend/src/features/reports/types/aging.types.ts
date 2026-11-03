@@ -1,6 +1,13 @@
-export type AgingDirection = "INCOME" | "EXPENSE"
+import type {
+    AgingReport,
+    AgingScope,
+    DecimalText,
+} from "../../../lib/api/presentation-client"
+import type { PageResponse } from "../../../lib/api/pagination.types"
 
-export type AgingScope = "ALL" | "COMPETENCE"
+export type { AgingScope }
+
+export type AgingDirection = AgingReport["direction"]
 
 export type AgingBandCode =
     | "DUE_0_30"
@@ -12,19 +19,48 @@ export type AgingBandCode =
     | "OVERDUE_61_90"
     | "OVERDUE_OVER_90"
 
-/** Faixa do aging; `amount` é texto decimal exato calculado no backend. */
-export interface AgingBand {
-    band: AgingBandCode
-    count: number
-    amount: string
+/**
+ * Resposta de getOpenTitlesAging. Reaproveita o tipo do cliente da
+ * Apresentação de Resultados (mesmo contrato), sem redefinir campos.
+ */
+export type OpenTitlesAging = AgingReport
+
+/** Filtros comuns a aging, lista e subtotais por parceiro. */
+export interface OpenTitlesFilter {
+    direction: AgingDirection
+    asOf: string
+    scope: AgingScope
+    band?: AgingBandCode
 }
 
-/** Resposta de getOpenTitlesAging. */
-export interface OpenTitlesAging {
-    asOf: string
+/** Item de listOpenTitlesAsOf. Dias de atraso e faixa vêm do servidor. */
+export interface OpenTitle {
+    id: string
+    description: string
     direction: AgingDirection
-    scope: AgingScope
-    totalCount: number
-    totalAmount: string
-    bands: AgingBand[]
+    nominalAmount: DecimalText
+    competence: string
+    dueDate: string
+    paymentDate: string | null
+    daysLate: number
+    documentNumber: string
+    documentDate: string
+    categoryId: string
+    band: AgingBandCode
+    bankAccountId: string
+    partnerId: string | null
+    resultCenterId: string | null
+    version: number
 }
+
+/** Item de listOpenTitlePartnerTotals: subtotal calculado no servidor. */
+export interface OpenTitlePartnerTotal {
+    partnerId: string | null
+    partnerName: string | null
+    titleCount: number
+    nominalAmount: DecimalText
+}
+
+export type OpenTitlesPage = PageResponse<OpenTitle>
+
+export type OpenTitlePartnerTotalsPage = PageResponse<OpenTitlePartnerTotal>

@@ -15,3 +15,8 @@ export const agingBands: {
     { code: "DUE_61_90", label: "A vencer 61 a 90 dias", overdue: false },
     { code: "DUE_OVER_90", label: "A vencer acima de 90 dias", overdue: false },
 ]
+
+/** Faixa de vencidos pelo código do contrato (sem cálculo de datas). */
+export function isOverdueBand(code: AgingBandCode) {
+    return code.startsWith("OVERDUE_")
+}
