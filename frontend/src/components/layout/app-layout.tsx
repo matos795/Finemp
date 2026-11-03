@@ -10,6 +10,7 @@ import { cn } from "cn"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { PageActions } from "./page-actions"
+import { BarActionsContext } from "./bar-actions-context"
 import {
     findNavigationByPath,
     navigationModules,
@@ -112,6 +113,9 @@ export function AppLayout() {
         })
     }
 
+    const [barActionsSlot, setBarActionsSlot] =
+        useState<HTMLElement | null>(null)
+
     const mobileOpen = isMobile && sideMobileOpen
 
     return (
@@ -135,11 +139,13 @@ export function AppLayout() {
                 <div className="conteudo">
                     <div className="barra">
                         <Breadcrumb />
-                        <PageActions />
+                        <PageActions onSlotChange={setBarActionsSlot} />
                     </div>
 
                     <main id="main">
-                        <Outlet />
+                        <BarActionsContext.Provider value={barActionsSlot}>
+                            <Outlet />
+                        </BarActionsContext.Provider>
                     </main>
                 </div>
             </div>
