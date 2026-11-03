@@ -56,4 +56,36 @@ class StagingSeedPostgresTest {
         }
         try(var c=connect()){assertThat(count(c,"staging_seed_receipts")).isEqualTo(1);assertThat(count(c,"companies")).isEqualTo(1);}
     }
+
+    @Test void isolationCompanyRequiresSeedAndIsIdempotentWithoutGrants() throws Exception {
+        try(var c=connect()) {
+            assertThatThrownBy(()->StagingSeed.provisionIsolationCompany(c)).isInstanceOf(SQLException.class);
+            assertThat(count(c,"companies")).isZero();
+            StagingSeed.provision(c,HASH);
+            assertThat(StagingSeed.provisionIsolationCompany(c)).isTrue();
+            assertThat(StagingSeed.provisionIsolationCompany(c)).isFalse();
+            assertThat(count(c,"companies")).isEqualTo(2);
+            assertThat(count(c,"company_access_grants")).isEqualTo(1);
+            assertThat(count(c,"user_accounts")).isEqualTo(1);
+            assertThat(count(c,"staging_seed_receipts")).isEqualTo(2);
+        }
+    }
+    @Test void isolationCompanyRollsBackWhenReceiptCannotBeWritten() throws Exception {
+        try(var c=connect();var s=c.createStatement()) {
+            StagingSeed.provision(c,HASH);
+            s.execute("CREATE FUNCTION reject_seed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Synthetic failure'; END; $$");
+            s.execute("CREATE TRIGGER reject_seed BEFORE INSERT ON staging_seed_receipts FOR EACH ROW EXECUTE FUNCTION reject_seed()");
+            assertThatThrownBy(()->StagingSeed.provisionIsolationCompany(c)).isInstanceOf(SQLException.class);
+            assertThat(count(c,"companies")).isEqualTo(1);
+            assertThat(count(c,"staging_seed_receipts")).isEqualTo(1);
+        }
+    }
+    @Test void isolationRetryRefusesChangedAccessWithoutRevokingIt() throws Exception {
+        try(var c=connect();var s=c.prepareStatement("INSERT INTO company_access_grants(id,user_account_id,company_id,access_role,cost_center_scope) VALUES(?,?,?,'CUSTOM','ALL')")) {
+            StagingSeed.provision(c,HASH);StagingSeed.provisionIsolationCompany(c);
+            s.setObject(1,UUID.randomUUID());s.setObject(2,StagingSeed.id("user"));s.setObject(3,StagingSeed.id("foreign-company"));s.executeUpdate();
+            assertThatThrownBy(()->StagingSeed.provisionIsolationCompany(c)).isInstanceOf(SQLException.class);
+            assertThat(count(c,"company_access_grants")).isEqualTo(2);
+        }
+    }
 }

@@ -44,6 +44,41 @@ final class StagingSeed {
         } catch(SQLException|RuntimeException ex) {connection.rollback();throw ex;}
         finally {connection.setAutoCommit(true);}
     }
+
+    /** Explicit negative-access fixture; never changes the existing operator or its grants. */
+    static boolean provisionIsolationCompany(Connection connection) throws SQLException {
+        if(!connection.getAutoCommit()) throw new IllegalArgumentException("Invalid staging seed context");
+        connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        connection.setAutoCommit(false);
+        try {
+            execute(connection,"SET LOCAL lock_timeout='10s'");
+            execute(connection,"SET LOCAL statement_timeout='30s'");
+            execute(connection,"SELECT pg_advisory_xact_lock(534826201)");
+            execute(connection,"LOCK TABLE companies,company_access_grants,staging_seed_receipts IN SHARE ROW EXCLUSIVE MODE");
+            require(connection,"SELECT count(*) FROM staging_seed_receipts WHERE seed_key=? AND company_id=? AND user_id=?",1,KEY,id("company"),id("user"));
+            require(connection,"SELECT count(*) FROM companies WHERE id=? AND client_id=?",1,id("company"),id("client"));
+            String key="finemp-isolation-v1";
+            boolean exists;
+            try(var query=connection.prepareStatement("SELECT company_id,user_id FROM staging_seed_receipts WHERE seed_key=?")) {
+                query.setString(1,key);
+                try(var rows=query.executeQuery()) {
+                    exists=rows.next();
+                    if(exists && (!id("foreign-company").equals(rows.getObject(1,UUID.class)) || !id("user").equals(rows.getObject(2,UUID.class))))
+                        throw new SQLException("Isolation seed receipt mismatch");
+                }
+            }
+            if(exists) {
+                require(connection,"SELECT count(*) FROM companies WHERE id=? AND client_id=?",1,id("foreign-company"),id("client"));
+                require(connection,"SELECT count(*) FROM company_access_grants WHERE company_id=?",0,id("foreign-company"));
+            } else {
+                require(connection,"SELECT count(*) FROM companies WHERE id=?",0,id("foreign-company"));
+                execute(connection,"INSERT INTO companies(id,client_id,legal_name,cnpj) VALUES(?,?,'Synthetic staging forbidden company','00000000000001')",id("foreign-company"),id("client"));
+                execute(connection,"INSERT INTO staging_seed_receipts(seed_key,company_id,user_id) VALUES(?,?,?)",key,id("foreign-company"),id("user"));
+            }
+            connection.commit();return !exists;
+        } catch(SQLException|RuntimeException ex) {connection.rollback();throw ex;}
+        finally {connection.setAutoCommit(true);}
+    }
     private static void category(Connection c,String name,String direction,String prefix,String dre) throws SQLException {
         String code=prefix+".1",sort=prefix+"/0000000000000000001";
         execute(c,"INSERT INTO financial_categories(id,company_id,kind,direction,code,sequence_number,sort_key,name,search_name,cash_activity,dre_line) VALUES(?,?,'GROUP',?,?,1,?,? ,?,'OPERATING',?)",

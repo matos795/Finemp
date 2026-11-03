@@ -17,7 +17,10 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.*;
 
 /** Dedicated disposable PostgreSQL; real login uses exactly the standalone provisioner's stored hash. */
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT, properties={
+    "finemp.finance.presentation.enabled=true", "finemp.finance.aging.enabled=true",
+    "finemp.finance.daily-cash.enabled=true", "finemp.finance.monthly-cash.enabled=true",
+    "finemp.finance.operational-dre.enabled=true"})
 @Testcontainers
 class StagingProvisionedLoginHttpIntegrationTest {
     @Container static final PostgreSQLContainer postgres=new PostgreSQLContainer("postgres:17");
@@ -37,10 +40,14 @@ class StagingProvisionedLoginHttpIntegrationTest {
         String password="Synthetic-login-regression-only";
         try(var connection=datasource.getConnection()) {
             assertThat(StagingSeed.provision(connection,StagingProvisioningMain.encodePassword(password))).isTrue();
+            assertThat(StagingSeed.provisionIsolationCompany(connection)).isTrue();
         }
         assertThat(get("/api/auth/me").statusCode()).isEqualTo(401);
         assertThat(post("/api/auth/login",Map.of("email","demo@finemp.example.invalid","password",password)).statusCode()).isEqualTo(204);
         assertThat(get("/api/auth/me").statusCode()).isEqualTo(200);
+        String report="/api/companies/"+StagingSeed.id("company")+"/financial-reports/presentation-snapshot?month=2026-07&asOf=2026-07-31&scope=ALL";
+        assertThat(get(report).statusCode()).isEqualTo(200);
+        assertThat(get(report.replace(StagingSeed.id("company").toString(),StagingSeed.id("foreign-company").toString())).statusCode()).isEqualTo(403);
         assertThat(post("/api/auth/logout",Map.of()).statusCode()).isEqualTo(204);
         assertThat(get("/api/auth/me").statusCode()).isEqualTo(401);
     }
