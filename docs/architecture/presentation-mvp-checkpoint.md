@@ -10,7 +10,7 @@ Escopo da evidência: requisitos confirmados neste Work, matriz homologada F01�
 | Pagar/receber, aging e subtotais por parceiro | Atendidos no recorte atual | Estado atual com data-base, sem reconstrução de alterações históricas; centros não cobertos |
 | Apresentação de blocos agregados | Parcial e consistente | Uma transação, período explícito; DRE opt-in; sem persistência/compartilhamento/PDF oficial |
 | Indicadores monetários DRE | Atendidos no recorte parcial F07 | Não representam fontes ausentes |
-| Margens essenciais DRE, geração/margem de caixa e taxa de vencidos | Implementados na #250, sujeitos aos gates de integração | Fórmulas confirmadas e dados já disponíveis; precisão de apresentação deve ser explícita |
+| Margens essenciais DRE, geração/margem de caixa e taxa de vencidos | Integrados na #251 / #250 | Fórmulas confirmadas e dados já disponíveis; precisão de apresentação deve ser explícita |
 | Recebimentos por forma efetiva | Indisponível | Baixa não possui forma efetiva persistida; não usar forma prevista do título |
 | Real × orçamento, saldo/projeção/autonomia, capital de giro | Indisponíveis no snapshot | Domínios/queries e decisões próprias; não derivar de totais parciais por hipótese |
 
@@ -26,8 +26,8 @@ Evidência de formato: fmtPct na referência apresenta percentual com uma casa d
 
 ## Menor conjunto para demonstração técnica ao João
 
-1. Rastreabilidade integrada; estabilizar o bloco de indicadores sustentados no snapshot.
-2. Um cenário sintético reproduzível e roteiro de consulta que mostre entrada, baixa, DRE, caixa, títulos e soma dos efeitos, identificando a cobertura parcial.
+1. Rastreabilidade e indicadores integrados (#249/#251).
+2. Cenário de leitura sintético e roteiro documentado em [demonstração do núcleo](presentation-core-demo.md), com DRE, caixa, títulos e soma dos efeitos; teste PostgreSQL/HTTP. Setup direto não substitui testes dos comandos.
 3. Exibir os valores do backend na Apresentação homologada; sem fórmulas locais. A conexão/validação visual do frontend é uma etapa distinta, não alegada pronta pelo backend headless.
 
 Isto define uma demonstração do núcleo parcial, não encerramento da #41, homologação operacional completa ou liberação de produção. Não exigir completar todos os módulos para demonstrar com limites claros; tampouco ocultar fontes ausentes.
