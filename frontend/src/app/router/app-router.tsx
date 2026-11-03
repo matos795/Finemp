@@ -14,6 +14,7 @@ import { StatementsPage } from "../../features/statements/pages/statements-page"
 import { OpenTitlesPage } from "../../features/reports/pages/open-titles-page"
 import { MonthlyCashFlowPage } from "../../features/reports/pages/monthly-cash-flow-page"
 import { DailyCashFlowPage } from "../../features/reports/pages/daily-cash-flow-page"
+import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 
 export function AppRouter() {
     return (
@@ -68,6 +69,20 @@ export function AppRouter() {
                                 ]}
                             >
                                 <StatementsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/reports/dre"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <OperationalDrePage />
                             </RequirePermission>
                         }
                     />
