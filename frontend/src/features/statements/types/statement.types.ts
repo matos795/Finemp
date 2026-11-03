@@ -77,3 +77,19 @@ export interface StatementImportReceipt {
     itemIds: string[]
     auditEventId: string
 }
+
+/** Sugestão de conciliação (listStatementReconciliationCandidates). */
+export interface StatementCandidate {
+    entryId: string
+    description: string
+    direction: "INCOME" | "EXPENSE"
+    bankAccountId?: string
+    dueDate: string
+    paymentDate?: string | null
+    nominalAmount: string
+    actualPaidAmount?: string | null
+    version: number
+    distanceDays: number
+}
+
+export type StatementCandidatePage = PageResponse<StatementCandidate>

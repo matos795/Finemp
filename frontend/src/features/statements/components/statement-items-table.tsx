@@ -4,8 +4,10 @@ import {
     isNegativeExactDecimal,
 } from "../../../lib/formatters/decimal"
 import type { StatementItem } from "../types/statement.types"
+import { StatementCandidatesCells } from "./statement-candidates-cell"
 
 interface StatementItemsTableProps {
+    companyId: string | undefined
     items: StatementItem[]
     loading: boolean
     dimmed: boolean
@@ -13,10 +15,12 @@ interface StatementItemsTableProps {
 
 /**
  * Tabela de movimentos do extrato (ext do protótipo homologado).
- * Conciliar, criar lançamento e desfazer dependem de contratos ainda
- * inexistentes na API (PA1) e ficam inativos.
+ * Pendentes mostram as sugestões do servidor. Conciliar, criar
+ * lançamento e desfazer dependem de contratos ainda inexistentes na API
+ * (PA1) e ficam inativos.
  */
 export function StatementItemsTable({
+    companyId,
     items,
     loading,
     dimmed,
@@ -69,64 +73,59 @@ export function StatementItemsTable({
                                     {formatExactDecimalCell(amount)}
                                 </td>
 
-                                <td>
-                                    {item.status === "RECONCILED" && (
-                                        <span className="badge b-ok">conciliado</span>
-                                    )}
+                                {item.status === "PENDING" ? (
+                                    <StatementCandidatesCells
+                                        companyId={companyId}
+                                        statementId={item.id}
+                                        actions={
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    className="btn sec sm"
+                                                    disabled
+                                                    title="Em breve"
+                                                >
+                                                    Criar lançamento
+                                                </button>{" "}
+                                                <button
+                                                    type="button"
+                                                    className="btn sec sm"
+                                                    disabled
+                                                    title="Em breve"
+                                                >
+                                                    Ignorar
+                                                </button>
+                                            </>
+                                        }
+                                    />
+                                ) : (
+                                    <>
+                                        <td>
+                                            {item.status === "RECONCILED" ? (
+                                                <span className="badge b-ok">conciliado</span>
+                                            ) : (
+                                                <span className="badge b-neu">ignorado</span>
+                                            )}
+                                        </td>
 
-                                    {item.status === "IGNORED" && (
-                                        <span className="badge b-neu">ignorado</span>
-                                    )}
-
-                                    {item.status === "PENDING" && (
-                                        <span className="mut">Sem lançamento correspondente</span>
-                                    )}
-                                </td>
-
-                                <td style={{ whiteSpace: "nowrap" }}>
-                                    {item.status === "PENDING" && (
-                                        <>
+                                        <td style={{ whiteSpace: "nowrap" }}>
                                             <button
                                                 type="button"
                                                 className="btn sec sm"
                                                 disabled
-                                                title="Em breve"
+                                                title={
+                                                    item.status === "RECONCILED"
+                                                        ? "Desconciliar ainda não existe na API"
+                                                        : "Voltar para pendente ainda não existe na API"
+                                                }
                                             >
-                                                Criar lançamento
-                                            </button>{" "}
-                                            <button
-                                                type="button"
-                                                className="btn sec sm"
-                                                disabled
-                                                title="Em breve"
-                                            >
-                                                Ignorar
+                                                {item.status === "RECONCILED"
+                                                    ? "Desfazer"
+                                                    : "Voltar para pendente"}
                                             </button>
-                                        </>
-                                    )}
-
-                                    {item.status === "RECONCILED" && (
-                                        <button
-                                            type="button"
-                                            className="btn sec sm"
-                                            disabled
-                                            title="Desconciliar ainda não existe na API"
-                                        >
-                                            Desfazer
-                                        </button>
-                                    )}
-
-                                    {item.status === "IGNORED" && (
-                                        <button
-                                            type="button"
-                                            className="btn sec sm"
-                                            disabled
-                                            title="Voltar para pendente ainda não existe na API"
-                                        >
-                                            Voltar para pendente
-                                        </button>
-                                    )}
-                                </td>
+                                        </td>
+                                    </>
+                                )}
                             </tr>
                         )
                     })}
