@@ -312,6 +312,41 @@ class BankStatementPersistenceIntegrationTest {
         tx.executeWithoutResult(status->{companies.findLockedById(owner.getId());entryGuard.requireLinkedStatementPeriodsOpen(owner.getId(),List.of(entry.getId(),foreignEntry.getId()));});
         assertThatThrownBy(()->tx.executeWithoutResult(status->{companies.findLockedById(other.getId());entryGuard.requireLinkedStatementPeriodsOpen(other.getId(),List.of(foreignEntry.getId()));})).isInstanceOf(com.finemp.finance.period.FinancialPeriodClosedException.class);
     }
+    @Test void demonstrablePresentationCoreReconcilesDreCashTitlesAndEffects()throws Exception{
+        var group=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"Synthetic demonstration"));
+        var category=categories.saveAndFlush(FinancialCategory.subcategory(group,1,"Synthetic revenue"));
+        jdbc.update("UPDATE financial_categories SET dre_line='REC' WHERE id=?",category.getId());
+        var july=LocalDate.of(2026,7,1);
+        for(int position=0;position<3;position++){
+            var nominal=new BigDecimal(position==2?"1.00":"3.00");
+            var due=position==2?LocalDate.of(2026,8,10):july;
+            entries.saveAndFlush(new FinancialEntry(owner,new FinancialEntryValues(FinancialDirection.INCOME,"Synthetic demo "+position,nominal,july,july,YearMonth.of(2026,7),due,position==0?july:null,position==0?new BigDecimal("3.10"):null,bank.getId(),category.getId(),null,null,null,"","",""),actor.getId()));
+        }
+        var snapshot=presentation.snapshot(actor.getId(),owner.getId(),"2026-07",LocalDate.of(2026,7,31),com.finemp.finance.reporting.OpenTitlesAgingService.Scope.ALL);
+        assertThat(snapshot.operationalDre().subtotals().netRevenue()).isEqualByComparingTo("7.00");
+        assertThat(snapshot.operationalDre().subtotals().netResult()).isEqualByComparingTo("6.10");
+        assertThat(snapshot.cashYear().months().get(6).realIncome()).isEqualByComparingTo("3.10");
+        assertThat(snapshot.cashYear().months().get(6).openIncome()).isEqualByComparingTo("3.00");
+        assertThat(snapshot.cashYear().months().get(7).openIncome()).isEqualByComparingTo("1.00");
+        assertThat(snapshot.receivables().totalAmount()).isEqualByComparingTo("4.00");
+        assertThat(snapshot.receivables().overdueAmount()).isEqualByComparingTo("3.00");
+        assertThat(snapshot.payables().totalAmount()).isEqualByComparingTo("1.00");
+        assertThat(snapshot.indicators().dre().netMargin().percent()).isEqualTo(new BigDecimal("87.1"));
+        assertThat(snapshot.indicators().receivables().overdueRate().percent()).isEqualTo(new BigDecimal("75.0"));
+        for(var line:snapshot.operationalDre().lines()){
+            var trace=dreEffects.list(actor.getId(),owner.getId(),"2026-07",line.line(),0,100);
+            assertThat(trace.items().stream().map(com.finemp.finance.reporting.OperationalDreEffectReadService.View::amount).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo(line.amount());
+        }
+        var principal=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+owner.getId()+"/financial-reports/presentation-snapshot").with(principal).param("month","2026-07").param("asOf","2026-07-31").param("scope","ALL"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.operationalDre.subtotals.netResult").value("6.10"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.indicators.receivables.overdueRate.percent").value("75.0"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/companies/"+owner.getId()+"/financial-reports/operational-dre/effects").with(principal).param("month","2026-07").param("line","RFIN"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.totalItems").value(1))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].amount").value("0.10"));
+    }
     @Test void presentationIndicatorsUsePersistedAmountsAndSelectedMonth()throws Exception{
         var incomeGroup=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"Synthetic indicator income"));
         var incomeCategory=categories.saveAndFlush(FinancialCategory.subcategory(incomeGroup,1,"Synthetic revenue"));

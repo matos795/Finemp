@@ -16,7 +16,7 @@ GET /api/companies/{companyId}/financial-reports/presentation-snapshot exige mon
 
 ## PONTO ABERTO
 
-Período padrão e comportamento sem período fechado. A escolha de último mês fechado não é fixada por este contrato. DRE operacional, indicadores, saldo, projeção, orçamento, transferências e forma efetiva não são inventados. A DRE contábil Questor permanece separada. O aging aplica a data-base ao estado armazenado, sem reconstruir alterações históricas.
+Período padrão e comportamento sem período fechado. A escolha de último mês fechado não é fixada por este contrato. Saldo, projeção, orçamento, transferências e forma efetiva não são presumidos prontos. DRE parcial e indicadores sustentados estão descritos nas extensões abaixo. A DRE contábil Questor permanece separada. O aging aplica a data-base ao estado armazenado, sem reconstruir alterações históricas.
 
 ## PROPOSTA
 
@@ -27,3 +27,10 @@ Reutilizar futuramente os mesmos dados na geração backend do PDF. Blocos adici
 DECISÃO: quando finemp.finance.operational-dre.enabled=true, o mesmo snapshot inclui operationalDre usando ator, Company e mês explícitos. O serviço participa da transação existente; o teste de alteração de baixa confirmada entre blocos verifica também que a diferença financeira da DRE continua no estado anterior, enquanto a leitura posterior isolada já observa a mudança.
 
 Sem o opt-in, o endpoint anterior continua disponível e o campo é omitido, não substituído por zeros. schemaVersion=1 e partial=true permanecem; mudança aditiva. O bloco mantém coverage=FINANCIAL_ENTRIES e não afirma DRE completa. NAO e fontes ausentes continuam pontos abertos. Não são adicionados indicadores ou fórmulas no frontend.
+
+
+## Indicadores essenciais (#250) e demonstração (#252)
+
+O bloco indicators usa exclusivamente os relatórios já presentes nesta transação: margens bruta/EBITDA/líquida, geração/margem de caixa realizado e proporção nominal vencida a receber. A cobertura parcial acompanha a DRE opcional. Percentuais vêm prontos do backend, com bases exatas e indisponibilidade explícita; veja o contrato OpenAPI.
+
+O [cenário reproduzível](presentation-core-demo.md) compara DRE, caixa, títulos, indicadores e efeitos com dados sintéticos. Ele comprova o recorte de leitura; não afirma frontend conectado ou fontes completas.
