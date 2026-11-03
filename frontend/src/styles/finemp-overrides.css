@@ -49,3 +49,9 @@
   border-radius: 6px;
   max-width: 100%;
 }
+
+/* Filtros ainda sem dado na API ficam visíveis, mas inativos (D5). */
+.fin select:disabled {
+  opacity: .5;
+  cursor: default;
+}
