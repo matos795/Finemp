@@ -10,7 +10,7 @@ import { useToast } from "../../../components/finemp/toast-context"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
 import { currentUserQueryKey } from "../../auth/hooks/use-current-user"
 import { previewStatement } from "../api/statements-api"
-import { StatementPreviewDialog } from "../components/statement-preview-dialog"
+import { StatementImportDialog } from "../components/statement-import-dialog"
 import {
     csvSeparators,
     STATEMENT_FILE_ACCEPT,
@@ -330,23 +330,17 @@ export function StatementsPage() {
                 </>
             )}
 
-            {previewSession && (
-                <StatementPreviewDialog
+            {previewSession && companyId && (
+                <StatementImportDialog
+                    // Nova prévia = nova seleção e novas confirmações.
+                    key={previewSession.sha256 + previewSession.file.name}
+                    companyId={companyId}
                     session={previewSession}
                     accountName={
                         accountItems.find((account) => account.id === previewSession.bankId)?.name ?? ""
                     }
+                    canImport={canImport}
                     onClose={() => setPreviewSession(null)}
-                    action={
-                        <button
-                            type="button"
-                            className="btn"
-                            disabled
-                            title="Em breve"
-                        >
-                            Importar
-                        </button>
-                    }
                 />
             )}
         </>

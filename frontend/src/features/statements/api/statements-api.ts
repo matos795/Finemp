@@ -8,9 +8,11 @@ import type {
     StatementFileFormat,
     StatementItemFilters,
     StatementItemPage,
+    StatementImportReceipt,
     StatementPreview,
     StatementPreviewSession,
 } from "../types/statement.types"
+import { readFileAsBase64 } from "../lib/file-base64"
 
 export function bankAccountStatementPath(
     companyId: string,
@@ -82,4 +84,42 @@ export async function previewStatement(
         sha256: response.headers.get("X-Statement-SHA256") ?? "",
         preview,
     }
+}
+
+export interface StatementImportRequest {
+    session: StatementPreviewSession
+    selectedRows: number[]
+    idempotencyKey: string
+}
+
+/**
+ * `POST …/statement-imports` (confirmBankStatementImport). O servidor
+ * confere o SHA, reprocessa o arquivo e grava só as linhas escolhidas;
+ * não baixa nem concilia (D2/D3). As três confirmações são do usuário.
+ */
+export async function confirmStatementImport(
+    companyId: string,
+    { session, selectedRows, idempotencyKey }: StatementImportRequest,
+): Promise<StatementImportReceipt> {
+    const fileBase64 = await readFileAsBase64(session.file)
+
+    return apiRequest<StatementImportReceipt>(
+        `${bankAccountStatementPath(companyId, session.bankId)}/statement-imports`,
+        {
+            method: "POST",
+            headers: {
+                "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+                format: session.format,
+                ...(session.format === "CSV" ? { separator: session.separator } : {}),
+                fileBase64,
+                fileSha256: session.sha256,
+                selectedRows,
+                accountConfirmed: true,
+                currencyConfirmed: true,
+                warningsConfirmed: true,
+            }),
+        },
+    )
 }
