@@ -1,4 +1,21 @@
-import { useState } from "react"
+import {
+    useRef,
+    useState,
+} from "react"
+import {
+    useMutation,
+    useQueryClient,
+} from "@tanstack/react-query"
+import { useToast } from "../../../components/finemp/toast-context"
+import { apiErrorStatus } from "../../../lib/api/api-errors"
+import { currentUserQueryKey } from "../../auth/hooks/use-current-user"
+import { previewStatement } from "../api/statements-api"
+import { StatementPreviewDialog } from "../components/statement-preview-dialog"
+import {
+    csvSeparators,
+    STATEMENT_FILE_ACCEPT,
+    statementFormatOf,
+} from "../lib/statement-file"
 import { Panel } from "../../../components/finemp/panel"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
@@ -10,7 +27,11 @@ import {
     useStatementItems,
 } from "../hooks/use-statement-items"
 import { StatementItemsTable } from "../components/statement-items-table"
-import type { StatementItemStatus } from "../types/statement.types"
+import type {
+    CsvSeparator,
+    StatementItemStatus,
+    StatementPreviewSession,
+} from "../types/statement.types"
 
 /** Máximo do endpoint: o protótipo mostra todos os movimentos da conta. */
 const PAGE_SIZE = 100
@@ -31,12 +52,77 @@ const errorMessages = {
     404: "A consulta de extratos não está disponível neste ambiente.",
 }
 
+function describePreviewError(error: unknown) {
+    switch (apiErrorStatus(error)) {
+        case 400:
+            return "Não foi possível ler o arquivo. Confira o formato e, no CSV, o separador."
+        case 403:
+            return "Você não tem permissão para importar extratos nesta empresa."
+        case 404:
+            return "A análise de extratos não está disponível neste ambiente."
+        case 413:
+            return "O arquivo excede o limite de tamanho da análise."
+        case 415:
+            return "Tipo de arquivo ou codificação não suportados."
+        case 429:
+            return "Outra análise de arquivo está em andamento. Tente de novo em instantes."
+        default:
+            return "Não foi possível analisar o arquivo."
+    }
+}
+
 /** Fluxo de caixa › Extratos e conciliação (ext do protótipo homologado). */
 export function StatementsPage() {
-    const { selectedCompany } =
-        useCompanyAccess()
+    const {
+        selectedCompany,
+        hasPermission,
+    } = useCompanyAccess()
 
     const companyId = selectedCompany?.id
+
+    // Prévia e importação exigem FINANCIAL_ENTRY_MANAGE ALL (só UX aqui).
+    const canImport = hasPermission("FINANCIAL_ENTRY_MANAGE")
+
+    const queryClient = useQueryClient()
+    const showToast = useToast()
+    const fileInput = useRef<HTMLInputElement>(null)
+
+    const [separator, setSeparator] =
+        useState<CsvSeparator>("SEMICOLON")
+
+    const [previewSession, setPreviewSession] =
+        useState<StatementPreviewSession | null>(null)
+
+    const preview = useMutation({
+        mutationFn: ({ file, bankId }: { file: File, bankId: string }) => {
+            const format = statementFormatOf(file.name)!
+
+            return previewStatement(companyId!, bankId, file, format, separator)
+        },
+        onSuccess: setPreviewSession,
+        onError: (error) => {
+            if (apiErrorStatus(error) === 401) {
+                queryClient.setQueryData(currentUserQueryKey, null)
+                return
+            }
+
+            showToast(describePreviewError(error), true)
+        },
+    })
+
+    function handleFile(file: File | undefined) {
+        if (!file || !bankId) {
+            return
+        }
+
+        if (!statementFormatOf(file.name)) {
+            // PA2: o protótipo aceitava Excel; a API aceita OFX e CSV.
+            showToast("Use arquivo OFX ou CSV. Planilhas Excel ainda não são aceitas.", true)
+            return
+        }
+
+        preview.mutate({ file, bankId })
+    }
 
     const accounts =
         useBankAccounts(companyId, { page: 0, size: 100 })
@@ -124,17 +210,55 @@ export function StatementsPage() {
                             </select>
                         </div>
 
-                        <div className="f">
-                            <label>&nbsp;</label>
-                            <button
-                                type="button"
-                                className="btn"
-                                disabled
-                                title="Em breve"
-                            >
-                                Escolher arquivo OFX / CSV
-                            </button>
-                        </div>
+                        {canImport && (
+                            <>
+                                <div className="f">
+                                    <label htmlFor="exSep">Separador (CSV)</label>
+                                    <select
+                                        id="exSep"
+                                        value={separator}
+                                        onChange={(event) =>
+                                            setSeparator(event.target.value as CsvSeparator)
+                                        }
+                                    >
+                                        {csvSeparators.map((option) => (
+                                            <option
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="f">
+                                    <label>&nbsp;</label>
+                                    <button
+                                        type="button"
+                                        className="btn"
+                                        disabled={!bankId || preview.isPending}
+                                        onClick={() => fileInput.current?.click()}
+                                    >
+                                        {preview.isPending
+                                            ? "Analisando arquivo…"
+                                            : "Escolher arquivo OFX / CSV"}
+                                    </button>
+
+                                    <input
+                                        ref={fileInput}
+                                        type="file"
+                                        accept={STATEMENT_FILE_ACCEPT}
+                                        hidden
+                                        onChange={(event) => {
+                                            const file = event.target.files?.[0]
+                                            event.target.value = ""
+                                            handleFile(file)
+                                        }}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </Panel>
@@ -204,6 +328,26 @@ export function StatementsPage() {
                         )}
                     </div>
                 </>
+            )}
+
+            {previewSession && (
+                <StatementPreviewDialog
+                    session={previewSession}
+                    accountName={
+                        accountItems.find((account) => account.id === previewSession.bankId)?.name ?? ""
+                    }
+                    onClose={() => setPreviewSession(null)}
+                    action={
+                        <button
+                            type="button"
+                            className="btn"
+                            disabled
+                            title="Em breve"
+                        >
+                            Importar
+                        </button>
+                    }
+                />
             )}
         </>
     )
