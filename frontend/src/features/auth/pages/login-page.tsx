@@ -1,11 +1,10 @@
-import { zodResolver } from "@hookform/resolvers/zod"
 import { BarChart3, LockKeyhole } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { Navigate, useNavigate } from "react-router"
 import { useState } from "react"
 import { currentUserQueryKey, useCurrentUser } from "../hooks/use-current-user"
-import { loginSchema, type LoginFormData } from "../schemas/login-schema"
+import { loginResolver, type LoginFormData } from "../schemas/login-schema"
 import { getCurrentUser, login } from "../api/auth-api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
 import { Label } from "../../../components/ui/label"
@@ -23,7 +22,7 @@ export function LoginPage() {
         useState<string | null>(null)
 
     const form = useForm<LoginFormData>({
-        resolver: zodResolver(loginSchema),
+        resolver: loginResolver,
         defaultValues: {
             email: "",
             password: "",
