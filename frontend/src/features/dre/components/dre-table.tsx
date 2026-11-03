@@ -1,98 +1,124 @@
-import {
-    ChevronRight,
-} from "lucide-react"
-import { Card, CardContent } from "../../../components/ui/card"
-import type { DreLine } from "../types/dre.types"
-import { groupDreLines } from "../lib/group-dre-lines"
-import { formatCurrency } from "../../../lib/formatters/currency"
+import type { DreGroup } from "../lib/group-dre-lines"
+import { formatAmountCell } from "../../../lib/formatters/decimal"
 
 interface DreTableProps {
-    lines: DreLine[]
+    groups: DreGroup[]
+    /** Chaves abertas: "g:<grupo>" e "o:<grupo>/<abertura>". */
+    expanded: ReadonlySet<string>
+    onToggle: (key: string) => void
 }
 
+function amountClass(value: number) {
+    return value < -0.004 ? "n neg" : "n"
+}
+
+/**
+ * DRE contábil no formato de matriz do protótipo (.mtx): linhas de grupo
+ * com seta (.tog) para abrir a DRE aberta e, nela, as linhas EBITDA.
+ */
 export function DreTable({
-    lines,
+    groups,
+    expanded,
+    onToggle,
 }: DreTableProps) {
-    const groups =
-        groupDreLines(lines)
-
     return (
-        <Card className="overflow-hidden border-slate-200 shadow-sm">
-            <CardContent className="p-0">
-                <div className="grid grid-cols-[1fr_auto] border-b bg-slate-50 px-6 py-3 text-xs font-medium uppercase tracking-wider text-slate-500">
-                    <span>Estrutura DRE</span>
-                    <span>Valor</span>
-                </div>
+        <div className="mtx">
+            <table>
+                <thead>
+                    <tr>
+                        <th>DRE</th>
+                        <th className="n">Valor</th>
+                    </tr>
+                </thead>
 
-                <div>
-                    {groups.map((dreGroup) => (
-                        <div
-                            key={dreGroup.name}
-                            className="border-b last:border-b-0"
-                        >
-                            <div className="grid grid-cols-[1fr_auto] items-center bg-white px-6 py-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-5 w-1 rounded-full bg-[#c7a35a]" />
+                <tbody>
+                    {groups.map((dreGroup) => {
+                        const groupKey = `g:${dreGroup.name}`
+                        const groupOpen = expanded.has(groupKey)
 
-                                    <span className="font-semibold text-[#102238]">
-                                        {dreGroup.name}
-                                    </span>
-                                </div>
-
-                                <span className="font-mono font-semibold text-[#102238]">
-                                    {formatCurrency(
-                                        dreGroup.total,
-                                    )}
-                                </span>
-                            </div>
-
-                            {dreGroup.groups.map(
-                                (openGroup) => (
-                                    <div
-                                        key={openGroup.name}
-                                        className="border-t bg-slate-50/40"
+                        return [
+                            <tr
+                                key={groupKey}
+                                className="grp"
+                            >
+                                <td>
+                                    <span
+                                        className="tog"
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-expanded={groupOpen}
+                                        onClick={() => onToggle(groupKey)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault()
+                                                onToggle(groupKey)
+                                            }
+                                        }}
                                     >
-                                        <div className="grid grid-cols-[1fr_auto] px-8 py-3">
-                                            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                                                <ChevronRight className="size-3.5 text-slate-400" />
+                                        {groupOpen ? "▾" : "▸"}
+                                    </span>
+                                    {dreGroup.name}
+                                </td>
+                                <td className={amountClass(dreGroup.total)}>
+                                    {formatAmountCell(dreGroup.total)}
+                                </td>
+                            </tr>,
 
-                                                {openGroup.name}
-                                            </div>
+                            ...(groupOpen
+                                ? dreGroup.groups.flatMap((openGroup) => {
+                                    const openKey = `o:${dreGroup.name}/${openGroup.name}`
+                                    const open = expanded.has(openKey)
 
-                                            <span className="font-mono text-sm font-medium text-slate-700">
-                                                {formatCurrency(
-                                                    openGroup.total,
-                                                )}
-                                            </span>
-                                        </div>
-
-                                        {openGroup.lines.map(
-                                            (line, index) => (
-                                                <div
-                                                    key={`${line.ebitdaClassification}-${index}`}
-                                                    className="grid grid-cols-[1fr_auto] border-t border-slate-100 bg-white px-12 py-3 text-sm"
-                                                >
-                                                    <span className="text-slate-500">
-                                                        {
-                                                            line.ebitdaClassification
+                                    return [
+                                        <tr
+                                            key={openKey}
+                                            className="sub"
+                                        >
+                                            <td style={{ paddingLeft: 28 }}>
+                                                <span
+                                                    className="tog"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-expanded={open}
+                                                    onClick={() => onToggle(openKey)}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === "Enter" || event.key === " ") {
+                                                            event.preventDefault()
+                                                            onToggle(openKey)
                                                         }
-                                                    </span>
+                                                    }}
+                                                >
+                                                    {open ? "▾" : "▸"}
+                                                </span>
+                                                {openGroup.name}
+                                            </td>
+                                            <td className={amountClass(openGroup.total)}>
+                                                {formatAmountCell(openGroup.total)}
+                                            </td>
+                                        </tr>,
 
-                                                    <span className="font-mono text-slate-600">
-                                                        {formatCurrency(
-                                                            line.total,
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            ),
-                                        )}
-                                    </div>
-                                ),
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                                        ...(open
+                                            ? openGroup.lines.map((line, index) => (
+                                                <tr
+                                                    key={`${openKey}/${line.ebitdaClassification}/${index}`}
+                                                    className="sub"
+                                                >
+                                                    <td style={{ paddingLeft: 52, fontSize: 13 }}>
+                                                        {line.ebitdaClassification}
+                                                    </td>
+                                                    <td className={amountClass(line.total)}>
+                                                        {formatAmountCell(line.total)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                            : []),
+                                    ]
+                                })
+                                : []),
+                        ]
+                    })}
+                </tbody>
+            </table>
+        </div>
     )
 }

@@ -1,26 +1,24 @@
 import {
-    AlertTriangle,
-    CalendarRange,
-    FileChartColumn,
-} from "lucide-react"
-import {
+    useMemo,
     useState,
 } from "react"
 import { useCompanyAccess } from "../../companies/company-access-context"
 import { useDre } from "../hooks/use-dre"
-import { Input } from "../../../components/ui/input"
-import { Label } from "../../../components/ui/label"
-import { Card, CardContent } from "../../../components/ui/card"
-import { Skeleton } from "../../../components/ui/skeleton"
 import { DreTable } from "../components/dre-table"
+import { groupDreLines } from "../lib/group-dre-lines"
+import { Panel } from "../../../components/finemp/panel"
+import { QueryError } from "../../../components/finemp/query-error"
+import { BarActions } from "../../../components/layout/bar-actions"
+import { formatIsoDate } from "../../../lib/formatters/decimal"
 
-
+/** Data local (YYYY-MM-DD); toISOString usaria UTC e podia virar o dia. */
 function toIsoDate(
     date: Date,
 ) {
-    return date
-        .toISOString()
-        .slice(0, 10)
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+
+    return `${date.getFullYear()}-${month}-${day}`
 }
 
 function createInitialPeriod() {
@@ -46,161 +44,158 @@ export function DrePage() {
     const [period, setPeriod] =
         useState(createInitialPeriod)
 
+    const [expanded, setExpanded] =
+        useState<ReadonlySet<string>>(() => new Set())
+
     const dre =
         useDre(
             selectedCompany?.id,
             period,
         )
 
+    // PA9: agrupamento e subtotais por grupo já eram feitos no frontend
+    // antes desta fatia; mantidos sem mudança até a API fornecer os totais.
+    const groups = useMemo(
+        () => (dre.data ? groupDreLines(dre.data.lines) : []),
+        [dre.data],
+    )
+
+    function toggle(key: string) {
+        setExpanded((current) => {
+            const next = new Set(current)
+
+            if (next.has(key)) {
+                next.delete(key)
+            } else {
+                next.add(key)
+            }
+
+            return next
+        })
+    }
+
+    function expandAll() {
+        setExpanded(
+            new Set(
+                groups.flatMap((group) => [
+                    `g:${group.name}`,
+                    ...group.groups.map(
+                        (openGroup) => `o:${group.name}/${openGroup.name}`,
+                    ),
+                ]),
+            ),
+        )
+    }
+
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                <div>
-                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[#b08d49]">
-                        <FileChartColumn className="size-4" />
-                        Demonstrativo financeiro
-                    </div>
+        <>
+            <BarActions>
+                <button
+                    type="button"
+                    className="icobtn"
+                    title="Abrir tudo"
+                    aria-label="Abrir tudo"
+                    onClick={expandAll}
+                >
+                    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="M5 4.5l5 4 5-4M5 11l5 4 5-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
 
-                    <h1 className="text-3xl font-semibold tracking-tight text-[#102238]">
-                        DRE
-                    </h1>
+                <button
+                    type="button"
+                    className="icobtn"
+                    title="Fechar tudo"
+                    aria-label="Fechar tudo"
+                    onClick={() => setExpanded(new Set())}
+                >
+                    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="M5 9l5-4 5 4M5 15.5l5-4 5 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
+            </BarActions>
 
-                    <p className="mt-2 text-muted-foreground">
-                        Demonstração do resultado da empresa
-                        no período selecionado.
-                    </p>
+            <div className="filters">
+                <div className="f">
+                    <label htmlFor="dre-start-date">Início</label>
+                    <input
+                        id="dre-start-date"
+                        type="date"
+                        value={period.startDate}
+                        onChange={(event) =>
+                            setPeriod((current) => ({
+                                ...current,
+                                startDate: event.target.value,
+                            }))
+                        }
+                    />
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row">
-                    <div className="space-y-1.5">
-                        <Label
-                            htmlFor="dre-start-date"
-                            className="text-xs text-muted-foreground"
-                        >
-                            Início
-                        </Label>
+                <div className="f">
+                    <label htmlFor="dre-end-date">Fim</label>
+                    <input
+                        id="dre-end-date"
+                        type="date"
+                        value={period.endDate}
+                        onChange={(event) =>
+                            setPeriod((current) => ({
+                                ...current,
+                                endDate: event.target.value,
+                            }))
+                        }
+                    />
+                </div>
+            </div>
 
-                        <Input
-                            id="dre-start-date"
-                            type="date"
-                            value={period.startDate}
-                            onChange={(event) =>
-                                setPeriod(
-                                    (current) => ({
-                                        ...current,
-                                        startDate:
-                                            event.target.value,
-                                    }),
-                                )
-                            }
-                            className="bg-white"
-                        />
+            <div className="cards">
+                <div className="card">
+                    <div className="lb">Empresa</div>
+                    <div className="vl" style={{ fontSize: 20 }}>
+                        {selectedCompany?.name ?? "—"}
                     </div>
+                </div>
 
-                    <div className="space-y-1.5">
-                        <Label
-                            htmlFor="dre-end-date"
-                            className="text-xs text-muted-foreground"
-                        >
-                            Fim
-                        </Label>
+                <div className="card">
+                    <div className="lb">Linhas classificadas</div>
+                    <div className="vl">
+                        {dre.data?.lines.length ?? "—"}
+                    </div>
+                </div>
 
-                        <Input
-                            id="dre-end-date"
-                            type="date"
-                            value={period.endDate}
-                            onChange={(event) =>
-                                setPeriod(
-                                    (current) => ({
-                                        ...current,
-                                        endDate:
-                                            event.target.value,
-                                    }),
-                                )
-                            }
-                            className="bg-white"
-                        />
+                <div className={dre.data?.unclassifiedAccountCount ? "card alerta" : "card"}>
+                    <div className="lb">Contas sem classificação</div>
+                    <div className="vl">
+                        {dre.data?.unclassifiedAccountCount ?? "—"}
                     </div>
                 </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-5">
-                        <CalendarRange className="size-5 text-[#568fd2]" />
-
-                        <div>
-                            <p className="text-xs text-muted-foreground">
-                                Empresa
-                            </p>
-
-                            <p className="mt-1 text-sm font-medium">
-                                {selectedCompany?.name ?? "-"}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-5">
-                        <FileChartColumn className="size-5 text-[#299d8f]" />
-
-                        <div>
-                            <p className="text-xs text-muted-foreground">
-                                Linhas classificadas
-                            </p>
-
-                            <p className="mt-1 text-xl font-semibold">
-                                {dre.data?.lines.length ?? "-"}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-5">
-                        <AlertTriangle className="size-5 text-[#d77c67]" />
-
-                        <div>
-                            <p className="text-xs text-muted-foreground">
-                                Contas sem classificação
-                            </p>
-
-                            <p className="mt-1 text-xl font-semibold">
-                                {
-                                    dre.data
-                                        ?.unclassifiedAccountCount ??
-                                    "-"
-                                }
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {dre.isLoading && (
-                <div className="space-y-3">
-                    <Skeleton className="h-14 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                </div>
-            )}
-
-            {dre.isError && (
-                <Card className="border-destructive/30 bg-destructive/5">
-                    <CardContent className="p-6 text-sm text-destructive">
-                        Não foi possível carregar a DRE
-                        para o período selecionado.
-                    </CardContent>
-                </Card>
-            )}
-
-            {dre.data && (
-                <DreTable
-                    lines={dre.data.lines}
-                />
-            )}
-        </div>
+            <Panel
+                title={`DRE contábil – ${formatIsoDate(period.startDate)} a ${formatIsoDate(period.endDate)}`}
+                help="Demonstração do resultado da empresa no período selecionado, a partir da contabilidade sincronizada e da classificação DRE, DRE aberta e EBITDA."
+            >
+                {dre.isError ? (
+                    <QueryError
+                        error={dre.error}
+                        messages={{
+                            400: "Confira o período: a data inicial deve ser anterior ou igual à final.",
+                            403: "Você não tem acesso à DRE desta empresa.",
+                        }}
+                        fallback="Não foi possível carregar a DRE para o período selecionado."
+                        onRetry={() => dre.refetch()}
+                    />
+                ) : dre.isPending ? (
+                    <div className="empty">Carregando…</div>
+                ) : groups.length === 0 ? (
+                    <div className="empty">Sem lançamentos classificados no período.</div>
+                ) : (
+                    <DreTable
+                        groups={groups}
+                        expanded={expanded}
+                        onToggle={toggle}
+                    />
+                )}
+            </Panel>
+        </>
     )
 }
