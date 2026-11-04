@@ -61,7 +61,7 @@ export function DrePage() {
                         Demonstrativo financeiro
                     </div>
 
-                    <h1 className="text-3xl font-semibold tracking-tight text-[#102238]">
+                    <h1 className="text-3xl font-semibold tracking-tight text-[var(--tx)]">
                         DRE
                     </h1>
 
