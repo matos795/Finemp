@@ -142,6 +142,14 @@ export function BankAccountsPage() {
 
         remove.mutate(accountToDelete, {
             onSuccess: (result) => {
+                if (
+                    result.action === "DELETED" &&
+                    page > 0 &&
+                    bankAccounts.data?.items.length === 1
+                ) {
+                    setPage(page - 1)
+                }
+
                 if (result.action === "DEACTIVATED") {
                     showToast("A conta tem movimentos: foi desativada (o histórico continua).")
                 }
