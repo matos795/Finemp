@@ -15,7 +15,7 @@ export function DashboardPage() {
         <div className="space-y-8">
             <div>
                 <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-[#102238]">
+                    <h1 className="text-3xl font-semibold tracking-tight text-[var(--tx)]">
                         Visão geral
                     </h1>
 
