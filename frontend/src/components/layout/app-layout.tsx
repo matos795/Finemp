@@ -10,8 +10,8 @@ import { cn } from "cn"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { PageActions } from "./page-actions"
-import { BarActionsContext } from "./bar-actions-context"
 import { ToastProvider } from "../finemp/toast-provider"
+import { BarActionsContext } from "./bar-actions-context"
 import {
     findNavigationByPath,
     navigationModules,
@@ -135,6 +135,7 @@ export function AppLayout() {
 
                 <div className="corpo">
                     <AppSidebar
+                        inert={isMobile && !mobileOpen}
                         onNavigate={() => setSideMobileOpen(false)}
                     />
 
@@ -151,14 +152,14 @@ export function AppLayout() {
                         </main>
                     </div>
                 </div>
-            </ToastProvider>
 
-            {mobileOpen && (
-                <div
-                    id="backdrop"
-                    onClick={() => setSideMobileOpen(false)}
-                />
-            )}
+                {mobileOpen && (
+                    <div
+                        id="backdrop"
+                        onClick={() => setSideMobileOpen(false)}
+                    />
+                )}
+            </ToastProvider>
         </div>
     )
 }
