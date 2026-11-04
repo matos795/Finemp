@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useRef,
     useState,
 } from "react"
@@ -79,6 +80,8 @@ export function StatementsPage() {
     } = useCompanyAccess()
 
     const companyId = selectedCompany?.id
+    const currentCompanyId = useRef(companyId)
+    currentCompanyId.current = companyId
 
     // Prévia e importação exigem FINANCIAL_ENTRY_MANAGE ALL (só UX aqui).
     const canImport = hasPermission("FINANCIAL_ENTRY_MANAGE")
@@ -93,13 +96,37 @@ export function StatementsPage() {
     const [previewSession, setPreviewSession] =
         useState<StatementPreviewSession | null>(null)
 
+    useEffect(() => {
+        setPreviewSession(null)
+    }, [companyId])
+
     const preview = useMutation({
-        mutationFn: ({ file, bankId }: { file: File, bankId: string }) => {
+        mutationFn: ({
+            companyId: requestCompanyId,
+            file,
+            bankId,
+            separator: requestSeparator,
+        }: {
+            companyId: string
+            file: File
+            bankId: string
+            separator: CsvSeparator
+        }) => {
             const format = statementFormatOf(file.name)!
 
-            return previewStatement(companyId!, bankId, file, format, separator)
+            return previewStatement(
+                requestCompanyId,
+                bankId,
+                file,
+                format,
+                requestSeparator,
+            )
         },
-        onSuccess: setPreviewSession,
+        onSuccess: (session) => {
+            if (session.companyId === currentCompanyId.current) {
+                setPreviewSession(session)
+            }
+        },
         onError: (error) => {
             if (apiErrorStatus(error) === 401) {
                 queryClient.setQueryData(currentUserQueryKey, null)
@@ -121,7 +148,12 @@ export function StatementsPage() {
             return
         }
 
-        preview.mutate({ file, bankId })
+        preview.mutate({
+            companyId: companyId!,
+            file,
+            bankId,
+            separator,
+        })
     }
 
     const accounts =
@@ -330,7 +362,7 @@ export function StatementsPage() {
                 </>
             )}
 
-            {previewSession && (
+            {previewSession?.companyId === companyId && (
                 <StatementPreviewDialog
                     session={previewSession}
                     accountName={
