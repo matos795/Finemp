@@ -110,29 +110,25 @@ export function BankAccountsPage() {
         showToast(describeWriteError(error), true)
     }
 
-    function handleChange(
+    async function handleChange(
         account: BankAccount,
         changes: Partial<BankAccountWrite>,
     ) {
-        update.mutate(
-            { account, changes },
-            {
-                onSuccess: (saved) => {
-                    if (changes.openingBalance !== undefined) {
-                        showToast(
-                            `Saldo inicial de ${saved.name}: ${formatExactCurrency(saved.openingBalance)}`,
-                        )
-                    }
-                },
-                onError: (error) => {
-                    setEditResetVersionById((current) => ({
-                        ...current,
-                        [account.id]: (current[account.id] ?? 0) + 1,
-                    }))
-                    handleWriteError(error)
-                },
-            },
-        )
+        try {
+            const saved = await update.mutateAsync({ account, changes })
+
+            if (changes.openingBalance !== undefined) {
+                showToast(
+                    `Saldo inicial de ${saved.name}: ${formatExactCurrency(saved.openingBalance)}`,
+                )
+            }
+        } catch (error) {
+            setEditResetVersionById((current) => ({
+                ...current,
+                [account.id]: (current[account.id] ?? 0) + 1,
+            }))
+            handleWriteError(error)
+        }
     }
 
     function confirmDelete() {
