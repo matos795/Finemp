@@ -11,7 +11,6 @@ import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { PageActions } from "./page-actions"
 import { BarActionsContext } from "./bar-actions-context"
-import { ToastProvider } from "../finemp/toast-provider"
 import {
     findNavigationByPath,
     navigationModules,
@@ -127,31 +126,30 @@ export function AppLayout() {
                 mobileOpen && "side-mob",
             )}
         >
-            <ToastProvider>
-                <AppHeader
-                    menuOpen={isMobile ? sideMobileOpen : sideOpen}
-                    onToggleMenu={toggleMenu}
+            <AppHeader
+                menuOpen={isMobile ? sideMobileOpen : sideOpen}
+                onToggleMenu={toggleMenu}
+            />
+
+            <div className="corpo">
+                <AppSidebar
+                    inert={isMobile && !mobileOpen}
+                    onNavigate={() => setSideMobileOpen(false)}
                 />
 
-                <div className="corpo">
-                    <AppSidebar
-                        onNavigate={() => setSideMobileOpen(false)}
-                    />
-
-                    <div className="conteudo">
-                        <div className="barra">
-                            <Breadcrumb />
-                            <PageActions onSlotChange={setBarActionsSlot} />
-                        </div>
-
-                        <main id="main">
-                            <BarActionsContext.Provider value={barActionsSlot}>
-                                <Outlet />
-                            </BarActionsContext.Provider>
-                        </main>
+                <div className="conteudo">
+                    <div className="barra">
+                        <Breadcrumb />
+                        <PageActions onSlotChange={setBarActionsSlot} />
                     </div>
+
+                    <main id="main">
+                        <BarActionsContext.Provider value={barActionsSlot}>
+                            <Outlet />
+                        </BarActionsContext.Provider>
+                    </main>
                 </div>
-            </ToastProvider>
+            </div>
 
             {mobileOpen && (
                 <div
