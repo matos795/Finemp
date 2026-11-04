@@ -20,7 +20,10 @@ export function DashboardPage() {
                     </h1>
 
                     {selectedCompany && (
-                        <Badge variant="outline">
+                        <Badge
+                            variant="outline"
+                            className="border-[var(--bd)] text-[var(--tx)]"
+                        >
                             {selectedCompany.role}
                         </Badge>
                     )}
