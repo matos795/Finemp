@@ -133,6 +133,7 @@ export function AppLayout() {
 
             <div className="corpo">
                 <AppSidebar
+                    inert={isMobile && !mobileOpen}
                     onNavigate={() => setSideMobileOpen(false)}
                 />
 
