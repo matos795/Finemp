@@ -1,0 +1,59 @@
+server:
+  address: 0.0.0.0
+  port: ${PORT:8080}
+  forward-headers-strategy: none
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+finemp:
+  local-user:
+    enabled: false
+  identity:
+    mail:
+      enabled: false
+  integration:
+    questor:
+      enabled: false
+      identity:
+        enabled: false
+  connector:
+    enabled: false
+    protocol:
+      enabled: false
+  sync:
+    worker:
+      enabled: false
+    executor:
+      enabled: false
+    control:
+      enabled: false
+  finance:
+    catalog:
+      enabled: true
+    entries:
+      enabled: true
+      commands:
+        enabled: true
+    presentation:
+      enabled: true
+    aging:
+      enabled: true
+    daily-cash:
+      enabled: true
+    monthly-cash:
+      enabled: true
+    operational-dre:
+      enabled: true
