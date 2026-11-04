@@ -17,7 +17,7 @@ Os metadados e o opt-in são barreiras contra erro operacional, não prova cript
 
 ## Efeito e repetição
 
-Uma transação cria contabilidade, cliente, Company, conta financeira zerada e grupos/subcategorias REC/DADM sintéticos. Usuário `demo@finemp.example.invalid` recebe hash BCrypt, grant CUSTOM/ALL e somente FINANCIAL_ENTRY_MANAGE, BANK_ACCOUNT_VIEW, FINANCIAL_CATEGORY_VIEW. Não há permissões de plataforma, Questor ou administração irrestrita. Não cria lançamentos/baixas: esses usam as APIs existentes na prova de jornada.
+Uma transação cria contabilidade, cliente, Company, conta financeira zerada e grupos/subcategorias REC/DADM sintéticos. Usuário `demo@finemp.example.invalid` recebe hash no formato delegating {bcrypt}, grant CUSTOM/ALL e somente FINANCIAL_ENTRY_MANAGE, BANK_ACCOUNT_VIEW, FINANCIAL_CATEGORY_VIEW. Não há permissões de plataforma, Questor ou administração irrestrita. Não cria lançamentos/baixas: esses usam as APIs existentes na prova de jornada.
 
 IDs determinísticos e marcador `finemp-synthetic-v1`; trava transacional e locks de tabelas serializam a verificação de banco vazio. Em falha, rollback integral. Repetição com marcador válido retorna sem modificar senha/grants/cadastros. Estado incompleto é recusado, sem tentativa de reparar ou sobrescrever dados.
 
@@ -30,3 +30,11 @@ Saída mostra apenas conclusão e IDs sintéticos, nunca senha/hash/URL. Falha r
 Testes de alvo validam projeto/ambiente/profiles e URL privada. Testes PostgreSQL cobrem banco ocupado, rollback tardio, concorrência e repetição sem reampliar grants/redefinir senha. Build local do JAR/help e testes de alvo são distintos de execução PostgreSQL no CI. Não houve provisionamento real só por compilar o comando.
 
 Após aprovação e deploy isolado: provisionar → login/CSRF → criar/baixar via API → conferir DRE/caixa/títulos/indicadores/efeitos → isolamento/logout. Sem afirmar frontend conectado ou produção pronta.
+
+## Fixture explícita de isolamento (#264)
+
+Depois da fixture inicial, executar separadamente `java -jar /app/staging-provisioner.jar --isolation-company`. Reutiliza os gates de projeto, ambiente, profiles, datasource privado e confirmação explícita; este modo não lê nem redefine a senha. Exige marcador/Company/client da fixture original.
+
+Cria somente uma segunda Company sintética sem grants, com marcador próprio. Não cria lançamentos, usuários ou permissões. Retry valida o marcador, vínculo ao cliente e ausência de grants; se o acesso tiver mudado, recusa sem revogar nada. Transação e locks protegem concorrência/rollback. O usuário de demonstração deve acessar a própria Company e receber 403 para a segunda Company existente.
+
+Testes PostgreSQL verificam pré-condição, repetição, rollback e preservação de permissões alteradas; o teste HTTP usa as duas Companies reais no banco descartável, login normal e snapshot. A prova em staging usa os mesmos IDs determinísticos e nunca uma Company real. Ao concluir, remover confirmação e segredo temporários e reiniciar o serviço para retirar essas variáveis do processo.
