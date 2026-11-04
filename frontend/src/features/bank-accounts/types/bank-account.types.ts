@@ -27,3 +27,20 @@ export interface BankAccount {
 }
 
 export type BankAccountPage = PageResponse<BankAccount>
+
+/**
+ * `FinancialBankAccountWrite` no OpenAPI. `openingBalance` vai como string
+ * decimal exata (o contrato aceita string), sem arredondamento.
+ */
+export interface BankAccountWrite {
+    name: string
+    type: BankAccountType
+    openingBalance: string
+    openingDate: string
+    active: boolean
+}
+
+export interface BankAccountDeletion {
+    id: string
+    action: "DELETED" | "DEACTIVATED"
+}

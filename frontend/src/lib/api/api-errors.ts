@@ -8,3 +8,7 @@ export function isSessionExpired(error: unknown) {
 export function apiErrorStatus(error: unknown) {
     return error instanceof ApiError ? error.status : undefined
 }
+
+export function apiErrorCode(error: unknown) {
+    return error instanceof ApiError ? error.code : undefined
+}

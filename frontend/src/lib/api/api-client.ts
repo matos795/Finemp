@@ -1,15 +1,47 @@
 export class ApiError extends Error {
   public readonly status: number
 
+  /** Código estável opcional do ProblemDetail (ex.: STALE_VERSION). */
+  public readonly code?: string
+
   constructor(
     status: number,
     message: string,
+    code?: string,
   ) {
     super(message)
 
     this.status = status
+    this.code = code
     this.name = "ApiError"
   }
+}
+
+async function readProblemCode(
+  response: Response,
+): Promise<string | undefined> {
+  const contentType = response.headers.get("Content-Type") ?? ""
+
+  if (!contentType.includes("json")) {
+    return undefined
+  }
+
+  try {
+    const body: unknown = await response.json()
+
+    if (
+      body &&
+      typeof body === "object" &&
+      "code" in body &&
+      typeof body.code === "string"
+    ) {
+      return body.code
+    }
+  } catch {
+    // Corpo ausente ou inválido: fica só o status.
+  }
+
+  return undefined
 }
 
 interface CsrfResponse {
@@ -61,6 +93,7 @@ export async function apiRequest<T>(
       response.status === 401
         ? "E-mail ou senha inválidos."
         : "Não foi possível concluir a operação.",
+      await readProblemCode(response),
     )
   }
 

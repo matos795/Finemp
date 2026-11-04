@@ -13,6 +13,11 @@ const bankAccountTypeLabels: Record<BankAccountType, string> = {
     OTHER: "Outra",
 }
 
+/** Tipos do contrato, na ordem das opções do protótipo. */
+export const bankAccountTypes = Object.keys(
+    bankAccountTypeLabels,
+) as BankAccountType[]
+
 /** Valor desconhecido é preservado e exibido como veio da API. */
 export function getBankAccountTypeLabel(
     type: string,

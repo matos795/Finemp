@@ -91,3 +91,18 @@ export function formatAmountCell(
 
     return amountFormatter.format(value)
 }
+
+/** Moeda no padrão do protótipo (fmtBRL): "-R$ 1.234,56". Só formata. */
+export function formatExactCurrency(
+    value: string,
+) {
+    if (!exactDecimalPattern.test(value.trim())) {
+        return value
+    }
+
+    const formatted = formatExactDecimal(value)
+
+    return formatted.startsWith("-")
+        ? `-R$ ${formatted.slice(1)}`
+        : `R$ ${formatted}`
+}

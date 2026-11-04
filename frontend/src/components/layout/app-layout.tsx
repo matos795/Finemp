@@ -10,6 +10,7 @@ import { cn } from "cn"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { PageActions } from "./page-actions"
+import { ToastProvider } from "../finemp/toast-provider"
 import { BarActionsContext } from "./bar-actions-context"
 import {
     findNavigationByPath,
@@ -126,37 +127,39 @@ export function AppLayout() {
                 mobileOpen && "side-mob",
             )}
         >
-            <AppHeader
-                menuOpen={isMobile ? sideMobileOpen : sideOpen}
-                onToggleMenu={toggleMenu}
-            />
-
-            <div className="corpo">
-                <AppSidebar
-                    inert={isMobile && !mobileOpen}
-                    onNavigate={() => setSideMobileOpen(false)}
+            <ToastProvider>
+                <AppHeader
+                    menuOpen={isMobile ? sideMobileOpen : sideOpen}
+                    onToggleMenu={toggleMenu}
                 />
 
-                <div className="conteudo">
-                    <div className="barra">
-                        <Breadcrumb />
-                        <PageActions onSlotChange={setBarActionsSlot} />
+                <div className="corpo">
+                    <AppSidebar
+                        inert={isMobile && !mobileOpen}
+                        onNavigate={() => setSideMobileOpen(false)}
+                    />
+
+                    <div className="conteudo">
+                        <div className="barra">
+                            <Breadcrumb />
+                            <PageActions onSlotChange={setBarActionsSlot} />
+                        </div>
+
+                        <main id="main">
+                            <BarActionsContext.Provider value={barActionsSlot}>
+                                <Outlet />
+                            </BarActionsContext.Provider>
+                        </main>
                     </div>
-
-                    <main id="main">
-                        <BarActionsContext.Provider value={barActionsSlot}>
-                            <Outlet />
-                        </BarActionsContext.Provider>
-                    </main>
                 </div>
-            </div>
 
-            {mobileOpen && (
-                <div
-                    id="backdrop"
-                    onClick={() => setSideMobileOpen(false)}
-                />
-            )}
+                {mobileOpen && (
+                    <div
+                        id="backdrop"
+                        onClick={() => setSideMobileOpen(false)}
+                    />
+                )}
+            </ToastProvider>
         </div>
     )
 }
