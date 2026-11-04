@@ -98,6 +98,9 @@ export function BankAccountsPage() {
     const [accountToDelete, setAccountToDelete] =
         useState<BankAccount | null>(null)
 
+    const [editResetVersionById, setEditResetVersionById] =
+        useState<Record<string, number>>({})
+
     function handleWriteError(error: unknown) {
         if (apiErrorStatus(error) === 401) {
             queryClient.setQueryData(currentUserQueryKey, null)
@@ -107,23 +110,25 @@ export function BankAccountsPage() {
         showToast(describeWriteError(error), true)
     }
 
-    function handleChange(
+    async function handleChange(
         account: BankAccount,
         changes: Partial<BankAccountWrite>,
     ) {
-        update.mutate(
-            { account, changes },
-            {
-                onSuccess: (saved) => {
-                    if (changes.openingBalance !== undefined) {
-                        showToast(
-                            `Saldo inicial de ${saved.name}: ${formatExactCurrency(saved.openingBalance)}`,
-                        )
-                    }
-                },
-                onError: handleWriteError,
-            },
-        )
+        try {
+            const saved = await update.mutateAsync({ account, changes })
+
+            if (changes.openingBalance !== undefined) {
+                showToast(
+                    `Saldo inicial de ${saved.name}: ${formatExactCurrency(saved.openingBalance)}`,
+                )
+            }
+        } catch (error) {
+            setEditResetVersionById((current) => ({
+                ...current,
+                [account.id]: (current[account.id] ?? 0) + 1,
+            }))
+            handleWriteError(error)
+        }
     }
 
     function confirmDelete() {
@@ -133,6 +138,14 @@ export function BankAccountsPage() {
 
         remove.mutate(accountToDelete, {
             onSuccess: (result) => {
+                if (
+                    result.action === "DELETED" &&
+                    page > 0 &&
+                    bankAccounts.data?.items.length === 1
+                ) {
+                    setPage(page - 1)
+                }
+
                 if (result.action === "DEACTIVATED") {
                     showToast("A conta tem movimentos: foi desativada (o histórico continua).")
                 }
@@ -200,7 +213,7 @@ export function BankAccountsPage() {
                                 canManage ? (
                                     <BankAccountEditRow
                                         // A versão na chave recria os campos com o valor salvo.
-                                        key={`${account.id}:${account.version}`}
+                                        key={`${account.id}:${account.version}:${editResetVersionById[account.id] ?? 0}`}
                                         account={account}
                                         busy={busyAccountId === account.id}
                                         onChange={(changes) =>
