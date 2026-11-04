@@ -106,3 +106,12 @@ export function formatExactCurrency(
         ? `-R$ ${formatted.slice(1)}`
         : `R$ ${formatted}`
 }
+
+/** Valor da string decimal exata é negativo (sem converter para Number). */
+export function isNegativeExactDecimal(
+    value: string,
+) {
+    const text = value.trim()
+
+    return text.startsWith("-") && /[1-9]/.test(text)
+}
