@@ -98,6 +98,9 @@ export function BankAccountsPage() {
     const [accountToDelete, setAccountToDelete] =
         useState<BankAccount | null>(null)
 
+    const [editResetVersionById, setEditResetVersionById] =
+        useState<Record<string, number>>({})
+
     function handleWriteError(error: unknown) {
         if (apiErrorStatus(error) === 401) {
             queryClient.setQueryData(currentUserQueryKey, null)
@@ -121,7 +124,13 @@ export function BankAccountsPage() {
                         )
                     }
                 },
-                onError: handleWriteError,
+                onError: (error) => {
+                    setEditResetVersionById((current) => ({
+                        ...current,
+                        [account.id]: (current[account.id] ?? 0) + 1,
+                    }))
+                    handleWriteError(error)
+                },
             },
         )
     }
@@ -200,7 +209,7 @@ export function BankAccountsPage() {
                                 canManage ? (
                                     <BankAccountEditRow
                                         // A versão na chave recria os campos com o valor salvo.
-                                        key={`${account.id}:${account.version}`}
+                                        key={`${account.id}:${account.version}:${editResetVersionById[account.id] ?? 0}`}
                                         account={account}
                                         busy={busyAccountId === account.id}
                                         onChange={(changes) =>
