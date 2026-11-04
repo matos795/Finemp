@@ -4,7 +4,7 @@ import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useCompanyPage } from "../../../lib/api/use-company-page"
 import { useCompanyAccess } from "../../companies/company-access-context"
-import { useBankAccounts } from "../../bank-accounts/hooks/use-bank-accounts"
+import { useAllBankAccounts } from "../../bank-accounts/hooks/use-bank-accounts"
 import {
     useStatementItemCounts,
     useStatementItems,
@@ -39,14 +39,14 @@ export function StatementsPage() {
     const companyId = selectedCompany?.id
 
     const accounts =
-        useBankAccounts(companyId, { page: 0, size: 100 })
+        useAllBankAccounts(companyId)
 
     const [selection, setSelection] = useState<{
         companyId: string | undefined
         bankId: string
     } | null>(null)
 
-    const accountItems = accounts.data?.items ?? []
+    const accountItems = accounts.data ?? []
 
     // Como no protótipo: começa pela primeira conta ativa da empresa.
     const bankId =
