@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Modal } from "../../../components/finemp/modal"
 import {
     formatExactCurrency,
+    formatExactDecimal,
     formatExactDecimalCell,
     formatIsoDate,
     isNegativeExactDecimal,
@@ -33,6 +34,21 @@ function rowIsReady(row: StatementPreviewRow) {
 
 function rowIsSkipped(row: StatementPreviewRow) {
     return !row.error && !row.values
+}
+
+function formatPreviewBalance(
+    amount: string,
+    currency: string | undefined,
+) {
+    if (currency === "BRL") {
+        return formatExactCurrency(amount)
+    }
+
+    const formatted = formatExactDecimal(amount)
+
+    return currency
+        ? `${currency} ${formatted}`
+        : formatted
 }
 
 /**
@@ -97,7 +113,12 @@ export function StatementPreviewDialog({
                     {preview.balance?.amount && (
                         <>
                             Saldo informado pelo banco:{" "}
-                            <b>{formatExactCurrency(preview.balance.amount)}</b>
+                            <b>
+                                {formatPreviewBalance(
+                                    preview.balance.amount,
+                                    preview.currency,
+                                )}
+                            </b>
                             {preview.balance.date && ` em ${formatIsoDate(preview.balance.date)}`}.
                         </>
                     )}
