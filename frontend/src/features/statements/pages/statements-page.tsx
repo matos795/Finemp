@@ -351,7 +351,7 @@ function StatementsCompanyPage() {
                 </>
             )}
 
-            {previewSession?.companyId === companyId && (
+            {previewSession && previewSession.companyId === companyId && (
                 <StatementPreviewDialog
                     session={previewSession}
                     accountName={
