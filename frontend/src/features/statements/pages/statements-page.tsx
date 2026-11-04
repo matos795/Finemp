@@ -1,5 +1,4 @@
 import {
-    useEffect,
     useRef,
     useState,
 } from "react"
@@ -73,15 +72,13 @@ function describePreviewError(error: unknown) {
 }
 
 /** Fluxo de caixa › Extratos e conciliação (ext do protótipo homologado). */
-export function StatementsPage() {
+function StatementsCompanyPage() {
     const {
         selectedCompany,
         hasPermission,
     } = useCompanyAccess()
 
     const companyId = selectedCompany?.id
-    const currentCompanyId = useRef(companyId)
-    currentCompanyId.current = companyId
 
     // Prévia e importação exigem FINANCIAL_ENTRY_MANAGE ALL (só UX aqui).
     const canImport = hasPermission("FINANCIAL_ENTRY_MANAGE")
@@ -95,10 +92,6 @@ export function StatementsPage() {
 
     const [previewSession, setPreviewSession] =
         useState<StatementPreviewSession | null>(null)
-
-    useEffect(() => {
-        setPreviewSession(null)
-    }, [companyId])
 
     const preview = useMutation({
         mutationFn: ({
@@ -122,11 +115,7 @@ export function StatementsPage() {
                 requestSeparator,
             )
         },
-        onSuccess: (session) => {
-            if (session.companyId === currentCompanyId.current) {
-                setPreviewSession(session)
-            }
-        },
+        onSuccess: setPreviewSession,
         onError: (error) => {
             if (apiErrorStatus(error) === 401) {
                 queryClient.setQueryData(currentUserQueryKey, null)
@@ -382,5 +371,20 @@ export function StatementsPage() {
                 />
             )}
         </>
+    )
+}
+
+
+/**
+ * Remonta o estado da tela quando a empresa muda.
+ * Isso descarta preview, seleção e mutations pendentes do escopo anterior.
+ */
+export function StatementsPage() {
+    const { selectedCompany } = useCompanyAccess()
+
+    return (
+        <StatementsCompanyPage
+            key={selectedCompany?.id ?? "no-company"}
+        />
     )
 }
