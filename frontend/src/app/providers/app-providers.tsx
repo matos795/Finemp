@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BrowserRouter } from "react-router"
 import type { PropsWithChildren } from "react"
-import { ToastProvider } from "../../components/finemp/toast-provider"
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -17,11 +16,9 @@ export function AppProviders({
 }: PropsWithChildren) {
     return (
         <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-                <BrowserRouter>
-                    {children}
-                </BrowserRouter>
-            </ToastProvider>
+            <BrowserRouter>
+                {children}
+            </BrowserRouter>
         </QueryClientProvider>
     )
 }
