@@ -1,6 +1,5 @@
 import { Navigate, Outlet } from "react-router"
 import { useCurrentUser } from "../hooks/use-current-user"
-import { Skeleton } from "../../../components/ui/skeleton"
 import { CompanyAccessProvider } from "../../companies/company-access-provider"
 
 export function ProtectedApp() {
@@ -8,12 +7,8 @@ export function ProtectedApp() {
 
     if (currentUser.isLoading) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <div className="w-72 space-y-3">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
+            <div className="fin min-h-screen">
+                <div className="empty">Carregando…</div>
             </div>
         )
     }

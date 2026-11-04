@@ -55,3 +55,39 @@ export function formatIsoDate(
 
     return `${day}/${month}/${year}`
 }
+
+/**
+ * Célula de tabela no padrão do protótipo (fmtN): zero aparece como "–".
+ * Recebe a string decimal exata da API; só formata.
+ */
+export function formatExactDecimalCell(
+    value: string,
+) {
+    return /^-?(?:0+(?:\.0*)?|\.0+)$/.test(value.trim())
+        ? "–"
+        : formatExactDecimal(value)
+}
+
+const amountFormatter =
+    new Intl.NumberFormat("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })
+
+/**
+ * Célula para valores que a API ainda entrega como número JSON
+ * (ex.: DRE contábil). Só formata; zero aparece como "–".
+ */
+export function formatAmountCell(
+    value: number,
+) {
+    if (!Number.isFinite(value)) {
+        return "—"
+    }
+
+    if (Math.abs(value) < 0.005) {
+        return "–"
+    }
+
+    return amountFormatter.format(value)
+}

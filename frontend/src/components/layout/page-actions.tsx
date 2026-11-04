@@ -5,9 +5,19 @@
  * Lançamentos, tela ainda não ligada. Tutorial e alertas dependem de
  * conteúdo ainda não portado e ficam inativos (D5).
  */
-export function PageActions() {
+export function PageActions({
+    onSlotChange,
+}: {
+    /** Recebe o espaço onde a tela atual coloca suas próprias ações. */
+    onSlotChange: (slot: HTMLElement | null) => void
+}) {
     return (
         <div className="barra-acoes">
+            <span
+                ref={onSlotChange}
+                style={{ display: "contents" }}
+            />
+
             <a
                 className="icobtn zap"
                 href="https://wa.me/551150266712"

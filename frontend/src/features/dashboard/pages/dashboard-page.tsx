@@ -1,90 +1,44 @@
-import {
-    BarChart3,
-    Building2,
-    ShieldCheck,
-} from "lucide-react"
 import { useCompanyAccess } from "../../companies/company-access-context"
-import { Badge } from "../../../components/ui/badge"
-import { Card, CardContent } from "../../../components/ui/card"
 
+/**
+ * Página inicial. O Painel homologado (saldos, entradas, saídas,
+ * projeção e indicadores) depende de dados que a API ainda não fornece;
+ * até lá esta tela mostra só o acesso do usuário, no visual do protótipo.
+ */
 export function DashboardPage() {
     const { selectedCompany } =
         useCompanyAccess()
 
     return (
-        <div className="space-y-8">
-            <div>
-                <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-[var(--tx)]">
-                        Visão geral
-                    </h1>
-
-                    {selectedCompany && (
-                        <Badge
-                            variant="outline"
-                            className="border-[var(--bd)] text-[var(--tx)]"
-                        >
-                            {selectedCompany.role}
-                        </Badge>
-                    )}
+        <>
+            <div className="cards">
+                <div className="card">
+                    <div className="lb">Empresa</div>
+                    <div className="vl" style={{ fontSize: 20 }}>
+                        {selectedCompany?.name ?? "Nenhuma"}
+                    </div>
                 </div>
 
-                <p className="mt-2 text-muted-foreground">
-                    Acompanhe os principais dados financeiros
-                    disponíveis para o seu perfil.
-                </p>
+                <div className="card">
+                    <div className="lb">Perfil</div>
+                    <div className="vl" style={{ fontSize: 20 }}>
+                        {selectedCompany?.role ?? "—"}
+                    </div>
+                </div>
+
+                <div className="card">
+                    <div className="lb">Funcionalidades</div>
+                    <div className="vl" style={{ fontSize: 20 }}>
+                        {selectedCompany?.permissions.length ?? 0} liberadas
+                    </div>
+                </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-6">
-                        <Building2 className="size-5 text-[#c7a35a]" />
-
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                Empresa
-                            </p>
-
-                            <p className="font-medium">
-                                {selectedCompany?.name ?? "Nenhuma"}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-6">
-                        <ShieldCheck className="size-5 text-[#299d8f]" />
-
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                Perfil
-                            </p>
-
-                            <p className="font-medium">
-                                {selectedCompany?.role ?? "-"}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center gap-4 p-6">
-                        <BarChart3 className="size-5 text-[#568fd2]" />
-
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                Funcionalidades
-                            </p>
-
-                            <p className="font-medium">
-                                {selectedCompany?.permissions.length ?? 0}
-                                {" "}liberadas
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="alert i">
+                Os quadros do Painel (saldo disponível, entradas, saídas,
+                projeção e indicadores) serão exibidos quando os dados
+                estiverem disponíveis na API.
             </div>
-        </div>
+        </>
     )
 }
