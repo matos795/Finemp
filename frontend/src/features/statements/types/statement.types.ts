@@ -31,3 +31,41 @@ export type StatementItemPage = PageResponse<StatementItem>
 export interface StatementItemFilters {
     status?: StatementItemStatus
 }
+
+export type StatementFileFormat = "OFX" | "CSV"
+
+export type CsvSeparator = "COMMA" | "SEMICOLON" | "TAB" | "PIPE"
+
+/** Linha da prévia (previewBankStatement): original e valores canônicos. */
+export interface StatementPreviewRow {
+    number: number
+    rawDate?: string
+    rawAmount?: string
+    rawMemo?: string
+    error?: string | null
+    warnings: string[]
+    values?: StatementItemValues | null
+}
+
+export interface StatementPreview {
+    bankCode?: string
+    accountReference?: string
+    currency?: string
+    balance?: {
+        date?: string
+        amount?: string
+    } | null
+    warnings: string[]
+    rows: StatementPreviewRow[]
+}
+
+/** Prévia + o que a confirmação precisa reapresentar ao servidor. */
+export interface StatementPreviewSession {
+    companyId: string
+    bankId: string
+    file: File
+    format: StatementFileFormat
+    separator?: CsvSeparator
+    sha256: string
+    preview: StatementPreview
+}
