@@ -21,7 +21,8 @@ O container:
 - encaminha `/api/*` para o backend pela rede privada;
 - não embute URL da API nem segredo no bundle;
 - não habilita CORS genérico;
-- expõe `/healthz` para health check.
+- expõe `/healthz` para health check;
+- não adiciona limite de body próprio no proxy; validações de tamanho permanecem no backend.
 
 A variável runtime do serviço web deve ser uma referência Railway:
 
