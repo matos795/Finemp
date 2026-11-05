@@ -1,7 +1,4 @@
-import {
-    CATEGORY_PAGE_SIZE,
-    useMonthlyCashCategoryTotals,
-} from "../hooks/use-cash-totals"
+import { useMonthlyCashCategoryTotals } from "../hooks/use-cash-totals"
 import { formatExactDecimalCell } from "../../../lib/formatters/decimal"
 import type {
     CashActivity,
@@ -29,9 +26,17 @@ interface MonthlyCashCategoryRowsProps {
 }
 
 function categoryLabel(category: MonthlyCashCategoryTotal) {
+    if (!category.categoryId) {
+        return "Sem categoria"
+    }
+
     const name = category.categoryName ?? "Categoria sem nome"
 
     return category.categoryCode ? `${category.categoryCode} ${name}` : name
+}
+
+function categoryKey(categoryId: string | null) {
+    return categoryId ?? "__unassigned__"
 }
 
 /**
@@ -85,21 +90,19 @@ export function MonthlyCashCategoryRows({
     const cells = new Map<string, MonthlyCashCategoryTotal>()
 
     months.forEach((month, index) => {
-        month.data?.items.forEach((item) => {
-            if (!categories.has(item.categoryId)) {
-                categories.set(item.categoryId, item)
+        month.data?.forEach((item) => {
+            const key = categoryKey(item.categoryId)
+
+            if (!categories.has(key)) {
+                categories.set(key, item)
             }
 
-            cells.set(`${item.categoryId}|${index}`, item)
+            cells.set(`${key}|${index}`, item)
         })
     })
 
     const ordered = [...categories.values()].sort((left, right) =>
         categoryLabel(left).localeCompare(categoryLabel(right), "pt", { numeric: true }),
-    )
-
-    const truncated = months.some(
-        (month) => (month.data?.totalPages ?? 0) > 1,
     )
 
     if (ordered.length === 0) {
@@ -117,7 +120,7 @@ export function MonthlyCashCategoryRows({
 
                 return (
                     <tr
-                        key={category.categoryId}
+                        key={categoryKey(category.categoryId)}
                         className="sub"
                     >
                         <td
@@ -128,14 +131,14 @@ export function MonthlyCashCategoryRows({
                         </td>
 
                         {monthIndexes.map((index) => {
-                            const cell = cells.get(`${category.categoryId}|${index}`)
+                            const cell = cells.get(`${categoryKey(category.categoryId)}|${index}`)
 
                             return (
                                 <td
                                     key={index}
                                     className="n"
                                 >
-                                    {cell ? (
+                                    {!cell ? "–" : category.categoryId ? (
                                         <a
                                             href="#"
                                             style={{ color: "inherit", textDecoration: "none" }}
@@ -143,7 +146,7 @@ export function MonthlyCashCategoryRows({
                                             onClick={(event) => {
                                                 event.preventDefault()
                                                 onOpenTitles({
-                                                    categoryId: category.categoryId,
+                                                    categoryId: category.categoryId!,
                                                     label,
                                                     monthIndex: index,
                                                 })
@@ -151,7 +154,11 @@ export function MonthlyCashCategoryRows({
                                         >
                                             {formatExactDecimalCell(cell.amount)}
                                         </a>
-                                    ) : "–"}
+                                    ) : (
+                                        <span title="Detalhamento de títulos sem categoria ainda não existe na API">
+                                            {formatExactDecimalCell(cell.amount)}
+                                        </span>
+                                    )}
                                 </td>
                             )
                         })}
@@ -166,17 +173,6 @@ export function MonthlyCashCategoryRows({
                 )
             })}
 
-            {truncated ? (
-                <tr className="sub">
-                    <td
-                        colSpan={columns}
-                        className="mut"
-                        style={{ fontSize: 12 }}
-                    >
-                        Algum mês tem mais de {CATEGORY_PAGE_SIZE} categorias; só as primeiras aparecem.
-                    </td>
-                </tr>
-            ) : null}
         </>
     )
 }

@@ -245,21 +245,21 @@ export function OperationalDrePage() {
             </div>
 
             <div className="alert i">
-                DRE operacional parcial: considera só os lançamentos financeiros
-                (cobertura FINANCIAL_ENTRIES). Bens e depreciação ainda não
-                entram. Não é a DRE contábil, que continua em Demais › DRE contábil.
+                DRE operacional parcial: a cobertura atual considera apenas
+                efeitos dos lançamentos financeiros (FINANCIAL_ENTRIES).
+                Outras fontes operacionais ainda não estão integradas. Não é a
+                DRE contábil, que continua em Demais › DRE contábil.
             </div>
 
             <div className="panel">
                 <h2>DRE {year} – regime de competência</h2>
                 <p className="help">
-                    Cada lançamento entra no mês de <b>competência</b>, pago ou
-                    em aberto. Juros, multas e descontos na baixa entram no mês
-                    do pagamento. Investimentos, empréstimos (principal),
-                    aportes, parcelamentos e distribuição de lucros não entram
-                    na DRE. Clique em um valor para ver os lançamentos. Total,
-                    média, AV% e margens serão exibidos quando estiverem
-                    disponíveis na API.
+                    Os efeitos de competência entram no mês de <b>competência</b>.
+                    Diferenças entre o valor nominal e o valor efetivamente pago
+                    entram no mês da baixa como efeito financeiro. Lançamentos
+                    cuja linha DRE efetiva é NAO ficam fora deste relatório.
+                    Clique em um valor para ver os efeitos. Total, média, AV% e
+                    margens serão exibidos quando estiverem disponíveis na API.
                 </p>
 
                 {failed ? (
@@ -345,32 +345,26 @@ export function OperationalDrePage() {
                                                         )
                                                     }
 
-                                                    const isZero = zeroPattern.test(cell.amount.trim())
-
                                                     return (
                                                         <td
                                                             key={index}
                                                             className={amountClass(cell.amount)}
                                                             title={`Competência ${formatExactDecimal(cell.competenceAmount)} · diferença na baixa ${formatExactDecimal(cell.settlementDifference)}`}
                                                         >
-                                                            {isZero ? (
-                                                                formatExactDecimalCell(cell.amount)
-                                                            ) : (
-                                                                <a
-                                                                    href="#"
-                                                                    style={{ color: "inherit", textDecoration: "none" }}
-                                                                    onClick={(event) => {
-                                                                        event.preventDefault()
-                                                                        setEffectsTarget({
-                                                                            month: monthOf(year, index),
-                                                                            line: item.line,
-                                                                            title: `${label} · ${monthLabels[index]}/${year}`,
-                                                                        })
-                                                                    }}
-                                                                >
-                                                                    {formatExactDecimalCell(cell.amount)}
-                                                                </a>
-                                                            )}
+                                                            <a
+                                                                href="#"
+                                                                style={{ color: "inherit", textDecoration: "none" }}
+                                                                onClick={(event) => {
+                                                                    event.preventDefault()
+                                                                    setEffectsTarget({
+                                                                        month: monthOf(year, index),
+                                                                        line: item.line,
+                                                                        title: `${label} · ${monthLabels[index]}/${year}`,
+                                                                    })
+                                                                }}
+                                                            >
+                                                                {formatExactDecimalCell(cell.amount)}
+                                                            </a>
                                                         </td>
                                                     )
                                                 })}
