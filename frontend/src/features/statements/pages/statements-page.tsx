@@ -10,7 +10,7 @@ import { useToast } from "../../../components/finemp/toast-context"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
 import { currentUserQueryKey } from "../../auth/hooks/use-current-user"
 import { previewStatement } from "../api/statements-api"
-import { StatementPreviewDialog } from "../components/statement-preview-dialog"
+import { StatementImportDialog } from "../components/statement-import-dialog"
 import {
     csvSeparators,
     STATEMENT_FILE_ACCEPT,
@@ -41,11 +41,11 @@ const statusPills: {
     label: string
     countKey: "PENDING" | "RECONCILED" | "IGNORED" | "ALL"
 }[] = [
-    { status: "PENDING", label: "Pendentes", countKey: "PENDING" },
-    { status: "RECONCILED", label: "Conciliados", countKey: "RECONCILED" },
-    { status: "IGNORED", label: "Ignorados", countKey: "IGNORED" },
-    { status: undefined, label: "Todos", countKey: "ALL" },
-]
+        { status: "PENDING", label: "Pendentes", countKey: "PENDING" },
+        { status: "RECONCILED", label: "Conciliados", countKey: "RECONCILED" },
+        { status: "IGNORED", label: "Ignorados", countKey: "IGNORED" },
+        { status: undefined, label: "Todos", countKey: "ALL" },
+    ]
 
 const errorMessages = {
     403: "Você não tem acesso aos extratos desta empresa.",
@@ -158,7 +158,7 @@ function StatementsCompanyPage() {
     // Como no protótipo: começa pela primeira conta ativa da empresa.
     const bankId =
         selection?.companyId === companyId &&
-        accountItems.some((account) => account.id === selection?.bankId)
+            accountItems.some((account) => account.id === selection?.bankId)
             ? selection?.bankId
             : (accountItems.find((account) => account.active) ?? accountItems[0])?.id
 
@@ -350,26 +350,23 @@ function StatementsCompanyPage() {
                     </div>
                 </>
             )}
-
-            {previewSession && previewSession.companyId === companyId && (
-                <StatementPreviewDialog
-                    session={previewSession}
-                    accountName={
-                        accountItems.find((account) => account.id === previewSession.bankId)?.name ?? ""
-                    }
-                    onClose={() => setPreviewSession(null)}
-                    action={
-                        <button
-                            type="button"
-                            className="btn"
-                            disabled
-                            title="Em breve"
-                        >
-                            Importar
-                        </button>
-                    }
-                />
-            )}
+            {previewSession &&
+                companyId &&
+                previewSession.companyId === companyId && (
+                    <StatementImportDialog
+                        // Nova prévia = nova seleção e novas confirmações.
+                        key={previewSession.sha256 + previewSession.file.name}
+                        companyId={companyId}
+                        session={previewSession}
+                        accountName={
+                            accountItems.find(
+                                (account) => account.id === previewSession.bankId,
+                            )?.name ?? ""
+                        }
+                        canImport={canImport}
+                        onClose={() => setPreviewSession(null)}
+                    />
+                )}
         </>
     )
 }

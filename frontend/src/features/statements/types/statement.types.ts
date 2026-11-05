@@ -69,3 +69,12 @@ export interface StatementPreviewSession {
     sha256: string
     preview: StatementPreview
 }
+
+/** Recibo da confirmação (confirmBankStatementImport). */
+export interface StatementImportReceipt {
+    companyId: string
+    bankAccountId: string
+    commandId: string
+    itemIds: string[]
+    auditEventId: string
+}
