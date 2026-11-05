@@ -13,6 +13,7 @@ import type {
     CashActivity,
     CashDirection,
     CashState,
+    MonthlyCashCategoryTotal,
     MonthlyCashDetailFilter,
 } from "../types/cash-totals.types"
 
@@ -46,8 +47,40 @@ export function useDailyCashTotals(
     })
 }
 
-/** Categorias de um mês carregadas de uma vez (máximo do contrato). */
+/** Máximo aceito pelo endpoint por página. */
 export const CATEGORY_PAGE_SIZE = 100
+
+async function listAllMonthlyCashCategoryTotals(
+    companyId: string,
+    filter: {
+        month: string
+        direction: CashDirection
+        state: CashState
+        activity: CashActivity
+    },
+): Promise<MonthlyCashCategoryTotal[]> {
+    const first = await listMonthlyCashCategoryTotals(
+        companyId,
+        filter,
+        0,
+        CATEGORY_PAGE_SIZE,
+    )
+
+    const items = [...first.items]
+
+    for (let page = 1; page < first.totalPages; page += 1) {
+        const next = await listMonthlyCashCategoryTotals(
+            companyId,
+            filter,
+            page,
+            CATEGORY_PAGE_SIZE,
+        )
+
+        items.push(...next.items)
+    }
+
+    return items
+}
 
 /**
  * Subtotais por categoria dos 12 meses de uma linha do fluxo mensal
@@ -74,11 +107,9 @@ export function useMonthlyCashCategoryTotals(
                     { month, direction, state, activity },
                 ],
                 queryFn: () =>
-                    listMonthlyCashCategoryTotals(
+                    listAllMonthlyCashCategoryTotals(
                         companyId!,
                         { month, direction, state, activity },
-                        0,
-                        CATEGORY_PAGE_SIZE,
                     ),
                 enabled: enabled && Boolean(companyId),
             }
@@ -104,6 +135,9 @@ export function useMonthlyCashTitles(
         queryFn: () =>
             listMonthlyCashTitles(companyId!, filter!, page, size),
         enabled: Boolean(companyId && filter),
-        placeholderData: keepPreviousData,
+        placeholderData: (previousData, previousQuery) =>
+            previousQuery?.queryKey[1] === companyId
+                ? keepPreviousData(previousData)
+                : undefined,
     })
 }

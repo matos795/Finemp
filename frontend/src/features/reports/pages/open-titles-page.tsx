@@ -1,7 +1,4 @@
-import {
-    Fragment,
-    useState,
-} from "react"
+import { useState } from "react"
 import { Pager } from "../../../components/finemp/pager"
 import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
@@ -13,11 +10,11 @@ import {
 } from "../../../lib/formatters/decimal"
 import { todayIso } from "../../../lib/formatters/local-date"
 import { useCompanyAccess } from "../../companies/company-access-context"
+import { OpenTitlePartnerGroup } from "../components/open-title-partner-group"
 import { OpenTitleRow } from "../components/open-title-row"
 import {
     useOpenTitlePartnerTotals,
     useOpenTitlesList,
-    useOpenTitlesOfGroups,
 } from "../hooks/use-open-titles"
 import { useOpenTitlesAging } from "../hooks/use-open-titles-aging"
 import {
@@ -104,9 +101,6 @@ export function OpenTitlesPage({
 
     const groupItems =
         grouped ? groups.data?.items ?? [] : []
-
-    const groupTitles =
-        useOpenTitlesOfGroups(companyId, filter, groupItems)
 
     const data = aging.data
     const isIncome = direction === "INCOME"
@@ -322,56 +316,15 @@ export function OpenTitlesPage({
 
                                         <tbody>
                                             {grouped
-                                                ? groupItems.map((group, index) => {
-                                                    const titles = groupTitles[index]
-                                                    const name = group.partnerName ?? ""
-                                                    const shown = titles?.data?.items.length ?? 0
-
-                                                    return (
-                                                        <Fragment key={group.partnerId ?? "_sem"}>
-                                                            {titles?.isError ? (
-                                                                <tr>
-                                                                    <td colSpan={9} className="neg">
-                                                                        Não foi possível carregar os títulos de {name || "Sem cliente/fornecedor"}.
-                                                                    </td>
-                                                                </tr>
-                                                            ) : titles?.data ? (
-                                                                titles.data.items.map((title) => (
-                                                                    <OpenTitleRow
-                                                                        key={title.id}
-                                                                        title={title}
-                                                                        partnerName={name}
-                                                                        isIncome={isIncome}
-                                                                    />
-                                                                ))
-                                                            ) : (
-                                                                <tr>
-                                                                    <td colSpan={9} className="mut">
-                                                                        Carregando títulos de {name || "Sem cliente/fornecedor"}…
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-
-                                                            {titles?.data && titles.data.totalItems > shown ? (
-                                                                <tr>
-                                                                    <td colSpan={9} className="mut" style={{ fontSize: 12 }}>
-                                                                        Mostrando {shown} de {titles.data.totalItems} título(s) deste grupo.
-                                                                    </td>
-                                                                </tr>
-                                                            ) : null}
-
-                                                            <tr className="tot">
-                                                                <td colSpan={7}>
-                                                                    Subtotal {name || "Sem cliente/fornecedor"}
-                                                                </td>
-                                                                <td className="n">
-                                                                    {formatExactDecimalCell(group.nominalAmount)}
-                                                                </td>
-                                                                <td />
-                                                            </tr>
-                                                        </Fragment>
-                                                    )
-                                                })
+                                                ? groupItems.map((group) => (
+                                                    <OpenTitlePartnerGroup
+                                                        key={group.partnerId ?? "_sem"}
+                                                        companyId={companyId}
+                                                        filter={filter}
+                                                        group={group}
+                                                        isIncome={isIncome}
+                                                    />
+                                                ))
                                                 : list.data?.items.map((title) => (
                                                     <OpenTitleRow
                                                         key={title.id}

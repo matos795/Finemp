@@ -11,6 +11,7 @@ interface StatementItemsTableProps {
     companyId: string | undefined
     /** FINANCIAL_ENTRY_MANAGE (só UX; o backend autoriza). */
     canIgnore: boolean
+    onIgnored: () => void
     items: StatementItem[]
     loading: boolean
     dimmed: boolean
@@ -25,6 +26,7 @@ interface StatementItemsTableProps {
 export function StatementItemsTable({
     companyId,
     canIgnore,
+    onIgnored,
     items,
     loading,
     dimmed,
@@ -95,6 +97,7 @@ export function StatementItemsTable({
                                                     companyId={companyId}
                                                     item={item}
                                                     canIgnore={canIgnore}
+                                                    onIgnored={onIgnored}
                                                 />
                                             </>
                                         }
