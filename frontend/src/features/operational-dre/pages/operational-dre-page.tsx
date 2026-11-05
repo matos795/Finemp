@@ -345,32 +345,26 @@ export function OperationalDrePage() {
                                                         )
                                                     }
 
-                                                    const isZero = zeroPattern.test(cell.amount.trim())
-
                                                     return (
                                                         <td
                                                             key={index}
                                                             className={amountClass(cell.amount)}
                                                             title={`Competência ${formatExactDecimal(cell.competenceAmount)} · diferença na baixa ${formatExactDecimal(cell.settlementDifference)}`}
                                                         >
-                                                            {isZero ? (
-                                                                formatExactDecimalCell(cell.amount)
-                                                            ) : (
-                                                                <a
-                                                                    href="#"
-                                                                    style={{ color: "inherit", textDecoration: "none" }}
-                                                                    onClick={(event) => {
-                                                                        event.preventDefault()
-                                                                        setEffectsTarget({
-                                                                            month: monthOf(year, index),
-                                                                            line: item.line,
-                                                                            title: `${label} · ${monthLabels[index]}/${year}`,
-                                                                        })
-                                                                    }}
-                                                                >
-                                                                    {formatExactDecimalCell(cell.amount)}
-                                                                </a>
-                                                            )}
+                                                            <a
+                                                                href="#"
+                                                                style={{ color: "inherit", textDecoration: "none" }}
+                                                                onClick={(event) => {
+                                                                    event.preventDefault()
+                                                                    setEffectsTarget({
+                                                                        month: monthOf(year, index),
+                                                                        line: item.line,
+                                                                        title: `${label} · ${monthLabels[index]}/${year}`,
+                                                                    })
+                                                                }}
+                                                            >
+                                                                {formatExactDecimalCell(cell.amount)}
+                                                            </a>
                                                         </td>
                                                     )
                                                 })}
