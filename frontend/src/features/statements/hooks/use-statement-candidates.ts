@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import { listStatementCandidates } from "../api/statements-api"
 
-/** Sugestões exibidas por movimento, como o select do protótipo. */
+/** Sugestões exibidas por movimento, preservando a paginação do servidor. */
 const CANDIDATE_PAGE_SIZE = 20
 
 export function useStatementCandidates(
@@ -9,7 +9,7 @@ export function useStatementCandidates(
     statementId: string,
     enabled: boolean,
 ) {
-    return useQuery({
+    return useInfiniteQuery({
         queryKey: [
             "companies",
             companyId,
@@ -17,11 +17,19 @@ export function useStatementCandidates(
             statementId,
             "candidates",
         ],
-        queryFn: () =>
+        initialPageParam: 0,
+        queryFn: ({ pageParam }) =>
             listStatementCandidates(companyId!, statementId, {
-                page: 0,
+                page: pageParam,
                 size: CANDIDATE_PAGE_SIZE,
             }),
+        getNextPageParam: (lastPage) => {
+            const nextPage = lastPage.page + 1
+
+            return nextPage < lastPage.totalPages
+                ? nextPage
+                : undefined
+        },
         enabled: enabled && Boolean(companyId),
     })
 }

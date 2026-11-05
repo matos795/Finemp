@@ -13,6 +13,8 @@ import {
 } from "./navigation"
 
 interface AppSidebarProps {
+    /** Remove o menu fechado da navegação por teclado no celular. */
+    inert?: boolean
     /** Chamado ao escolher uma tela (fecha o menu no celular). */
     onNavigate: () => void
 }
@@ -22,6 +24,7 @@ interface AppSidebarProps {
  * um aberto por vez; o módulo atual mostra a tela aberta quando fechado.
  */
 export function AppSidebar({
+    inert = false,
     onNavigate,
 }: AppSidebarProps) {
     const { hasPermission } = useCompanyAccess()
@@ -53,6 +56,8 @@ export function AppSidebar({
         <aside
             id="side"
             aria-label="Menu principal"
+            aria-hidden={inert || undefined}
+            inert={inert || undefined}
         >
             {modules.map((module) => {
                 const isCurrent =

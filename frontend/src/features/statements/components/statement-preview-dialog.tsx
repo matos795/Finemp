@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Modal } from "../../../components/finemp/modal"
 import {
     formatExactCurrency,
+    formatExactDecimal,
     formatExactDecimalCell,
     formatIsoDate,
     isNegativeExactDecimal,
@@ -31,6 +32,25 @@ function rowIsReady(row: StatementPreviewRow) {
     return !row.error && Boolean(row.values)
 }
 
+function rowIsSkipped(row: StatementPreviewRow) {
+    return !row.error && !row.values
+}
+
+function formatPreviewBalance(
+    amount: string,
+    currency: string | undefined,
+) {
+    if (currency === "BRL") {
+        return formatExactCurrency(amount)
+    }
+
+    const formatted = formatExactDecimal(amount)
+
+    return currency
+        ? `${currency} ${formatted}`
+        : formatted
+}
+
 /**
  * "Importar extrato – conferência": mesma janela de conferência linha a
  * linha dos layouts de importação do protótipo homologado, com o
@@ -47,7 +67,8 @@ export function StatementPreviewDialog({
 }: StatementPreviewDialogProps) {
     const { preview } = session
     const ready = preview.rows.filter(rowIsReady)
-    const withProblem = preview.rows.length - ready.length
+    const withProblem = preview.rows.filter((row) => Boolean(row.error))
+    const skipped = preview.rows.filter(rowIsSkipped)
 
     const fileFacts = [
         preview.bankCode && `banco ${preview.bankCode}`,
@@ -67,13 +88,20 @@ export function StatementPreviewDialog({
                 Arquivo <b>{session.file.name}</b> para a conta{" "}
                 <b>{accountName}</b>: {preview.rows.length} linha(s),{" "}
                 <b className="pos">{ready.length} pronta(s)</b>
-                {withProblem > 0 && (
+                {skipped.length > 0 && (
                     <>
-                        , <b className="neg">{withProblem} com problema</b>{" "}
+                        , <b>{skipped.length} ignorada(s)</b>
+                    </>
+                )}
+                {withProblem.length > 0 && (
+                    <>
+                        , <b className="neg">{withProblem.length} com problema</b>{" "}
                         (não serão importadas)
                     </>
                 )}
-                . Corrija o arquivo e analise de novo, se precisar.
+                . {withProblem.length > 0
+                    ? "Corrija as linhas com problema e analise de novo, se precisar."
+                    : "As linhas ignoradas não precisam ser corrigidas."}
             </p>
 
             {(fileFacts.length > 0 || preview.balance?.amount) && (
@@ -85,7 +113,12 @@ export function StatementPreviewDialog({
                     {preview.balance?.amount && (
                         <>
                             Saldo informado pelo banco:{" "}
-                            <b>{formatExactCurrency(preview.balance.amount)}</b>
+                            <b>
+                                {formatPreviewBalance(
+                                    preview.balance.amount,
+                                    preview.currency,
+                                )}
+                            </b>
                             {preview.balance.date && ` em ${formatIsoDate(preview.balance.date)}`}.
                         </>
                     )}
@@ -169,6 +202,13 @@ export function StatementPreviewDialog({
                                     <td style={{ fontSize: 13 }}>
                                         {row.error ? (
                                             <span className="neg">{row.error}</span>
+                                        ) : rowIsSkipped(row) ? (
+                                            <>
+                                                <span>ignorada</span>
+                                                {row.warnings.length > 0 && (
+                                                    <span className="mut"> · {row.warnings.join("; ")}</span>
+                                                )}
+                                            </>
                                         ) : (
                                             <>
                                                 <span className="pos">ok</span>

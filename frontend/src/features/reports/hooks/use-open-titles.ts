@@ -1,16 +1,13 @@
 import {
     keepPreviousData,
-    useQueries,
+    useInfiniteQuery,
     useQuery,
 } from "@tanstack/react-query"
 import {
     listOpenTitlePartnerTotals,
     listOpenTitles,
 } from "../api/reports-api"
-import type {
-    OpenTitlePartnerTotal,
-    OpenTitlesFilter,
-} from "../types/aging.types"
+import type { OpenTitlesFilter } from "../types/aging.types"
 
 /** Títulos de um grupo carregados de uma vez (máximo do contrato). */
 export const GROUP_TITLES_SIZE = 100
@@ -71,37 +68,42 @@ export function useOpenTitlePartnerTotals(
     })
 }
 
-/** Títulos de cada grupo da página atual (uma consulta por grupo). */
-export function useOpenTitlesOfGroups(
+/** Títulos de um parceiro no modo agrupado, com paginação incremental. */
+export function useOpenTitlesOfPartner(
     companyId: string | undefined,
     filter: OpenTitlesFilter,
-    groups: OpenTitlePartnerTotal[],
+    partnerId: string | null,
 ) {
-    return useQueries({
-        queries: groups.map((group) => ({
-            queryKey: [
-                "companies",
-                companyId,
-                "financial-reports",
-                "open-titles",
-                {
-                    ...filter,
-                    partnerId: group.partnerId,
-                    page: 0,
-                    size: GROUP_TITLES_SIZE,
-                },
-            ],
-            queryFn: () =>
-                listOpenTitles(
-                    companyId!,
-                    filter,
-                    0,
-                    GROUP_TITLES_SIZE,
-                    group.partnerId
-                        ? { partnerId: group.partnerId }
-                        : { unassignedPartner: true as const },
-                ),
-            enabled: Boolean(companyId && filter.asOf),
-        })),
+    return useInfiniteQuery({
+        queryKey: [
+            "companies",
+            companyId,
+            "financial-reports",
+            "open-titles",
+            {
+                ...filter,
+                partnerId,
+                pageSize: GROUP_TITLES_SIZE,
+            },
+        ],
+        initialPageParam: 0,
+        queryFn: ({ pageParam }) =>
+            listOpenTitles(
+                companyId!,
+                filter,
+                pageParam,
+                GROUP_TITLES_SIZE,
+                partnerId
+                    ? { partnerId }
+                    : { unassignedPartner: true as const },
+            ),
+        getNextPageParam: (lastPage) => {
+            const nextPage = lastPage.page + 1
+
+            return nextPage < lastPage.totalPages
+                ? nextPage
+                : undefined
+        },
+        enabled: Boolean(companyId && filter.asOf),
     })
 }
