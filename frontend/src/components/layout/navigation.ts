@@ -51,8 +51,18 @@ export const navigationModules: NavigationModule[] = [
         label: "Relatórios",
         icon: "rel",
         items: [
-            { id: "relRec", label: "Contas a receber em aberto" },
-            { id: "relPag", label: "Contas a pagar em aberto" },
+            {
+                id: "relRec",
+                label: "Contas a receber em aberto",
+                path: "/reports/receivables",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
+            {
+                id: "relPag",
+                label: "Contas a pagar em aberto",
+                path: "/reports/payables",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
             { id: "dre", label: "DRE (competência)" },
             { id: "conc", label: "Conciliação caixa × DRE" },
             { id: "ciclo", label: "Ciclo financeiro e prazos" },

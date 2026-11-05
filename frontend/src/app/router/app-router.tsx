@@ -11,6 +11,7 @@ import { RequirePermission } from "../../features/auth/components/require-permis
 import { DrePage } from "../../features/dre/pages/dre-page"
 import { BankAccountsPage } from "../../features/bank-accounts/pages/bank-accounts-page"
 import { StatementsPage } from "../../features/statements/pages/statements-page"
+import { OpenTitlesPage } from "../../features/reports/pages/open-titles-page"
 
 export function AppRouter() {
     return (
@@ -65,6 +66,40 @@ export function AppRouter() {
                                 ]}
                             >
                                 <StatementsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/reports/receivables"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <OpenTitlesPage
+                                    key="INCOME"
+                                    direction="INCOME"
+                                />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/reports/payables"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <OpenTitlesPage
+                                    key="EXPENSE"
+                                    direction="EXPENSE"
+                                />
                             </RequirePermission>
                         }
                     />
