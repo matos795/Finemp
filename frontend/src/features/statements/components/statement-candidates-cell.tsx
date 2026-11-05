@@ -19,6 +19,23 @@ function candidateLabel(candidate: StatementCandidate) {
     return `${paid ? "Já pago" : "Em aberto"} · ${formatIsoDate(date)} · ${candidate.description.slice(0, 40)}`
 }
 
+function loadedCandidateItems(
+    candidates: ReturnType<typeof useStatementCandidates>,
+) {
+    const seen = new Set<string>()
+
+    return (candidates.data?.pages ?? [])
+        .flatMap((page) => page.items)
+        .filter((candidate) => {
+            if (seen.has(candidate.entryId)) {
+                return false
+            }
+
+            seen.add(candidate.entryId)
+            return true
+        })
+}
+
 function CandidatesContent({
     candidates,
 }: {
@@ -38,29 +55,55 @@ function CandidatesContent({
         )
     }
 
-    const items = candidates.data.items
+    const items = loadedCandidateItems(candidates)
 
     if (!items.length) {
         return <span className="mut">Sem lançamento correspondente</span>
     }
 
     return (
-        <select
-            aria-label="Lançamento sugerido"
-            style={{ maxWidth: 340 }}
-            defaultValue={items[0].entryId}
+        <div
+            style={{
+                display: "grid",
+                gap: 4,
+                maxWidth: 340,
+            }}
         >
-            {items.map((candidate) => (
-                <option
-                    key={candidate.entryId}
-                    value={candidate.entryId}
-                >
-                    {candidateLabel(candidate)}
-                </option>
-            ))}
+            <select
+                aria-label="Lançamento sugerido"
+                defaultValue={items[0].entryId}
+            >
+                {items.map((candidate) => (
+                    <option
+                        key={candidate.entryId}
+                        value={candidate.entryId}
+                    >
+                        {candidateLabel(candidate)}
+                    </option>
+                ))}
 
-            <option value="">— nenhum destes —</option>
-        </select>
+                <option value="">— nenhum destes —</option>
+            </select>
+
+            {candidates.hasNextPage && (
+                <button
+                    type="button"
+                    className="btn sec sm"
+                    disabled={candidates.isFetchingNextPage}
+                    onClick={() => void candidates.fetchNextPage()}
+                >
+                    {candidates.isFetchingNextPage
+                        ? "Carregando candidatos…"
+                        : "Carregar mais candidatos"}
+                </button>
+            )}
+
+            {candidates.isFetchNextPageError && (
+                <span className="mut">
+                    Não foi possível carregar mais candidatos. Tente novamente.
+                </span>
+            )}
+        </div>
     )
 }
 
@@ -77,7 +120,7 @@ export function StatementCandidatesCells({
     const candidates =
         useStatementCandidates(companyId, statementId, true)
 
-    const hasCandidates = Boolean(candidates.data?.items.length)
+    const hasCandidates = loadedCandidateItems(candidates).length > 0
 
     return (
         <>
