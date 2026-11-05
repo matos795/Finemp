@@ -11,20 +11,18 @@ RUN npm run build
 FROM nginx/nginx-unprivileged:stable-alpine AS runtime
 
 ENV PORT=8080 \
-    NGINX_ENVSUBST_FILTER='^(PORT)
+    NGINX_ENVSUBST_FILTER='^(PORT)$'
 
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
-COPY --chmod=755 docker-entrypoint.d/10-finemp-env.sh /docker-entrypoint.d/10-finemp-env.sh
+USER root
 
-EXPOSE 8080
+RUN mkdir -p /etc/nginx/templates \
+    && chown -R 101:101 /etc/nginx/templates
 
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=build --chown=101:101 /app/dist /usr/share/nginx/html
+COPY --chown=101:101 nginx/default.conf.template /etc/nginx/templates/default.conf.template
+COPY --chown=101:101 --chmod=755 docker-entrypoint.d/10-finemp-env.sh /docker-entrypoint.d/10-finemp-env.sh
 
-
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
-COPY --chmod=755 docker-entrypoint.d/10-finemp-env.sh /docker-entrypoint.d/10-finemp-env.sh
+USER 101
 
 EXPOSE 8080
 
