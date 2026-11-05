@@ -1,0 +1,84 @@
+name: Staging web image CI
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/Dockerfile'
+      - 'frontend/.dockerignore'
+      - 'frontend/railway.toml'
+      - 'frontend/nginx/**'
+      - 'frontend/docker-entrypoint.d/**'
+      - '.github/workflows/staging-web-image-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend runtime
+        run: docker build --tag finemp-web:test frontend
+
+      - name: Verify non-root runtime and fail-fast configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(docker run --rm --entrypoint id finemp-web:test -u)" != "0"
+
+          set +e
+          docker run --rm -e PORT=8080 finemp-web:test > missing-upstream.log 2>&1
+          result=$?
+          set -e
+
+          test "$result" -ne 0
+          grep -q 'Frontend staging configuration rejected: FINEMP_API_UPSTREAM' missing-upstream.log
+
+      - name: Verify SPA and same-origin API proxy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker network create finemp-web-ci-net
+
+          docker run -d \
+            --name finemp-api-stub \
+            --network finemp-web-ci-net \
+            --network-alias finemp-api.railway.internal \
+            busybox:1.37 \
+            sh -c 'mkdir -p /www/api && printf "stub-ok\n" > /www/api/ping && httpd -f -p 8080 -h /www'
+
+          docker run -d \
+            --name finemp-web-ci \
+            --network finemp-web-ci-net \
+            -p 18080:8080 \
+            -e PORT=8080 \
+            -e FINEMP_API_UPSTREAM=http://finemp-api.railway.internal:8080 \
+            finemp-web:test
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18080/healthz > /tmp/healthz; then
+              break
+            fi
+            sleep 1
+          done
+
+          grep -qx 'ok' /tmp/healthz
+          curl --fail --silent http://127.0.0.1:18080/login | grep -q 'id="root"'
+          curl --fail --silent http://127.0.0.1:18080/api/ping | grep -qx 'stub-ok'
+
+          docker exec finemp-web-ci nginx -T > nginx-rendered.conf 2>&1
+          grep -q 'listen 8080;' nginx-rendered.conf
+          grep -q 'proxy_pass http://finemp-api.railway.internal:8080;' nginx-rendered.conf
+
+      - name: Cleanup
+        if: always()
+        shell: bash
+        run: |
+          docker rm -f finemp-web-ci finemp-api-stub >/dev/null 2>&1 || true
+          docker network rm finemp-web-ci-net >/dev/null 2>&1 || true
