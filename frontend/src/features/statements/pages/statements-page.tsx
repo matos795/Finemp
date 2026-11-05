@@ -304,6 +304,19 @@ function StatementsCompanyPage() {
                                 )
                             })}
                         </div>
+
+                        <span className="sp" />
+
+                        {status === "PENDING" && Boolean(counts.PENDING) && (
+                            <button
+                                type="button"
+                                className="btn sec sm"
+                                disabled
+                                title="Conciliar ainda não existe na API"
+                            >
+                                Aceitar todas as sugestões
+                            </button>
+                        )}
                     </div>
 
                     <div
@@ -322,6 +335,7 @@ function StatementsCompanyPage() {
                         ) : (
                             <>
                                 <StatementItemsTable
+                                    companyId={companyId}
                                     items={items.data?.items ?? []}
                                     loading={items.isPending}
                                     dimmed={items.isPlaceholderData}

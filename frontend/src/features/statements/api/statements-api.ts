@@ -5,6 +5,7 @@ import {
 import type { PageRequest } from "../../../lib/api/pagination.types"
 import type {
     CsvSeparator,
+    StatementCandidatePage,
     StatementFileFormat,
     StatementItemFilters,
     StatementItemPage,
@@ -122,5 +123,25 @@ export async function confirmStatementImport(
                 warningsConfirmed: true,
             }),
         },
+    )
+}
+
+/**
+ * `GET /api/companies/{companyId}/statement-items/{statementId}/candidates`.
+ * Só consulta: a regra (sinal, diferença, prazos e ordem) é do servidor;
+ * nada é conciliado nem baixado (D3).
+ */
+export async function listStatementCandidates(
+    companyId: string,
+    statementId: string,
+    pagination: PageRequest,
+): Promise<StatementCandidatePage> {
+    const params = new URLSearchParams({
+        page: String(pagination.page),
+        size: String(pagination.size),
+    })
+
+    return apiRequest<StatementCandidatePage>(
+        `/api/companies/${encodeURIComponent(companyId)}/statement-items/${encodeURIComponent(statementId)}/candidates?${params}`,
     )
 }
