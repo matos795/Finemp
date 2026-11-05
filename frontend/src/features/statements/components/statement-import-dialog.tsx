@@ -24,6 +24,23 @@ interface StatementImportDialogProps {
     onClose: () => void
 }
 
+const definitiveFailureStatuses = new Set([
+    400,
+    401,
+    403,
+    404,
+    409,
+    413,
+    415,
+    429,
+])
+
+function isDefinitiveImportFailure(error: unknown) {
+    const status = apiErrorStatus(error)
+
+    return status !== undefined && definitiveFailureStatuses.has(status)
+}
+
 function describeImportError(error: unknown) {
     if (apiErrorCode(error) === "FINANCIAL_PERIOD_CLOSED") {
         return "Há movimentos em período fechado. Nada foi importado."
@@ -86,9 +103,11 @@ export function StatementImportDialog({
 
     // A mesma chave só pode repetir o mesmo corpo: muda com a seleção.
     const [attempt, setAttempt] = useState<{
-        rowsKey: string
+        selectedRows: number[]
         idempotencyKey: string
     } | null>(null)
+
+    const [ambiguousFailure, setAmbiguousFailure] = useState(false)
 
     const importMutation = useMutation({
         mutationFn: (request: { selectedRows: number[], idempotencyKey: string }) =>
@@ -104,12 +123,24 @@ export function StatementImportDialog({
             onClose()
         },
         onError: (error) => {
-            if (apiErrorStatus(error) === 401) {
-                queryClient.setQueryData(currentUserQueryKey, null)
+            if (isDefinitiveImportFailure(error)) {
+                setAttempt(null)
+                setAmbiguousFailure(false)
+
+                if (apiErrorStatus(error) === 401) {
+                    queryClient.setQueryData(currentUserQueryKey, null)
+                    return
+                }
+
+                showToast(describeImportError(error), true)
                 return
             }
 
-            showToast(describeImportError(error), true)
+            setAmbiguousFailure(true)
+            showToast(
+                "Não foi possível confirmar se a importação terminou. Mantenha esta tentativa e use Tentar novamente para repetir com segurança.",
+                true,
+            )
         },
     })
 
@@ -122,15 +153,19 @@ export function StatementImportDialog({
         warningsConfirmed
 
     function confirmImport() {
-        const rowsKey = selectedRows.join(",")
+        if (attempt && ambiguousFailure) {
+            setAmbiguousFailure(false)
+            importMutation.mutate(attempt)
+            return
+        }
 
-        const idempotencyKey =
-            attempt?.rowsKey === rowsKey
-                ? attempt.idempotencyKey
-                : newIdempotencyKey()
+        const nextAttempt = {
+            selectedRows: [...selectedRows],
+            idempotencyKey: newIdempotencyKey(),
+        }
 
-        setAttempt({ rowsKey, idempotencyKey })
-        importMutation.mutate({ selectedRows, idempotencyKey })
+        setAttempt(nextAttempt)
+        importMutation.mutate(nextAttempt)
     }
 
     function toggleRow(row: number) {
@@ -147,7 +182,8 @@ export function StatementImportDialog({
         })
     }
 
-    const busy = importMutation.isPending
+    const requestPending = importMutation.isPending
+    const interactionLocked = requestPending || ambiguousFailure
 
     if (!canImport) {
         return (
@@ -164,7 +200,7 @@ export function StatementImportDialog({
             session={session}
             accountName={accountName}
             onClose={onClose}
-            busy={busy}
+            busy={interactionLocked}
             selection={{
                 selected,
                 onToggle: toggleRow,
@@ -181,7 +217,7 @@ export function StatementImportDialog({
                         <input
                             type="checkbox"
                             checked={accountConfirmed}
-                            disabled={busy}
+                            disabled={interactionLocked}
                             onChange={(event) => setAccountConfirmed(event.target.checked)}
                         />
                         <span>O arquivo é da conta <b>{accountName}</b>.</span>
@@ -197,7 +233,7 @@ export function StatementImportDialog({
                             <input
                                 type="checkbox"
                                 checked={currencyConfirmed}
-                                disabled={busy}
+                                disabled={interactionLocked}
                                 onChange={(event) =>
                                     setCurrencyConfirmed(event.target.checked)
                                 }
@@ -210,11 +246,19 @@ export function StatementImportDialog({
                         <input
                             type="checkbox"
                             checked={warningsConfirmed}
-                            disabled={busy}
+                            disabled={interactionLocked}
                             onChange={(event) => setWarningsConfirmed(event.target.checked)}
                         />
                         <span>Conferi as linhas e os alertas desta prévia.</span>
                     </label>
+
+                    {ambiguousFailure && (
+                        <div className="alert w">
+                            O resultado da última tentativa é incerto. Para evitar
+                            duplicidade, a seleção fica bloqueada até você repetir
+                            exatamente a mesma importação.
+                        </div>
+                    )}
 
                     <p
                         className="help"
@@ -229,12 +273,18 @@ export function StatementImportDialog({
                 <button
                     type="button"
                     className="btn"
-                    disabled={busy || !confirmed || selectedRows.length === 0}
+                    disabled={
+                        requestPending ||
+                        (!ambiguousFailure &&
+                            (!confirmed || selectedRows.length === 0))
+                    }
                     onClick={confirmImport}
                 >
-                    {busy
+                    {requestPending
                         ? "Importando…"
-                        : `Importar ${selectedRows.length} linha(s)`}
+                        : ambiguousFailure && attempt
+                            ? `Tentar novamente (${attempt.selectedRows.length} linha(s))`
+                            : `Importar ${selectedRows.length} linha(s)`}
                 </button>
             }
         />
