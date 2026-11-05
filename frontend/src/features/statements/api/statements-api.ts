@@ -78,6 +78,7 @@ export async function previewStatement(
     const preview = (await response.json()) as StatementPreview
 
     return {
+        companyId,
         bankId,
         file,
         format,

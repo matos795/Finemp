@@ -19,6 +19,7 @@ interface IgnoreStatementButtonProps {
     item: StatementItem
     /** FINANCIAL_ENTRY_MANAGE: sem ela o botão fica inativo (só UX). */
     canIgnore: boolean
+    onIgnored: () => void
 }
 
 function describeIgnoreError(error: unknown) {
@@ -45,6 +46,7 @@ export function IgnoreStatementButton({
     companyId,
     item,
     canIgnore,
+    onIgnored,
 }: IgnoreStatementButtonProps) {
     const queryClient = useQueryClient()
     const showToast = useToast()
@@ -68,6 +70,7 @@ export function IgnoreStatementButton({
                 keyForVersion.current.key,
             )
         },
+        onSuccess: onIgnored,
         onError: (error) => {
             if (apiErrorStatus(error) === 401) {
                 queryClient.setQueryData(currentUserQueryKey, null)
