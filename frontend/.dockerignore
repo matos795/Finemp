@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+tests
+.vscode
+.idea
+*.log
+*.local
+.env
+.env.*
+README.md
