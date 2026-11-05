@@ -135,6 +135,9 @@ export function useMonthlyCashTitles(
         queryFn: () =>
             listMonthlyCashTitles(companyId!, filter!, page, size),
         enabled: Boolean(companyId && filter),
-        placeholderData: keepPreviousData,
+        placeholderData: (previousData, previousQuery) =>
+            previousQuery?.queryKey[1] === companyId
+                ? keepPreviousData(previousData)
+                : undefined,
     })
 }
