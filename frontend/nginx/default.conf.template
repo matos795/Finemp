@@ -1,3 +1,12 @@
+resolver __FINEMP_DNS_RESOLVER__ valid=5s ipv6=off;
+resolver_timeout 2s;
+
+upstream finemp_api {
+    zone finemp_api 64k;
+    server __FINEMP_API_HOST__:__FINEMP_API_PORT__ resolve;
+    keepalive 16;
+}
+
 server {
     listen ${PORT};
     listen [::]:${PORT};
@@ -10,10 +19,6 @@ server {
     # O proxy não cria um limite de negócio adicional; cada endpoint backend
     # continua responsável por validar o tamanho aceito.
     client_max_body_size 0;
-
-    # Resolve o private domain novamente durante a vida do container. Railway
-    # pode trocar o IP privado de um serviço em um redeploy independente.
-    resolver ${FINEMP_DNS_RESOLVER} valid=5s ipv6=off;
 
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "no-referrer" always;
@@ -34,8 +39,7 @@ server {
         proxy_set_header X-Request-Id $request_id;
         proxy_set_header Connection "";
 
-        set $finemp_api_upstream ${FINEMP_API_UPSTREAM};
-        proxy_pass $finemp_api_upstream$request_uri;
+        proxy_pass http://finemp_api;
     }
 
     location / {
