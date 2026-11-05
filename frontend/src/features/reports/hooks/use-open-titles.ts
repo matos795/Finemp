@@ -7,10 +7,7 @@ import {
     listOpenTitlePartnerTotals,
     listOpenTitles,
 } from "../api/reports-api"
-import type {
-    OpenTitlePartnerTotal,
-    OpenTitlesFilter,
-} from "../types/aging.types"
+import type { OpenTitlesFilter } from "../types/aging.types"
 
 /** Títulos de um grupo carregados de uma vez (máximo do contrato). */
 export const GROUP_TITLES_SIZE = 100
