@@ -128,7 +128,13 @@ export function BankAccountEditRow({
                     onBlur={(event) => {
                         const openingDate = event.target.value
 
-                        if (openingDate && openingDate !== account.openingDate) {
+                        if (!openingDate) {
+                            event.target.value = account.openingDate
+                            onInvalid("Informe uma data de início válida.")
+                            return
+                        }
+
+                        if (openingDate !== account.openingDate) {
                             onChange({ openingDate })
                         }
                     }}
