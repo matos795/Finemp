@@ -174,6 +174,16 @@ function StatementsCompanyPage() {
     const counts =
         useStatementItemCounts(companyId, bankId)
 
+    function handleStatementIgnored() {
+        if (
+            status === "PENDING" &&
+            page > 0 &&
+            items.data?.items.length === 1
+        ) {
+            setPage(page - 1)
+        }
+    }
+
     return (
         <>
             <Panel
@@ -336,6 +346,8 @@ function StatementsCompanyPage() {
                             <>
                                 <StatementItemsTable
                                     companyId={companyId}
+                                    canIgnore={canImport}
+                                    onIgnored={handleStatementIgnored}
                                     items={items.data?.items ?? []}
                                     loading={items.isPending}
                                     dimmed={items.isPlaceholderData}

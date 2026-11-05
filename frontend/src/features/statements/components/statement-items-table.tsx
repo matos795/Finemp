@@ -5,9 +5,13 @@ import {
 } from "../../../lib/formatters/decimal"
 import type { StatementItem } from "../types/statement.types"
 import { StatementCandidatesCells } from "./statement-candidates-cell"
+import { IgnoreStatementButton } from "./ignore-statement-button"
 
 interface StatementItemsTableProps {
     companyId: string | undefined
+    /** FINANCIAL_ENTRY_MANAGE (só UX; o backend autoriza). */
+    canIgnore: boolean
+    onIgnored: () => void
     items: StatementItem[]
     loading: boolean
     dimmed: boolean
@@ -21,6 +25,8 @@ interface StatementItemsTableProps {
  */
 export function StatementItemsTable({
     companyId,
+    canIgnore,
+    onIgnored,
     items,
     loading,
     dimmed,
@@ -87,14 +93,12 @@ export function StatementItemsTable({
                                                 >
                                                     Criar lançamento
                                                 </button>{" "}
-                                                <button
-                                                    type="button"
-                                                    className="btn sec sm"
-                                                    disabled
-                                                    title="Em breve"
-                                                >
-                                                    Ignorar
-                                                </button>
+                                                <IgnoreStatementButton
+                                                    companyId={companyId}
+                                                    item={item}
+                                                    canIgnore={canIgnore}
+                                                    onIgnored={onIgnored}
+                                                />
                                             </>
                                         }
                                     />
