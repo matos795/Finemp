@@ -7,6 +7,13 @@ import type {
     OpenTitlesFilter,
     OpenTitlesPage,
 } from "../types/aging.types"
+import type {
+    DailyCashTotals,
+    MonthlyCashCategoryTotalsPage,
+    MonthlyCashDetailFilter,
+    MonthlyCashTitlesPage,
+    MonthlyCashTotals,
+} from "../types/cash-totals.types"
 
 function reportsPath(companyId: string) {
     return `/api/companies/${encodeURIComponent(companyId)}/financial-reports`
@@ -91,6 +98,84 @@ export async function listOpenTitlePartnerTotals(
 ): Promise<OpenTitlePartnerTotalsPage> {
     return apiRequest<OpenTitlePartnerTotalsPage>(
         `${reportsPath(companyId)}/open-titles/by-partner?${openTitlesParams(filter, page, size)}`,
+        { cache: "no-store" },
+    )
+}
+
+/** `GET …/financial-reports/monthly-cash-totals?year=` (getMonthlyCashTotals). */
+export async function getMonthlyCashTotals(
+    companyId: string,
+    year: number,
+): Promise<MonthlyCashTotals> {
+    const params = new URLSearchParams({ year: String(year) })
+
+    return apiRequest<MonthlyCashTotals>(
+        `${reportsPath(companyId)}/monthly-cash-totals?${params}`,
+        { cache: "no-store" },
+    )
+}
+
+/** `GET …/financial-reports/daily-cash-totals?month=YYYY-MM` (getDailyCashTotals). */
+export async function getDailyCashTotals(
+    companyId: string,
+    month: string,
+): Promise<DailyCashTotals> {
+    const params = new URLSearchParams({ month })
+
+    return apiRequest<DailyCashTotals>(
+        `${reportsPath(companyId)}/daily-cash-totals?${params}`,
+    )
+}
+
+function monthlyDetailParams(
+    filter: MonthlyCashDetailFilter,
+    page: number,
+    size: number,
+) {
+    const params = new URLSearchParams({
+        month: filter.month,
+        direction: filter.direction,
+        state: filter.state,
+        page: String(page),
+        size: String(size),
+    })
+
+    if (filter.activity) {
+        params.set("activity", filter.activity)
+    }
+
+    if (filter.categoryId) {
+        params.set("categoryId", filter.categoryId)
+    }
+
+    return params
+}
+
+/**
+ * `GET …/monthly-cash-totals/by-category` (listMonthlyCashCategoryTotals).
+ * Subtotais por categoria somados no servidor.
+ */
+export async function listMonthlyCashCategoryTotals(
+    companyId: string,
+    filter: Omit<MonthlyCashDetailFilter, "categoryId">,
+    page: number,
+    size: number,
+): Promise<MonthlyCashCategoryTotalsPage> {
+    return apiRequest<MonthlyCashCategoryTotalsPage>(
+        `${reportsPath(companyId)}/monthly-cash-totals/by-category?${monthlyDetailParams(filter, page, size)}`,
+        { cache: "no-store" },
+    )
+}
+
+/** `GET …/monthly-cash-totals/titles` (listMonthlyCashTitles). */
+export async function listMonthlyCashTitles(
+    companyId: string,
+    filter: MonthlyCashDetailFilter,
+    page: number,
+    size: number,
+): Promise<MonthlyCashTitlesPage> {
+    return apiRequest<MonthlyCashTitlesPage>(
+        `${reportsPath(companyId)}/monthly-cash-totals/titles?${monthlyDetailParams(filter, page, size)}`,
         { cache: "no-store" },
     )
 }
