@@ -42,6 +42,9 @@ export function useOperationalDreEffects(
         queryFn: ({ signal }) =>
             getOperationalDreEffects(companyId!, query, signal),
         enabled: Boolean(companyId),
-        placeholderData: keepPreviousData,
+        placeholderData: (previousData, previousQuery) =>
+            previousQuery?.queryKey[1] === companyId
+                ? keepPreviousData(previousData)
+                : undefined,
     })
 }
