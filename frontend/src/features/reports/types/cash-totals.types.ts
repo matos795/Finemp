@@ -36,7 +36,7 @@ export interface MonthlyCashDetailFilter {
 
 /** Item de listMonthlyCashCategoryTotals: subtotal exato do servidor. */
 export interface MonthlyCashCategoryTotal {
-    categoryId: string
+    categoryId: string | null
     categoryName: string | null
     categoryCode: string | null
     groupId: string | null
