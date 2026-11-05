@@ -83,7 +83,7 @@ export interface PresentationSnapshot {
 export interface DreEffect {
   entryId: string
   description: string
-  categoryId: string
+  categoryId: string | null
   competence: string
   paymentDate: string | null
   line: Exclude<DreLine, "NAO">
