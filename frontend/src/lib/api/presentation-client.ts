@@ -83,7 +83,7 @@ export interface PresentationSnapshot {
 export interface DreEffect {
   entryId: string
   description: string
-  categoryId: string
+  categoryId: string | null
   competence: string
   paymentDate: string | null
   line: Exclude<DreLine, "NAO">
@@ -110,6 +110,12 @@ function reportPath(companyId: string, resource: string, query: URLSearchParams)
 export function getPresentationSnapshot(companyId: string, query: SnapshotQuery, signal?: AbortSignal): Promise<PresentationSnapshot> {
   const params = new URLSearchParams({ month: query.month, asOf: query.asOf, scope: query.scope })
   return apiRequest<PresentationSnapshot>(reportPath(companyId, "presentation-snapshot", params), { signal, cache: "no-store" })
+}
+
+/** Monthly operational DRE (#41). Not the accounting Questor DRE; no month default. */
+export function getOperationalDre(companyId: string, month: string, signal?: AbortSignal): Promise<OperationalDre> {
+  const params = new URLSearchParams({ month })
+  return apiRequest<OperationalDre>(reportPath(companyId, "operational-dre", params), { signal, cache: "no-store" })
 }
 
 /** A later detail request does not share the earlier snapshot's database transaction. */

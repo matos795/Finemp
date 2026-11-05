@@ -73,7 +73,14 @@ export const navigationModules: NavigationModule[] = [
                 path: "/reports/payables",
                 permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
             },
-            { id: "dre", label: "DRE (competência)" },
+            {
+                // DRE operacional (#41), parcial: só lançamentos financeiros.
+                // A DRE contábil (Questor) segue separada em "Demais" (PA7).
+                id: "dre",
+                label: "DRE (competência)",
+                path: "/reports/dre",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
             { id: "conc", label: "Conciliação caixa × DRE" },
             { id: "ciclo", label: "Ciclo financeiro e prazos" },
             { id: "ncg", label: "Capital de giro (NCG)" },
