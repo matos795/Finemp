@@ -44,7 +44,10 @@ case "$resolver" in
 esac
 
 # O entrypoint oficial executa este script antes do envsubst. Como scripts
-# executáveis rodam em subprocesso, gravamos o resolver diretamente no template
-# em vez de depender de export para o script 20-envsubst-on-templates.sh.
-sed -i "s|\${FINEMP_DNS_RESOLVER}|$resolver|g" \
+# executáveis rodam em subprocesso, gravamos host/porta/resolver diretamente no
+# template. Todos já foram validados para não conter sintaxe arbitrária.
+sed -i \
+    -e "s|__FINEMP_API_HOST__|$host|g" \
+    -e "s|__FINEMP_API_PORT__|$port|g" \
+    -e "s|__FINEMP_DNS_RESOLVER__|$resolver|g" \
     /etc/nginx/templates/default.conf.template
