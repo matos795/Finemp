@@ -45,7 +45,7 @@ function CandidatesContent({
         return <span className="mut">Buscando sugestões…</span>
     }
 
-    if (candidates.isError) {
+    if (candidates.isError && !candidates.data) {
         return (
             <span className="mut">
                 {apiErrorStatus(candidates.error) === 404
