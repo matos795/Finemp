@@ -44,14 +44,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          docker network create finemp-web-ci-net
+          docker network create --subnet 172.29.0.0/24 finemp-web-ci-net
 
           docker run -d \
             --name finemp-api-stub \
             --network finemp-web-ci-net \
+            --ip 172.29.0.10 \
             --network-alias finemp-api.railway.internal \
             busybox:1.37 \
-            sh -c 'mkdir -p /www/api && printf "stub-ok\n" > /www/api/ping && httpd -f -p 8080 -h /www'
+            sh -c 'mkdir -p /www/api && printf "stub-v1\n" > /www/api/ping && httpd -f -p 8080 -h /www'
 
           docker run -d \
             --name finemp-web-ci \
@@ -70,15 +71,38 @@ jobs:
 
           grep -qx 'ok' /tmp/healthz
           curl --fail --silent http://127.0.0.1:18080/login | grep -q 'id="root"'
-          curl --fail --silent http://127.0.0.1:18080/api/ping | grep -qx 'stub-ok'
+          curl --fail --silent http://127.0.0.1:18080/api/ping | grep -qx 'stub-v1'
 
           docker exec finemp-web-ci nginx -T > nginx-rendered.conf 2>&1
           grep -q 'listen 8080;' nginx-rendered.conf
-          grep -q 'proxy_pass http://finemp-api.railway.internal:8080;' nginx-rendered.conf
+          grep -q 'resolver .* valid=5s ipv6=off;' nginx-rendered.conf
+          grep -q 'set .*finemp_api_upstream http://finemp-api.railway.internal:8080;' nginx-rendered.conf
+          grep -q 'proxy_pass .*finemp_api_upstream.*request_uri;' nginx-rendered.conf
+
+          docker rm -f finemp-api-stub
+
+          docker run -d \
+            --name finemp-api-stub-v2 \
+            --network finemp-web-ci-net \
+            --ip 172.29.0.11 \
+            --network-alias finemp-api.railway.internal \
+            busybox:1.37 \
+            sh -c 'mkdir -p /www/api && printf "stub-v2\n" > /www/api/ping && httpd -f -p 8080 -h /www'
+
+          resolved=0
+          for attempt in {1..20}; do
+            if [ "$(curl --silent --max-time 2 http://127.0.0.1:18080/api/ping || true)" = "stub-v2" ]; then
+              resolved=1
+              break
+            fi
+            sleep 1
+          done
+
+          test "$resolved" -eq 1
 
       - name: Cleanup
         if: always()
         shell: bash
         run: |
-          docker rm -f finemp-web-ci finemp-api-stub >/dev/null 2>&1 || true
+          docker rm -f finemp-web-ci finemp-api-stub finemp-api-stub-v2 >/dev/null 2>&1 || true
           docker network rm finemp-web-ci-net >/dev/null 2>&1 || true
