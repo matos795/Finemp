@@ -76,8 +76,9 @@ jobs:
           docker exec finemp-web-ci nginx -T > nginx-rendered.conf 2>&1
           grep -q 'listen 8080;' nginx-rendered.conf
           grep -q 'resolver .* valid=5s ipv6=off;' nginx-rendered.conf
-          grep -q 'set .*finemp_api_upstream http://finemp-api.railway.internal:8080;' nginx-rendered.conf
-          grep -q 'proxy_pass .*finemp_api_upstream.*request_uri;' nginx-rendered.conf
+          grep -q 'zone finemp_api 64k;' nginx-rendered.conf
+          grep -q 'server finemp-api.railway.internal:8080 resolve;' nginx-rendered.conf
+          grep -q 'proxy_pass http://finemp_api;' nginx-rendered.conf
 
           docker rm -f finemp-api-stub
 
@@ -88,6 +89,8 @@ jobs:
             --network-alias finemp-api.railway.internal \
             busybox:1.37 \
             sh -c 'mkdir -p /www/api && printf "stub-v2\n" > /www/api/ping && httpd -f -p 8080 -h /www'
+
+          docker exec finemp-web-ci getent hosts finemp-api.railway.internal
 
           resolved=0
           for attempt in {1..20}; do
