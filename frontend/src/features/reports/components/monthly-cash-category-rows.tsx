@@ -1,7 +1,4 @@
-import {
-    CATEGORY_PAGE_SIZE,
-    useMonthlyCashCategoryTotals,
-} from "../hooks/use-cash-totals"
+import { useMonthlyCashCategoryTotals } from "../hooks/use-cash-totals"
 import { formatExactDecimalCell } from "../../../lib/formatters/decimal"
 import type {
     CashActivity,
@@ -85,7 +82,7 @@ export function MonthlyCashCategoryRows({
     const cells = new Map<string, MonthlyCashCategoryTotal>()
 
     months.forEach((month, index) => {
-        month.data?.items.forEach((item) => {
+        month.data?.forEach((item) => {
             if (!categories.has(item.categoryId)) {
                 categories.set(item.categoryId, item)
             }
@@ -96,10 +93,6 @@ export function MonthlyCashCategoryRows({
 
     const ordered = [...categories.values()].sort((left, right) =>
         categoryLabel(left).localeCompare(categoryLabel(right), "pt", { numeric: true }),
-    )
-
-    const truncated = months.some(
-        (month) => (month.data?.totalPages ?? 0) > 1,
     )
 
     if (ordered.length === 0) {
@@ -166,17 +159,6 @@ export function MonthlyCashCategoryRows({
                 )
             })}
 
-            {truncated ? (
-                <tr className="sub">
-                    <td
-                        colSpan={columns}
-                        className="mut"
-                        style={{ fontSize: 12 }}
-                    >
-                        Algum mês tem mais de {CATEGORY_PAGE_SIZE} categorias; só as primeiras aparecem.
-                    </td>
-                </tr>
-            ) : null}
         </>
     )
 }
