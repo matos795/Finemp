@@ -21,7 +21,7 @@ import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useCompanyPage } from "../../../lib/api/use-company-page"
 import { useCompanyAccess } from "../../companies/company-access-context"
-import { useBankAccounts } from "../../bank-accounts/hooks/use-bank-accounts"
+import { useAllBankAccounts } from "../../bank-accounts/hooks/use-bank-accounts"
 import {
     useStatementItemCounts,
     useStatementItems,
@@ -41,11 +41,11 @@ const statusPills: {
     label: string
     countKey: "PENDING" | "RECONCILED" | "IGNORED" | "ALL"
 }[] = [
-    { status: "PENDING", label: "Pendentes", countKey: "PENDING" },
-    { status: "RECONCILED", label: "Conciliados", countKey: "RECONCILED" },
-    { status: "IGNORED", label: "Ignorados", countKey: "IGNORED" },
-    { status: undefined, label: "Todos", countKey: "ALL" },
-]
+        { status: "PENDING", label: "Pendentes", countKey: "PENDING" },
+        { status: "RECONCILED", label: "Conciliados", countKey: "RECONCILED" },
+        { status: "IGNORED", label: "Ignorados", countKey: "IGNORED" },
+        { status: undefined, label: "Todos", countKey: "ALL" },
+    ]
 
 const errorMessages = {
     403: "Você não tem acesso aos extratos desta empresa.",
@@ -72,7 +72,7 @@ function describePreviewError(error: unknown) {
 }
 
 /** Fluxo de caixa › Extratos e conciliação (ext do protótipo homologado). */
-export function StatementsPage() {
+function StatementsCompanyPage() {
     const {
         selectedCompany,
         hasPermission,
@@ -94,10 +94,26 @@ export function StatementsPage() {
         useState<StatementPreviewSession | null>(null)
 
     const preview = useMutation({
-        mutationFn: ({ file, bankId }: { file: File, bankId: string }) => {
+        mutationFn: ({
+            companyId: requestCompanyId,
+            file,
+            bankId,
+            separator: requestSeparator,
+        }: {
+            companyId: string
+            file: File
+            bankId: string
+            separator: CsvSeparator
+        }) => {
             const format = statementFormatOf(file.name)!
 
-            return previewStatement(companyId!, bankId, file, format, separator)
+            return previewStatement(
+                requestCompanyId,
+                bankId,
+                file,
+                format,
+                requestSeparator,
+            )
         },
         onSuccess: setPreviewSession,
         onError: (error) => {
@@ -121,23 +137,28 @@ export function StatementsPage() {
             return
         }
 
-        preview.mutate({ file, bankId })
+        preview.mutate({
+            companyId: companyId!,
+            file,
+            bankId,
+            separator,
+        })
     }
 
     const accounts =
-        useBankAccounts(companyId, { page: 0, size: 100 })
+        useAllBankAccounts(companyId)
 
     const [selection, setSelection] = useState<{
         companyId: string | undefined
         bankId: string
     } | null>(null)
 
-    const accountItems = accounts.data?.items ?? []
+    const accountItems = accounts.data ?? []
 
     // Como no protótipo: começa pela primeira conta ativa da empresa.
     const bankId =
         selection?.companyId === companyId &&
-        accountItems.some((account) => account.id === selection?.bankId)
+            accountItems.some((account) => account.id === selection?.bankId)
             ? selection?.bankId
             : (accountItems.find((account) => account.active) ?? accountItems[0])?.id
 
@@ -329,20 +350,38 @@ export function StatementsPage() {
                     </div>
                 </>
             )}
-
-            {previewSession && companyId && (
-                <StatementImportDialog
-                    // Nova prévia = nova seleção e novas confirmações.
-                    key={previewSession.sha256 + previewSession.file.name}
-                    companyId={companyId}
-                    session={previewSession}
-                    accountName={
-                        accountItems.find((account) => account.id === previewSession.bankId)?.name ?? ""
-                    }
-                    canImport={canImport}
-                    onClose={() => setPreviewSession(null)}
-                />
-            )}
+            {previewSession &&
+                companyId &&
+                previewSession.companyId === companyId && (
+                    <StatementImportDialog
+                        // Nova prévia = nova seleção e novas confirmações.
+                        key={previewSession.sha256 + previewSession.file.name}
+                        companyId={companyId}
+                        session={previewSession}
+                        accountName={
+                            accountItems.find(
+                                (account) => account.id === previewSession.bankId,
+                            )?.name ?? ""
+                        }
+                        canImport={canImport}
+                        onClose={() => setPreviewSession(null)}
+                    />
+                )}
         </>
+    )
+}
+
+
+/**
+ * Remonta o estado da tela quando a empresa muda.
+ * Isso descarta preview, seleção e mutations pendentes do escopo anterior.
+ */
+export function StatementsPage() {
+    const { selectedCompany } = useCompanyAccess()
+
+    return (
+        <StatementsCompanyPage
+            key={selectedCompany?.id ?? "no-company"}
+        />
     )
 }

@@ -75,6 +75,15 @@ export function StatementImportDialog({
     const [currencyConfirmed, setCurrencyConfirmed] = useState(false)
     const [warningsConfirmed, setWarningsConfirmed] = useState(false)
 
+    const declaredCurrency =
+        session.preview.currency?.trim().toUpperCase()
+
+    const unsupportedCurrency =
+        Boolean(
+            declaredCurrency &&
+            declaredCurrency !== "BRL",
+        )
+
     // A mesma chave só pode repetir o mesmo corpo: muda com a seleção.
     const [attempt, setAttempt] = useState<{
         rowsKey: string
@@ -107,7 +116,10 @@ export function StatementImportDialog({
     const selectedRows = readyRows.filter((row) => selected.has(row))
 
     const confirmed =
-        accountConfirmed && currencyConfirmed && warningsConfirmed
+        !unsupportedCurrency &&
+        accountConfirmed &&
+        currencyConfirmed &&
+        warningsConfirmed
 
     function confirmImport() {
         const rowsKey = selectedRows.join(",")
@@ -175,15 +187,24 @@ export function StatementImportDialog({
                         <span>O arquivo é da conta <b>{accountName}</b>.</span>
                     </label>
 
-                    <label className="chk">
-                        <input
-                            type="checkbox"
-                            checked={currencyConfirmed}
-                            disabled={busy}
-                            onChange={(event) => setCurrencyConfirmed(event.target.checked)}
-                        />
-                        <span>Os valores estão em reais (R$).</span>
-                    </label>
+                    {unsupportedCurrency ? (
+                        <div className="alert w">
+                            Este arquivo informa moeda <b>{declaredCurrency}</b>.
+                            A importação de extratos atualmente aceita apenas reais (BRL).
+                        </div>
+                    ) : (
+                        <label className="chk">
+                            <input
+                                type="checkbox"
+                                checked={currencyConfirmed}
+                                disabled={busy}
+                                onChange={(event) =>
+                                    setCurrencyConfirmed(event.target.checked)
+                                }
+                            />
+                            <span>Os valores estão em reais (R$).</span>
+                        </label>
+                    )}
 
                     <label className="chk">
                         <input

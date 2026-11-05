@@ -119,6 +119,12 @@
 						<goals><goal>jar</goal></goals>
 						<configuration><classifier>connector</classifier></configuration>
 					</execution>
+					<execution>
+						<id>staging-provisioner-jar</id>
+						<phase>package</phase>
+						<goals><goal>jar</goal></goals>
+						<configuration><classifier>staging-provisioner</classifier></configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>
@@ -134,6 +140,14 @@
 						<configuration>
 							<classifier>connector</classifier>
 							<mainClass>com.finemp.connector.agent.ConnectorMain</mainClass>
+						</configuration>
+					</execution>
+					<execution>
+						<id>staging-provisioner-repackage</id>
+						<goals><goal>repackage</goal></goals>
+						<configuration>
+							<classifier>staging-provisioner</classifier>
+							<mainClass>com.finemp.staging.StagingProvisioningMain</mainClass>
 						</configuration>
 					</execution>
 				</executions>

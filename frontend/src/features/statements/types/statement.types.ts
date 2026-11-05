@@ -61,6 +61,7 @@ export interface StatementPreview {
 
 /** Prévia + o que a confirmação precisa reapresentar ao servidor. */
 export interface StatementPreviewSession {
+    companyId: string
     bankId: string
     file: File
     format: StatementFileFormat
