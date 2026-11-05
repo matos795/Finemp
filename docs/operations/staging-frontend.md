@@ -22,7 +22,8 @@ O container:
 - não embute URL da API nem segredo no bundle;
 - não habilita CORS genérico;
 - expõe `/healthz` para health check;
-- não adiciona limite de body próprio no proxy; validações de tamanho permanecem no backend.
+- não adiciona limite de body próprio no proxy; validações de tamanho permanecem no backend;
+- descobre o resolver do container e re-resolve o private domain durante a execução, evitando dependência do IP obtido no startup.
 
 A variável runtime do serviço web deve ser uma referência Railway:
 
@@ -30,9 +31,13 @@ A variável runtime do serviço web deve ser uma referência Railway:
 FINEMP_API_UPSTREAM=http://${{finemp-api.RAILWAY_PRIVATE_DOMAIN}}:${{finemp-api.PORT}}
 ```
 
-O guard do container aceita somente `http://*.railway.internal:<porta>`. A
-comunicação interna usa HTTP dentro da rede privada; o navegador continua usando
-HTTPS no domínio público do `finemp-web`.
+O guard do container aceita somente `http://*.railway.internal:<porta>`. O
+NGINX usa o resolver presente em `/etc/resolv.conf` e força nova resolução do
+hostname privado em intervalos curtos; assim um redeploy independente do backend
+não exige restart do serviço web apenas para atualizar o IP. Como este staging
+foi criado após 16/10/2025, o private DNS Railway oferece A e AAAA; o proxy usa
+A/IPv4 nesta configuração. A comunicação interna usa HTTP dentro da rede privada;
+o navegador continua usando HTTPS no domínio público do `finemp-web`.
 
 ## Configuração Railway
 
