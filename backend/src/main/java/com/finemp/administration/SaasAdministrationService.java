@@ -1,5 +1,6 @@
 package com.finemp.administration;
 
+import com.finemp.access.AccountingFirmAccessGrantRepository;
 import com.finemp.access.AccountingFirmPermission;
 import com.finemp.access.AccountingFirmPermissionAuthorizationService;
 import com.finemp.access.PlatformPermission;
@@ -13,6 +14,8 @@ import com.finemp.client.Client;
 import com.finemp.client.ClientRepository;
 import com.finemp.company.Company;
 import com.finemp.company.CompanyRepository;
+import com.finemp.audit.AccessAuditAction;
+import com.finemp.audit.AccessAuditRecorder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -28,28 +31,34 @@ public class SaasAdministrationService {
     private final ClientRepository clientRepository;
     private final CompanyRepository companyRepository;
     private final AccountingSourceRepository accountingSourceRepository;
+    private final AccountingFirmAccessGrantRepository accountingFirmAccessGrantRepository;
     private final UserAccountRepository userAccountRepository;
     private final CompanyClientAssignmentEventRepository assignmentEventRepository;
     private final PlatformPermissionAuthorizationService platformAuthorizationService;
     private final AccountingFirmPermissionAuthorizationService accountingFirmAuthorizationService;
+    private final AccessAuditRecorder auditRecorder;
 
     public SaasAdministrationService(
             AccountingFirmRepository accountingFirmRepository,
             ClientRepository clientRepository,
             CompanyRepository companyRepository,
             AccountingSourceRepository accountingSourceRepository,
+            AccountingFirmAccessGrantRepository accountingFirmAccessGrantRepository,
             UserAccountRepository userAccountRepository,
             CompanyClientAssignmentEventRepository assignmentEventRepository,
             PlatformPermissionAuthorizationService platformAuthorizationService,
-            AccountingFirmPermissionAuthorizationService accountingFirmAuthorizationService) {
+            AccountingFirmPermissionAuthorizationService accountingFirmAuthorizationService,
+            AccessAuditRecorder auditRecorder) {
         this.accountingFirmRepository = accountingFirmRepository;
         this.clientRepository = clientRepository;
         this.companyRepository = companyRepository;
         this.accountingSourceRepository = accountingSourceRepository;
+        this.accountingFirmAccessGrantRepository = accountingFirmAccessGrantRepository;
         this.userAccountRepository = userAccountRepository;
         this.assignmentEventRepository = assignmentEventRepository;
         this.platformAuthorizationService = platformAuthorizationService;
         this.accountingFirmAuthorizationService = accountingFirmAuthorizationService;
+        this.auditRecorder = auditRecorder;
     }
 
     @Transactional(readOnly = true)
@@ -77,6 +86,64 @@ public class SaasAdministrationService {
 
         return accountingFirmRepository.save(
                 new AccountingFirm(request.name().trim(), true));
+    }
+
+    @Transactional
+    public void deleteAccountingFirm(
+            UUID userAccountId,
+            UUID accountingFirmId) {
+
+        requirePlatformPermission(
+                userAccountId,
+                PlatformPermission.ACCOUNTING_FIRM_CREATE);
+        requirePlatformPermission(
+                userAccountId,
+                PlatformPermission.PLATFORM_USER_MANAGE);
+
+        AccountingFirm accountingFirm = accountingFirmRepository
+                .findById(accountingFirmId)
+                .orElseThrow(() -> new SaasResourceNotFoundException("Accounting firm"));
+
+        if (clientRepository.existsByAccountingFirmId(accountingFirmId)) {
+            throw new HierarchyDeletionConflictException(
+                    "O escritório só pode ser excluído quando não possui clientes.");
+        }
+
+        long grantCount = accountingFirmAccessGrantRepository
+                .countByAccountingFirmId(accountingFirmId);
+        var ownGrant = accountingFirmAccessGrantRepository
+                .findByUserAccountIdAndAccountingFirmId(
+                        userAccountId,
+                        accountingFirmId);
+
+        long removableGrantCount = ownGrant.isPresent() ? 1 : 0;
+
+        if (grantCount != removableGrantCount) {
+            throw new HierarchyDeletionConflictException(
+                    "O escritório possui acessos de outros usuários.");
+        }
+
+        ownGrant.ifPresent(grant -> {
+            auditRecorder.record(
+                    AccessAuditAction.FIRM_ACCESS_REVOKED,
+                    userAccountId,
+                    userAccountId,
+                    accountingFirmId,
+                    null,
+                    java.util.Set.of());
+            accountingFirmAccessGrantRepository.delete(grant);
+        });
+        accountingFirmAccessGrantRepository.flush();
+
+        auditRecorder.recordHierarchyDeletion(
+                AccessAuditAction.ACCOUNTING_FIRM_DELETED,
+                userAccountId,
+                accountingFirmId,
+                "ACCOUNTING_FIRM",
+                accountingFirmId);
+
+        accountingFirmRepository.delete(accountingFirm);
+        accountingFirmRepository.flush();
     }
 
     @Transactional(readOnly = true)
@@ -113,6 +180,35 @@ public class SaasAdministrationService {
 
         return clientRepository.save(
                 new Client(accountingFirm, request.name().trim(), true));
+    }
+
+    @Transactional
+    public void deleteClient(
+            UUID userAccountId,
+            UUID accountingFirmId,
+            UUID clientId) {
+
+        requireAccountingFirmPermission(
+                userAccountId,
+                accountingFirmId,
+                AccountingFirmPermission.HIERARCHY_MANAGE);
+
+        Client client = requireClient(accountingFirmId, clientId);
+
+        if (companyRepository.existsByClientId(clientId)) {
+            throw new HierarchyDeletionConflictException(
+                    "O cliente só pode ser excluído quando não possui empresas.");
+        }
+
+        auditRecorder.recordHierarchyDeletion(
+                AccessAuditAction.CLIENT_DELETED,
+                userAccountId,
+                accountingFirmId,
+                "CLIENT",
+                clientId);
+
+        clientRepository.delete(client);
+        clientRepository.flush();
     }
 
     @Transactional(readOnly = true)
