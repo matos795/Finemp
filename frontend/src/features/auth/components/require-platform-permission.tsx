@@ -24,7 +24,7 @@ export function RequirePlatformPermission({
             : [permission]
 
     const allowed = permissions.some((candidate) =>
-        user.platformPermissions.includes(candidate),
+        (user.platformPermissions ?? []).includes(candidate),
     )
 
     if (!allowed) {
