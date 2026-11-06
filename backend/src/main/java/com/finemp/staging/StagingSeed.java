@@ -45,6 +45,29 @@ final class StagingSeed {
         finally {connection.setAutoCommit(true);}
     }
 
+    /** Explicit password reset for the deterministic synthetic operator only. */
+    static void resetSyntheticPassword(Connection connection,String passwordHash) throws SQLException {
+        if(!connection.getAutoCommit() || passwordHash==null || !passwordHash.matches("\\{bcrypt\\}\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}"))
+            throw new IllegalArgumentException("Invalid staging seed context");
+        connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        connection.setAutoCommit(false);
+        try {
+            execute(connection,"SET LOCAL lock_timeout='10s'");
+            execute(connection,"SET LOCAL statement_timeout='30s'");
+            execute(connection,"SELECT pg_advisory_xact_lock(534826201)");
+            execute(connection,"LOCK TABLE user_accounts,staging_seed_receipts IN SHARE ROW EXCLUSIVE MODE");
+            require(connection,"SELECT count(*) FROM staging_seed_receipts WHERE seed_key=? AND company_id=? AND user_id=?",1,KEY,id("company"),id("user"));
+            require(connection,"SELECT count(*) FROM user_accounts WHERE id=? AND email='demo@finemp.example.invalid' AND active=true AND invitation_pending=false",1,id("user"));
+            try(var statement=connection.prepareStatement("UPDATE user_accounts SET password_hash=?,credentials_version=credentials_version+1 WHERE id=?")) {
+                statement.setString(1,passwordHash);
+                statement.setObject(2,id("user"));
+                if(statement.executeUpdate()!=1) throw new SQLException("Synthetic staging password reset target mismatch");
+            }
+            connection.commit();
+        } catch(SQLException|RuntimeException ex) {connection.rollback();throw ex;}
+        finally {connection.setAutoCommit(true);}
+    }
+
     /** Explicit negative-access fixture; never changes the existing operator or its grants. */
     static boolean provisionIsolationCompany(Connection connection) throws SQLException {
         if(!connection.getAutoCommit()) throw new IllegalArgumentException("Invalid staging seed context");
