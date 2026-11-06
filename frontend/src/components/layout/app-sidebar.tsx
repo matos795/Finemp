@@ -4,6 +4,7 @@ import {
     useLocation,
 } from "react-router"
 import { cn } from "cn"
+import type { PlatformPermission } from "../../features/auth/types/auth.types"
 import { useCompanyAccess } from "../../features/companies/company-access-context"
 import { MenuIcon } from "./menu-icon"
 import {
@@ -30,9 +31,9 @@ export function AppSidebar({
     const { user, hasPermission } = useCompanyAccess()
 
     function hasPlatformPermission(
-        permission: import("../../features/auth/types/auth.types").PlatformPermission,
+        permission: PlatformPermission,
     ) {
-        return user.platformPermissions.includes(permission)
+        return (user.platformPermissions ?? []).includes(permission)
     }
     const location = useLocation()
 
