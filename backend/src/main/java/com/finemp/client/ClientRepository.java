@@ -12,6 +12,8 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
 
     List<Client> findAllByAccountingFirmId(UUID accountingFirmId);
 
+    boolean existsByAccountingFirmId(UUID accountingFirmId);
+
     Optional<Client> findByIdAndAccountingFirmId(
             UUID id,
             UUID accountingFirmId);
