@@ -1,3 +1,9 @@
+export type PlatformPermission =
+    | "ACCOUNTING_FIRM_CREATE"
+    | "ACCOUNTING_FIRM_VIEW"
+    | "UNASSIGNED_COMPANY_ASSIGN"
+    | "PLATFORM_USER_MANAGE"
+
 export type CompanyAccessRole =
     | "CUSTOM"
     | "ADMIN"
@@ -44,6 +50,7 @@ export interface CurrentUser {
     id: string
     name: string
     email: string
+    platformPermissions: PlatformPermission[]
     companies: CompanyAccess[]
 }
 
