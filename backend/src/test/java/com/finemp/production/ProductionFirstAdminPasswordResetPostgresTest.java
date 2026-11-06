@@ -106,7 +106,7 @@ class ProductionFirstAdminPasswordResetPostgresTest {
     }
 
     @Test
-    void refusesWrongIdentityIncompletePermissionsAndExistingOperationalGrants() throws Exception {
+    void refusesWrongIdentityAndIncompletePermissions() throws Exception {
         createFirstAdmin();
 
         try (var connection = connect()) {
