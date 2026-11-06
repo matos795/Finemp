@@ -41,3 +41,32 @@ incompleto é recusado.
 Depois do primeiro login, remover do ambiente a confirmação e as três variáveis
 temporárias do administrador. O restante do onboarding deve usar as APIs
 auditadas de administração e acesso.
+
+
+## Recuperação da senha do primeiro administrador
+
+Se o bootstrap já criou o primeiro administrador, mas o primeiro smoke de login
+falhar antes de qualquer onboarding operacional, usar exclusivamente o one-shot:
+
+```text
+java -jar /app/production-first-admin-password-reset.jar
+```
+
+A ferramenta não é um reset administrativo genérico. Ela só aceita o estado
+inicial esperado: exatamente um usuário ativo e não pendente, conjunto exato das
+quatro permissões de plataforma e nenhum grant de escritório ou Company.
+
+Além dos guards comuns de produção, exige:
+
+- `FINEMP_PRODUCTION_ADMIN_PASSWORD_RESET_CONFIRM=RESET_FINEMP_FIRST_ADMIN_PASSWORD`;
+- `FINEMP_PRODUCTION_ADMIN_EMAIL`;
+- `FINEMP_PRODUCTION_ADMIN_NEW_PASSWORD`.
+
+A nova senha precisa cumprir `AccountPasswordPolicy`. Se já coincidir com o hash
+armazenado, a operação é no-op. Se mudar, o hash é substituído e
+`credentials_version` é incrementado para invalidar sessões existentes.
+
+E-mail, senha, hash e credenciais reais nunca devem aparecer em commit, Issue,
+documentação, logs ou chat. Após a execução, remover ou neutralizar imediatamente
+as três variáveis temporárias de recuperação e retirar qualquer pre-deploy usado
+somente para executar o one-shot.
