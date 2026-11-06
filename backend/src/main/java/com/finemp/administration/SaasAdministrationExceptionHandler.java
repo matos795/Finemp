@@ -36,8 +36,10 @@ public class SaasAdministrationExceptionHandler {
                 exception.getMessage());
     }
 
-    @ExceptionHandler(CompanyAssignmentConflictException.class)
-    ProblemDetail handleConflict(CompanyAssignmentConflictException exception) {
+    @ExceptionHandler({
+            CompanyAssignmentConflictException.class,
+            HierarchyDeletionConflictException.class})
+    ProblemDetail handleConflict(RuntimeException exception) {
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
                 exception.getMessage());
