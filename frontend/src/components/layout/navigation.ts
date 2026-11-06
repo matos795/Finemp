@@ -1,4 +1,7 @@
-import type { CompanyPermission } from "../../features/auth/types/auth.types"
+import type {
+    CompanyPermission,
+    PlatformPermission,
+} from "../../features/auth/types/auth.types"
 import type { MenuIconName } from "./menu-icons"
 
 export interface NavigationItem {
@@ -8,6 +11,8 @@ export interface NavigationItem {
     path?: string
     /** Qualquer uma das permissões libera o item (só UX; o backend autoriza). */
     permissions?: CompanyPermission[]
+    /** Permissões do plano SaaS, separadas das permissões de Company. */
+    platformPermissions?: PlatformPermission[]
 }
 
 export interface NavigationModule {
@@ -22,6 +27,23 @@ export interface NavigationModule {
  * Telas ainda não ligadas à API não têm rota e aparecem inativas (D5).
  */
 export const navigationModules: NavigationModule[] = [
+    {
+        id: "admin",
+        label: "Administração",
+        icon: "cad",
+        items: [
+            {
+                id: "adminOnboarding",
+                label: "Onboarding SaaS",
+                path: "/admin",
+                platformPermissions: [
+                    "ACCOUNTING_FIRM_VIEW",
+                    "ACCOUNTING_FIRM_CREATE",
+                    "PLATFORM_USER_MANAGE",
+                ],
+            },
+        ],
+    },
     {
         id: "fluxo",
         label: "Fluxo de caixa",
@@ -249,11 +271,17 @@ export const navigationModules: NavigationModule[] = [
 export function isItemVisible(
     item: NavigationItem,
     hasPermission: (permission: CompanyPermission) => boolean,
+    hasPlatformPermission: (permission: PlatformPermission) => boolean,
 ) {
-    return (
+    const companyVisible =
         !item.permissions ||
         item.permissions.some(hasPermission)
-    )
+
+    const platformVisible =
+        !item.platformPermissions ||
+        item.platformPermissions.some(hasPlatformPermission)
+
+    return companyVisible && platformVisible
 }
 
 export function findNavigationByPath(
