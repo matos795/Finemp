@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { ApiError } from "../../../lib/api/api-client"
 import { useCompanyAccess } from "../../companies/company-access-context"
@@ -113,27 +113,52 @@ export function PlatformAdminPage() {
     const [error, setError] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
 
+    const firmSelectionRequest = useRef(0)
+    const clientSelectionRequest = useRef(0)
+
+    const platformPermissions = user.platformPermissions ?? []
+    const canViewFirms =
+        platformPermissions.includes("ACCOUNTING_FIRM_VIEW")
+    const canCreateFirm =
+        platformPermissions.includes("ACCOUNTING_FIRM_CREATE")
+    const canManagePlatformUsers =
+        platformPermissions.includes("PLATFORM_USER_MANAGE")
+
     useEffect(() => {
         let active = true
 
-        void Promise.all([
-            listAccountingFirms(),
-            listPlatformUsers(),
-        ])
-            .then(([firmPage, userPage]) => {
-                if (!active) return
-                setFirms(firmPage.items)
-                setUsers(userPage.items)
-            })
-            .catch((caught) => {
-                if (!active) return
-                setError(describeError(caught))
-            })
+        if (canViewFirms) {
+            void listAccountingFirms()
+                .then((page) => {
+                    if (active) {
+                        setFirms(page.items)
+                    }
+                })
+                .catch((caught) => {
+                    if (active) {
+                        setError(describeError(caught))
+                    }
+                })
+        }
+
+        if (canManagePlatformUsers) {
+            void listPlatformUsers()
+                .then((page) => {
+                    if (active) {
+                        setUsers(page.items)
+                    }
+                })
+                .catch((caught) => {
+                    if (active) {
+                        setError(describeError(caught))
+                    }
+                })
+        }
 
         return () => {
             active = false
         }
-    }, [])
+    }, [canManagePlatformUsers, canViewFirms])
 
     async function run(action: () => Promise<void>) {
         setBusy(true)
@@ -150,6 +175,9 @@ export function PlatformAdminPage() {
     }
 
     async function selectFirm(firmId: string) {
+        const requestId = ++firmSelectionRequest.current
+        clientSelectionRequest.current += 1
+
         setSelectedFirmId(firmId)
         setSelectedClientId("")
         setSelectedCompanyId("")
@@ -163,9 +191,18 @@ export function PlatformAdminPage() {
 
         try {
             const page = await listClients(firmId)
+
+            if (requestId !== firmSelectionRequest.current) {
+                return
+            }
+
             setClients(page.items)
             setFirmAccessReady(true)
         } catch (caught) {
+            if (requestId !== firmSelectionRequest.current) {
+                return
+            }
+
             if (caught instanceof ApiError && caught.status === 403) {
                 setMessage(
                     "Escritório selecionado. Conceda explicitamente seu acesso administrativo antes de criar clientes.",
@@ -177,6 +214,8 @@ export function PlatformAdminPage() {
     }
 
     async function selectClient(clientId: string) {
+        const requestId = ++clientSelectionRequest.current
+
         setSelectedClientId(clientId)
         setSelectedCompanyId("")
         setCompanies([])
@@ -187,8 +226,17 @@ export function PlatformAdminPage() {
 
         try {
             const page = await listCompanies(selectedFirmId, clientId)
+
+            if (requestId !== clientSelectionRequest.current) {
+                return
+            }
+
             setCompanies(page.items)
         } catch (caught) {
+            if (requestId !== clientSelectionRequest.current) {
+                return
+            }
+
             setError(describeError(caught))
         }
     }
@@ -245,7 +293,7 @@ export function PlatformAdminPage() {
                     <button
                         type="button"
                         className="btn"
-                        disabled={busy || !firmName.trim()}
+                        disabled={busy || !canCreateFirm || !firmName.trim()}
                         onClick={() => void run(async () => {
                             const created = await createAccountingFirm(firmName.trim())
                             const page = await listAccountingFirms()
