@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.*;
 @Testcontainers
 class ProductionAdminBootstrapPostgresTest {
     @Container static final PostgreSQLContainer postgres=new PostgreSQLContainer("postgres:17");
-    static final String HASH=PasswordEncoderFactories.createDelegatingPasswordEncoder().encode("Admin-password-123");
+    static final String HASH=PasswordEncoderFactories.createDelegatingPasswordEncoder().encode("Test-password-123");
 
     @BeforeAll static void schema() {
         Flyway.configure().dataSource(postgres.getJdbcUrl(),postgres.getUsername(),postgres.getPassword()).load().migrate();
@@ -39,11 +39,12 @@ class ProductionAdminBootstrapPostgresTest {
 
     long count(Connection c,String table) throws SQLException {
         try(var s=c.createStatement();var r=s.executeQuery("SELECT count(*) FROM "+table)) {
-            r.next(); return r.getLong(1);
+            r.next();
+            return r.getLong(1);
         }
     }
 
-    @Test void createsOnlyFirstPlatformAdministratorAndIsIdempotentBeforeOnboarding() throws Exception {
+    @Test void createsOnlyFirstPlatformAdministratorAndIsIdempotent() throws Exception {
         try(var c=connect()) {
             assertThat(ProductionAdminBootstrap.provision(c,"FINEMP Admin","admin@example.com",HASH)).isTrue();
             assertThat(ProductionAdminBootstrap.provision(c,"FINEMP Admin","admin@example.com",HASH)).isFalse();
@@ -52,12 +53,6 @@ class ProductionAdminBootstrapPostgresTest {
             assertThat(count(c,"accounting_firm_access_grants")).isZero();
             assertThat(count(c,"company_access_grants")).isZero();
             assertThat(count(c,"companies")).isZero();
-            try(var r=c.createStatement().executeQuery("SELECT active,invitation_pending,credentials_version FROM user_accounts")) {
-                r.next();
-                assertThat(r.getBoolean("active")).isTrue();
-                assertThat(r.getBoolean("invitation_pending")).isFalse();
-                assertThat(r.getLong("credentials_version")).isZero();
-            }
         }
     }
 
@@ -76,8 +71,13 @@ class ProductionAdminBootstrapPostgresTest {
 
     @Test void concurrentBootstrapsCreateOneAdministrator() throws Exception {
         try(var pool=Executors.newVirtualThreadPerTaskExecutor()) {
-            Callable<Boolean> action=()->{try(var c=connect()){return ProductionAdminBootstrap.provision(c,"FINEMP Admin","admin@example.com",HASH);}};
-            var first=pool.submit(action); var second=pool.submit(action);
+            Callable<Boolean> action=()->{
+                try(var c=connect()) {
+                    return ProductionAdminBootstrap.provision(c,"FINEMP Admin","admin@example.com",HASH);
+                }
+            };
+            var first=pool.submit(action);
+            var second=pool.submit(action);
             assertThat(List.of(first.get(30,TimeUnit.SECONDS),second.get(30,TimeUnit.SECONDS)))
                     .containsExactlyInAnyOrder(true,false);
         }

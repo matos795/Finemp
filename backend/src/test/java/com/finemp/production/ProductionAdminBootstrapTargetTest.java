@@ -23,7 +23,8 @@ class ProductionAdminBootstrapTargetTest {
     @Test void acceptsOnlyExplicitProductionTarget() {
         ProductionAdminBootstrapMain.validateTarget(valid());
         for (String key : valid().keySet()) {
-            var env=valid(); env.remove(key);
+            var env=valid();
+            env.remove(key);
             assertThatThrownBy(() -> ProductionAdminBootstrapMain.validateTarget(env))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -35,11 +36,13 @@ class ProductionAdminBootstrapTargetTest {
                 "RAILWAY_PROJECT_NAME","finemp-staging",
                 "RAILWAY_ENVIRONMENT_NAME","staging",
                 "SPRING_DATASOURCE_URL","jdbc:postgresql://public.example:5432/railway").entrySet()) {
-            var env=valid(); env.put(change.getKey(), change.getValue());
+            var env=valid();
+            env.put(change.getKey(), change.getValue());
             assertThatThrownBy(() -> ProductionAdminBootstrapMain.validateTarget(env))
                     .isInstanceOf(IllegalArgumentException.class);
         }
-        var env=valid(); env.put("RAILWAY_PROJECT_ID",UUID.randomUUID().toString());
+        var env=valid();
+        env.put("RAILWAY_PROJECT_ID",UUID.randomUUID().toString());
         assertThatThrownBy(() -> ProductionAdminBootstrapMain.validateTarget(env))
                 .isInstanceOf(IllegalArgumentException.class);
     }

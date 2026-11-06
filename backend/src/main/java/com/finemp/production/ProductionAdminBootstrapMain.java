@@ -10,11 +10,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 
-/** One-shot production bootstrap. Never starts Spring or the HTTP server. */
+/** One-shot bootstrap for the first platform administrator. Never starts Spring. */
 public final class ProductionAdminBootstrapMain {
     public static void main(String[] args) {
         if (args.length == 1 && "--help".equals(args[0])) {
-            System.out.println("FINEMP production admin bootstrap: environment-only configuration required; no secrets as arguments.");
+            System.out.println("FINEMP first-admin bootstrap: environment-only configuration required.");
             return;
         }
         try {
@@ -33,12 +33,10 @@ public final class ProductionAdminBootstrapMain {
                     required(env, "SPRING_DATASOURCE_USERNAME"),
                     required(env, "SPRING_DATASOURCE_PASSWORD"))) {
                 boolean created = ProductionAdminBootstrap.provision(connection, name, email, hash);
-                System.out.println(created
-                        ? "FINEMP production platform administrator created."
-                        : "FINEMP production platform administrator already exists; unchanged.");
+                System.out.println(created ? "FINEMP first platform administrator created." : "FINEMP first platform administrator already exists; unchanged.");
             }
         } catch (Exception failure) {
-            System.err.println("Production admin bootstrap refused or failed; no configuration values logged.");
+            System.err.println("First-admin bootstrap refused or failed; no configuration values logged.");
             System.exit(2);
         }
     }
@@ -53,18 +51,15 @@ public final class ProductionAdminBootstrapMain {
             throw new IllegalArgumentException("Unconfirmed production target");
         }
         UUID expected = UUID.fromString(required(env, "FINEMP_PRODUCTION_PROJECT_ID"));
-        if (!expected.equals(UUID.fromString(required(env, "RAILWAY_PROJECT_ID")))) {
-            throw new IllegalArgumentException("Production project mismatch");
-        }
-        if (!required(env, "SPRING_DATASOURCE_URL")
-                .matches("jdbc:postgresql://[a-zA-Z0-9-]+\\.railway\\.internal:[0-9]{1,5}/[a-zA-Z0-9_]+")) {
+        if (!expected.equals(UUID.fromString(required(env, "RAILWAY_PROJECT_ID")))) throw new IllegalArgumentException("Production project mismatch");
+        if (!required(env, "SPRING_DATASOURCE_URL").matches("jdbc:postgresql://[a-zA-Z0-9-]+\\.railway\\.internal:[0-9]{1,5}/[a-zA-Z0-9_]+")) {
             throw new IllegalArgumentException("Private production datasource required");
         }
     }
 
     private static String required(Map<String,String> env, String key) {
         String value = env.get(key);
-        if (value == null || value.isBlank()) throw new IllegalArgumentException("Missing production bootstrap configuration");
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("Missing bootstrap configuration");
         return value;
     }
 }

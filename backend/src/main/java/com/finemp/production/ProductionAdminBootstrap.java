@@ -18,7 +18,7 @@ final class ProductionAdminBootstrap {
                 || email == null || email.isBlank()
                 || passwordHash == null
                 || !passwordHash.matches("\\{bcrypt\\}\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}")) {
-            throw new IllegalArgumentException("Invalid production bootstrap context");
+            throw new IllegalArgumentException("Invalid first-admin bootstrap context");
         }
         connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
         connection.setAutoCommit(false);
@@ -47,7 +47,7 @@ final class ProductionAdminBootstrap {
                 connection.commit();
                 return false;
             }
-            if (users != 0) throw new SQLException("Production bootstrap database is not empty");
+            if (users != 0) throw new SQLException("First-admin bootstrap database is not empty");
             require(connection, "SELECT count(*) FROM user_account_platform_permissions", 0);
             require(connection, "SELECT count(*) FROM accounting_firm_access_grants", 0);
             require(connection, "SELECT count(*) FROM company_access_grants", 0);
@@ -85,7 +85,7 @@ final class ProductionAdminBootstrap {
     }
 
     private static void require(Connection connection, String sql, long expected, Object... args) throws SQLException {
-        if (count(connection, sql, args) != expected) throw new SQLException("Production bootstrap precondition failed");
+        if (count(connection, sql, args) != expected) throw new SQLException("First-admin bootstrap precondition failed");
     }
 
     private static void execute(Connection connection, String sql, Object... args) throws SQLException {
