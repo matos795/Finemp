@@ -27,7 +27,13 @@ export function AppSidebar({
     inert = false,
     onNavigate,
 }: AppSidebarProps) {
-    const { hasPermission } = useCompanyAccess()
+    const { user, hasPermission } = useCompanyAccess()
+
+    function hasPlatformPermission(
+        permission: import("../../features/auth/types/auth.types").PlatformPermission,
+    ) {
+        return user.platformPermissions.includes(permission)
+    }
     const location = useLocation()
 
     const [openModuleId, setOpenModuleId] =
@@ -42,7 +48,11 @@ export function AppSidebar({
         .map((module) => ({
             ...module,
             items: module.items.filter((item) =>
-                isItemVisible(item, hasPermission),
+                isItemVisible(
+                    item,
+                    hasPermission,
+                    hasPlatformPermission,
+                ),
             ),
         }))
         .filter((module) => module.items.length > 0)
