@@ -131,6 +131,12 @@
 						<goals><goal>jar</goal></goals>
 						<configuration><classifier>production-admin-bootstrap</classifier></configuration>
 					</execution>
+					<execution>
+						<id>production-first-admin-password-reset-jar</id>
+						<phase>package</phase>
+						<goals><goal>jar</goal></goals>
+						<configuration><classifier>production-first-admin-password-reset</classifier></configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>
@@ -162,6 +168,14 @@
 						<configuration>
 							<classifier>production-admin-bootstrap</classifier>
 							<mainClass>com.finemp.production.ProductionAdminBootstrapMain</mainClass>
+						</configuration>
+					</execution>
+					<execution>
+						<id>production-first-admin-password-reset-repackage</id>
+						<goals><goal>repackage</goal></goals>
+						<configuration>
+							<classifier>production-first-admin-password-reset</classifier>
+							<mainClass>com.finemp.production.ProductionFirstAdminPasswordResetMain</mainClass>
 						</configuration>
 					</execution>
 				</executions>
