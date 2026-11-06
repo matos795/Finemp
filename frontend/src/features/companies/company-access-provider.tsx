@@ -22,14 +22,22 @@ export function CompanyAccessProvider({
         user.companies[0]?.id ?? null,
     )
 
+    const effectiveSelectedCompanyId =
+        selectedCompanyId !== null &&
+        user.companies.some(
+            (company) => company.id === selectedCompanyId,
+        )
+            ? selectedCompanyId
+            : user.companies[0]?.id ?? null
+
     const selectedCompany = useMemo(
         () =>
             user.companies.find(
                 (company) =>
-                    company.id === selectedCompanyId,
+                    company.id === effectiveSelectedCompanyId,
             ) ?? null,
         [
-            selectedCompanyId,
+            effectiveSelectedCompanyId,
             user.companies,
         ],
     )

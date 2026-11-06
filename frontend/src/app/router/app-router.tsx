@@ -8,6 +8,7 @@ import { ProtectedApp } from "../../features/auth/components/protected-app"
 import { AppLayout } from "../../components/layout/app-layout"
 import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
 import { RequirePermission } from "../../features/auth/components/require-permission"
+import { RequirePlatformPermission } from "../../features/auth/components/require-platform-permission"
 import { DrePage } from "../../features/dre/pages/dre-page"
 import { BankAccountsPage } from "../../features/bank-accounts/pages/bank-accounts-page"
 import { StatementsPage } from "../../features/statements/pages/statements-page"
@@ -15,6 +16,7 @@ import { OpenTitlesPage } from "../../features/reports/pages/open-titles-page"
 import { MonthlyCashFlowPage } from "../../features/reports/pages/monthly-cash-flow-page"
 import { DailyCashFlowPage } from "../../features/reports/pages/daily-cash-flow-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
+import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
 
 export function AppRouter() {
     return (
@@ -34,6 +36,21 @@ export function AppRouter() {
                     <Route
                         path="/dashboard"
                         element={<DashboardPage />}
+                    />
+
+                    <Route
+                        path="/admin"
+                        element={
+                            <RequirePlatformPermission
+                                permission={[
+                                    "ACCOUNTING_FIRM_VIEW",
+                                    "ACCOUNTING_FIRM_CREATE",
+                                    "PLATFORM_USER_MANAGE",
+                                ]}
+                            >
+                                <PlatformAdminPage />
+                            </RequirePlatformPermission>
+                        }
                     />
 
                     <Route

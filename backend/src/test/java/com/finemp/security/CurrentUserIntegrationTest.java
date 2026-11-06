@@ -6,6 +6,7 @@ import com.finemp.access.CompanyAccessGrantRepository;
 import com.finemp.access.CompanyAccessRole;
 import com.finemp.access.CompanyPermission;
 import com.finemp.access.CostCenterScope;
+import com.finemp.access.PlatformPermission;
 import com.finemp.access.UserAccount;
 import com.finemp.access.UserAccountRepository;
 import com.finemp.company.Company;
@@ -51,7 +52,7 @@ class CurrentUserIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    void shouldReturnCurrentUserAndAllowedCompanies()
+    void shouldReturnCurrentUserPlatformPermissionsAndAllowedCompanies()
             throws Exception {
 
         UserAccount user = userAccountRepository.saveAndFlush(
@@ -59,7 +60,10 @@ class CurrentUserIntegrationTest {
                         "Usuário Exemplo",
                         "usuario@example.com",
                         passwordEncoder.encode(
-                                "senha-segura")));
+                                "senha-segura"),
+                        Set.of(
+                                PlatformPermission.ACCOUNTING_FIRM_VIEW,
+                                PlatformPermission.PLATFORM_USER_MANAGE)));
 
         Company allowedCompany = companyRepository.saveAndFlush(
                 new Company(
@@ -92,6 +96,12 @@ class CurrentUserIntegrationTest {
                         .value("Usuário Exemplo"))
                 .andExpect(jsonPath("$.email")
                         .value("usuario@example.com"))
+                .andExpect(jsonPath("$.platformPermissions.length()")
+                        .value(2))
+                .andExpect(jsonPath("$.platformPermissions[0]")
+                        .value("ACCOUNTING_FIRM_VIEW"))
+                .andExpect(jsonPath("$.platformPermissions[1]")
+                        .value("PLATFORM_USER_MANAGE"))
                 .andExpect(jsonPath("$.companies.length()")
                         .value(1))
                 .andExpect(jsonPath("$.companies[0].name")

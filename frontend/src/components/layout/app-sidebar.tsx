@@ -4,6 +4,7 @@ import {
     useLocation,
 } from "react-router"
 import { cn } from "cn"
+import type { PlatformPermission } from "../../features/auth/types/auth.types"
 import { useCompanyAccess } from "../../features/companies/company-access-context"
 import { MenuIcon } from "./menu-icon"
 import {
@@ -27,7 +28,13 @@ export function AppSidebar({
     inert = false,
     onNavigate,
 }: AppSidebarProps) {
-    const { hasPermission } = useCompanyAccess()
+    const { user, hasPermission } = useCompanyAccess()
+
+    function hasPlatformPermission(
+        permission: PlatformPermission,
+    ) {
+        return (user.platformPermissions ?? []).includes(permission)
+    }
     const location = useLocation()
 
     const [openModuleId, setOpenModuleId] =
@@ -42,7 +49,11 @@ export function AppSidebar({
         .map((module) => ({
             ...module,
             items: module.items.filter((item) =>
-                isItemVisible(item, hasPermission),
+                isItemVisible(
+                    item,
+                    hasPermission,
+                    hasPlatformPermission,
+                ),
             ),
         }))
         .filter((module) => module.items.length > 0)
