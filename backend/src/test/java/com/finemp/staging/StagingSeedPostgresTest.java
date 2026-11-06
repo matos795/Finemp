@@ -57,6 +57,55 @@ class StagingSeedPostgresTest {
         try(var c=connect()){assertThat(count(c,"staging_seed_receipts")).isEqualTo(1);assertThat(count(c,"companies")).isEqualTo(1);}
     }
 
+    @Test void resetPasswordRequiresExistingSyntheticSeed() throws Exception {
+        String newHash=StagingProvisioningMain.encodePassword("New-synthetic-password");
+        try(var c=connect()) {
+            assertThatThrownBy(()->StagingSeed.resetSyntheticPassword(c,newHash)).isInstanceOf(SQLException.class);
+            assertThat(count(c,"user_accounts")).isZero();
+        }
+    }
+
+    @Test void resetPasswordChangesOnlySyntheticCredentialsAndInvalidatesSessions() throws Exception {
+        String newPassword="New-synthetic-password";
+        String newHash=StagingProvisioningMain.encodePassword(newPassword);
+        try(var c=connect()) {
+            StagingSeed.provision(c,HASH);
+            long grants=count(c,"company_access_grants");
+            long permissions=count(c,"company_access_grant_permissions");
+
+            StagingSeed.resetSyntheticPassword(c,newHash);
+
+            assertThat(count(c,"companies")).isEqualTo(1);
+            assertThat(count(c,"company_access_grants")).isEqualTo(grants);
+            assertThat(count(c,"company_access_grant_permissions")).isEqualTo(permissions);
+            try(var s=c.prepareStatement("SELECT password_hash,credentials_version,email,active,invitation_pending FROM user_accounts WHERE id=?")) {
+                s.setObject(1,StagingSeed.id("user"));
+                try(var r=s.executeQuery()) {
+                    assertThat(r.next()).isTrue();
+                    assertThat(PasswordEncoderFactories.createDelegatingPasswordEncoder().matches(newPassword,r.getString("password_hash"))).isTrue();
+                    assertThat(r.getLong("credentials_version")).isEqualTo(1);
+                    assertThat(r.getString("email")).isEqualTo("demo@finemp.example.invalid");
+                    assertThat(r.getBoolean("active")).isTrue();
+                    assertThat(r.getBoolean("invitation_pending")).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test void resetPasswordRefusesChangedSyntheticIdentityWithoutMutatingCredentials() throws Exception {
+        String newHash=StagingProvisioningMain.encodePassword("New-synthetic-password");
+        try(var c=connect();var s=c.createStatement()) {
+            StagingSeed.provision(c,HASH);
+            s.executeUpdate("UPDATE user_accounts SET email='changed@finemp.example.invalid' WHERE id='"+StagingSeed.id("user")+"'");
+            assertThatThrownBy(()->StagingSeed.resetSyntheticPassword(c,newHash)).isInstanceOf(SQLException.class);
+            try(var r=s.executeQuery("SELECT password_hash,credentials_version FROM user_accounts WHERE id='"+StagingSeed.id("user")+"'")) {
+                assertThat(r.next()).isTrue();
+                assertThat(r.getString("password_hash")).isEqualTo(HASH);
+                assertThat(r.getLong("credentials_version")).isZero();
+            }
+        }
+    }
+
     @Test void isolationCompanyRequiresSeedAndIsIdempotentWithoutGrants() throws Exception {
         try(var c=connect()) {
             assertThatThrownBy(()->StagingSeed.provisionIsolationCompany(c)).isInstanceOf(SQLException.class);
