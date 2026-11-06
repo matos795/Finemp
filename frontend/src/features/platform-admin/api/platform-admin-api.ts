@@ -48,29 +48,26 @@ export type FirmPermission =
 
 
 async function listAllPages<T>(path: string): Promise<PagedResponse<T>> {
-    const items: T[] = []
-    let page = 0
-    let totalPages = 1
-    let totalItems = 0
+    const separator = path.includes("?") ? "&" : "?"
+    const firstPage = await apiRequest<PagedResponse<T>>(
+        `${path}${separator}page=0&size=100`,
+    )
 
-    do {
-        const separator = path.includes("?") ? "&" : "?"
+    const items = [...firstPage.items]
+
+    for (let page = 1; page < firstPage.totalPages; page += 1) {
         const response = await apiRequest<PagedResponse<T>>(
             `${path}${separator}page=${page}&size=100`,
         )
 
         items.push(...response.items)
-        totalPages = response.totalPages
-        totalItems = response.totalItems
-        page += 1
-    } while (page < totalPages)
+    }
 
     return {
+        ...firstPage,
         items,
         page: 0,
         size: items.length,
-        totalItems,
-        totalPages,
     }
 }
 
