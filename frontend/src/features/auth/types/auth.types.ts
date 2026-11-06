@@ -50,7 +50,7 @@ export interface CurrentUser {
     id: string
     name: string
     email: string
-    platformPermissions: PlatformPermission[]
+    platformPermissions?: PlatformPermission[]
     companies: CompanyAccess[]
 }
 
