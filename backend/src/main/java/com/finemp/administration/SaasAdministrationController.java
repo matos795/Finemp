@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,6 +58,16 @@ public class SaasAdministrationController {
                         request));
     }
 
+    @DeleteMapping("/admin/accounting-firms/{accountingFirmId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAccountingFirm(
+            @AuthenticationPrincipal UserAccountPrincipal principal,
+            @PathVariable UUID accountingFirmId) {
+        administrationService.deleteAccountingFirm(
+                principal.getUserAccountId(),
+                accountingFirmId);
+    }
+
     @GetMapping("/accounting-firms/{accountingFirmId}/clients")
     public PagedResponse<ClientResponse> listClients(
             @AuthenticationPrincipal UserAccountPrincipal principal,
@@ -85,6 +96,18 @@ public class SaasAdministrationController {
                         principal.getUserAccountId(),
                         accountingFirmId,
                         request));
+    }
+
+    @DeleteMapping("/accounting-firms/{accountingFirmId}/clients/{clientId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteClient(
+            @AuthenticationPrincipal UserAccountPrincipal principal,
+            @PathVariable UUID accountingFirmId,
+            @PathVariable UUID clientId) {
+        administrationService.deleteClient(
+                principal.getUserAccountId(),
+                accountingFirmId,
+                clientId);
     }
 
     @GetMapping("/accounting-firms/{accountingFirmId}/clients/{clientId}/companies")
