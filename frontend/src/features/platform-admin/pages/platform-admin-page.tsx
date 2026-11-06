@@ -296,11 +296,24 @@ export function PlatformAdminPage() {
                         disabled={busy || !canCreateFirm || !firmName.trim()}
                         onClick={() => void run(async () => {
                             const created = await createAccountingFirm(firmName.trim())
-                            const page = await listAccountingFirms()
-                            setFirms(page.items)
+
+                            if (canViewFirms) {
+                                const page = await listAccountingFirms()
+                                setFirms(page.items)
+                            } else {
+                                setFirms((current) => [
+                                    ...current.filter((firm) => firm.id !== created.id),
+                                    created,
+                                ])
+                            }
+
                             setFirmName("")
                             await selectFirm(created.id)
-                            setMessage("Escritório criado. Agora conceda seu acesso administrativo.")
+                            setMessage(
+                                canManagePlatformUsers
+                                    ? "Escritório criado. Agora conceda seu acesso administrativo."
+                                    : "Escritório criado. Seu perfil não possui permissão para administrar os acessos deste escritório.",
+                            )
                         })}
                     >
                         Criar escritório
@@ -309,7 +322,12 @@ export function PlatformAdminPage() {
                     <button
                         type="button"
                         className="btn sec"
-                        disabled={busy || !selectedFirmId || firmAccessReady}
+                        disabled={
+                            busy ||
+                            !canManagePlatformUsers ||
+                            !selectedFirmId ||
+                            firmAccessReady
+                        }
                         onClick={() => void run(async () => {
                             await replaceFirmAccess(
                                 selectedFirmId,
