@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../lib/api/api-client"
+import { apiRequest } from "../../../lib/api/api-client.ts"
 import type {
     CompanyAccessRole,
     CompanyPermission,
