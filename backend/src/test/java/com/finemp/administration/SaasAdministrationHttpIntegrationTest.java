@@ -179,6 +179,144 @@ class SaasAdministrationHttpIntegrationTest {
     }
 
     @Test
+    void shouldDeleteEmptyClientButRejectClientWithCompany() throws Exception {
+        UserAccount actor = createUser("delete-client@example.invalid", Set.of());
+        AccountingFirm firm = accountingFirmRepository.save(
+                new AccountingFirm("Synthetic Firm", true));
+        Client emptyClient = clientRepository.save(
+                new Client(firm, "Empty Client", true));
+        Client occupiedClient = clientRepository.save(
+                new Client(firm, "Occupied Client", true));
+        companyRepository.save(
+                new Company(occupiedClient, "Synthetic Company", "33333333000133"));
+
+        accountingFirmAccessGrantRepository.saveAndFlush(
+                new AccountingFirmAccessGrant(
+                        actor,
+                        firm,
+                        Set.of(AccountingFirmPermission.HIERARCHY_MANAGE)));
+
+        MockHttpSession session = login(actor.getEmail(), "senha-segura");
+
+        mockMvc.perform(delete(
+                                "/api/accounting-firms/{accountingFirmId}/clients/{clientId}",
+                                firm.getId(),
+                                occupiedClient.getId())
+                        .session(session)
+                        .with(csrf()))
+                .andExpect(status().isConflict());
+
+        org.assertj.core.api.Assertions.assertThat(
+                clientRepository.findById(occupiedClient.getId()))
+                .isPresent();
+
+        mockMvc.perform(delete(
+                                "/api/accounting-firms/{accountingFirmId}/clients/{clientId}",
+                                firm.getId(),
+                                emptyClient.getId())
+                        .session(session)
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        org.assertj.core.api.Assertions.assertThat(
+                clientRepository.findById(emptyClient.getId()))
+                .isEmpty();
+    }
+
+    @Test
+    void shouldDeleteEmptyFirmAndOwnGrantWithoutTouchingPlatformIdentity() throws Exception {
+        UserAccount actor = createUser(
+                "delete-firm@example.invalid",
+                Set.of(
+                        PlatformPermission.ACCOUNTING_FIRM_CREATE,
+                        PlatformPermission.PLATFORM_USER_MANAGE));
+        AccountingFirm firm = accountingFirmRepository.save(
+                new AccountingFirm("Synthetic Empty Firm", true));
+
+        accountingFirmAccessGrantRepository.saveAndFlush(
+                new AccountingFirmAccessGrant(
+                        actor,
+                        firm,
+                        Set.of(
+                                AccountingFirmPermission.HIERARCHY_MANAGE,
+                                AccountingFirmPermission.USER_ACCESS_MANAGE)));
+
+        MockHttpSession session = login(actor.getEmail(), "senha-segura");
+
+        mockMvc.perform(delete(
+                                "/api/admin/accounting-firms/{accountingFirmId}",
+                                firm.getId())
+                        .session(session)
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        org.assertj.core.api.Assertions.assertThat(
+                accountingFirmRepository.findById(firm.getId()))
+                .isEmpty();
+        org.assertj.core.api.Assertions.assertThat(
+                accountingFirmAccessGrantRepository
+                        .findByUserAccountIdAndAccountingFirmId(
+                                actor.getId(),
+                                firm.getId()))
+                .isEmpty();
+
+        UserAccount preserved = userAccountRepository.findById(actor.getId())
+                .orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(preserved.isActive())
+                .isTrue();
+        org.assertj.core.api.Assertions.assertThat(
+                preserved.getPlatformPermissions())
+                .containsExactlyInAnyOrder(
+                        PlatformPermission.ACCOUNTING_FIRM_CREATE,
+                        PlatformPermission.PLATFORM_USER_MANAGE);
+    }
+
+    @Test
+    void shouldRejectFirmDeletionWhenHierarchyOrAnotherUserGrantExists() throws Exception {
+        UserAccount actor = createUser(
+                "delete-firm-guard@example.invalid",
+                Set.of(
+                        PlatformPermission.ACCOUNTING_FIRM_CREATE,
+                        PlatformPermission.PLATFORM_USER_MANAGE));
+        UserAccount another = createUser("other-member@example.invalid", Set.of());
+        AccountingFirm firmWithClient = accountingFirmRepository.save(
+                new AccountingFirm("Firm With Client", true));
+        clientRepository.save(
+                new Client(firmWithClient, "Client", true));
+
+        AccountingFirm firmWithAnotherGrant = accountingFirmRepository.save(
+                new AccountingFirm("Firm With Member", true));
+        accountingFirmAccessGrantRepository.saveAndFlush(
+                new AccountingFirmAccessGrant(
+                        another,
+                        firmWithAnotherGrant,
+                        Set.of(AccountingFirmPermission.HIERARCHY_MANAGE)));
+
+        MockHttpSession session = login(actor.getEmail(), "senha-segura");
+
+        mockMvc.perform(delete(
+                                "/api/admin/accounting-firms/{accountingFirmId}",
+                                firmWithClient.getId())
+                        .session(session)
+                        .with(csrf()))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(delete(
+                                "/api/admin/accounting-firms/{accountingFirmId}",
+                                firmWithAnotherGrant.getId())
+                        .session(session)
+                        .with(csrf()))
+                .andExpect(status().isConflict());
+
+        org.assertj.core.api.Assertions.assertThat(
+                accountingFirmRepository.findById(firmWithClient.getId()))
+                .isPresent();
+        org.assertj.core.api.Assertions.assertThat(
+                accountingFirmRepository.findById(firmWithAnotherGrant.getId()))
+                .isPresent();
+    }
+
+    @Test
     void shouldCreateCompanyAndAccountingSourceInsideAuthorizedHierarchy() throws Exception {
         UserAccount userAccount = createUser(
                 "operador@example.com",
