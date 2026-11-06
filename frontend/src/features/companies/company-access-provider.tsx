@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useMemo,
     useState,
     type ReactNode,
@@ -21,6 +22,20 @@ export function CompanyAccessProvider({
     ] = useState<string | null>(
         user.companies[0]?.id ?? null,
     )
+
+    useEffect(() => {
+        const stillAvailable =
+            selectedCompanyId !== null &&
+            user.companies.some(
+                (company) => company.id === selectedCompanyId,
+            )
+
+        if (!stillAvailable) {
+            setSelectedCompanyId(
+                user.companies[0]?.id ?? null,
+            )
+        }
+    }, [selectedCompanyId, user.companies])
 
     const selectedCompany = useMemo(
         () =>
