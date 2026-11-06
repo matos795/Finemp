@@ -30,6 +30,11 @@ public class CurrentUserQueryService {
         UserAccount userAccount = userAccountRepository.findById(userAccountId)
                 .orElseThrow();
 
+        var platformPermissions = userAccount.getPlatformPermissions()
+                .stream()
+                .sorted()
+                .toList();
+
         var companies = companyAccessGrantRepository
                 .findAllByUserAccountId(userAccountId)
                 .stream()
@@ -43,6 +48,7 @@ public class CurrentUserQueryService {
                 userAccount.getId(),
                 userAccount.getName(),
                 userAccount.getEmail(),
+                platformPermissions,
                 companies);
     }
 }
