@@ -14,6 +14,8 @@ import {
     createAccountingFirm,
     createClient,
     createCompany,
+    deleteAccountingFirm,
+    deleteClient,
     listAccountingFirms,
     listClients,
     listCompanies,
@@ -342,6 +344,51 @@ export function PlatformAdminPage() {
                     >
                         Conceder meu acesso ao escritório
                     </button>
+
+                    <button
+                        type="button"
+                        className="btn sec"
+                        disabled={
+                            busy ||
+                            !canCreateFirm ||
+                            !canManagePlatformUsers ||
+                            !selectedFirmId ||
+                            clients.length > 0
+                        }
+                        onClick={() => {
+                            if (!window.confirm(
+                                "Excluir o escritório selecionado? A operação só é permitida quando ele está vazio.",
+                            )) {
+                                return
+                            }
+
+                            void run(async () => {
+                                const deletedFirmId = selectedFirmId
+                                await deleteAccountingFirm(deletedFirmId)
+
+                                if (canViewFirms) {
+                                    const page = await listAccountingFirms()
+                                    setFirms(page.items)
+                                } else {
+                                    setFirms((current) =>
+                                        current.filter(
+                                            (firm) => firm.id !== deletedFirmId,
+                                        ),
+                                    )
+                                }
+
+                                setSelectedFirmId("")
+                                setSelectedClientId("")
+                                setSelectedCompanyId("")
+                                setClients([])
+                                setCompanies([])
+                                setFirmAccessReady(false)
+                                setMessage("Escritório vazio excluído.")
+                            })
+                        }}
+                    >
+                        Excluir escritório vazio
+                    </button>
                 </div>
             </section>
 
@@ -390,6 +437,42 @@ export function PlatformAdminPage() {
                     })}
                 >
                     Criar cliente
+                </button>
+
+                <button
+                    type="button"
+                    className="btn sec"
+                    disabled={
+                        busy ||
+                        !selectedFirmId ||
+                        !selectedClientId ||
+                        !firmAccessReady ||
+                        companies.length > 0
+                    }
+                    onClick={() => {
+                        if (!window.confirm(
+                            "Excluir o cliente selecionado? A operação só é permitida quando ele não possui empresas.",
+                        )) {
+                            return
+                        }
+
+                        void run(async () => {
+                            const deletedClientId = selectedClientId
+                            await deleteClient(
+                                selectedFirmId,
+                                deletedClientId,
+                            )
+
+                            const page = await listClients(selectedFirmId)
+                            setClients(page.items)
+                            setSelectedClientId("")
+                            setSelectedCompanyId("")
+                            setCompanies([])
+                            setMessage("Cliente vazio excluído.")
+                        })
+                    }}
+                >
+                    Excluir cliente vazio
                 </button>
             </section>
 
