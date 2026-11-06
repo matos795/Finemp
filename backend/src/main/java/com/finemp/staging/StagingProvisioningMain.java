@@ -11,10 +11,11 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 /** Standalone process. No SpringApplication, web server, external readers or automatic migrations. */
 public final class StagingProvisioningMain {
     public static void main(String[] args) {
-        if(args.length==1 && "--help".equals(args[0])) {System.out.println("FINEMP staging provisioner: explicit environment-only configuration required; no secrets as arguments. Optional --isolation-company creates a negative-access fixture.");return;}
+        if(args.length==1 && "--help".equals(args[0])) {System.out.println("FINEMP staging provisioner: explicit environment-only configuration required; no secrets as arguments. Optional --isolation-company creates a negative-access fixture; --reset-password resets only the deterministic synthetic operator.");return;}
         try {
             boolean isolation=args.length==1 && "--isolation-company".equals(args[0]);
-            if(args.length!=0 && !isolation)throw new IllegalArgumentException();
+            boolean resetPassword=args.length==1 && "--reset-password".equals(args[0]);
+            if(args.length!=0 && !isolation && !resetPassword)throw new IllegalArgumentException();
             var env=System.getenv();validateTarget(env);
             String hash=null;
             if(!isolation) {
@@ -23,9 +24,14 @@ public final class StagingProvisioningMain {
                 hash=encodePassword(password);
             }
             try(var connection=DriverManager.getConnection(required(env,"SPRING_DATASOURCE_URL"),required(env,"SPRING_DATASOURCE_USERNAME"),required(env,"SPRING_DATASOURCE_PASSWORD"))) {
-                boolean created=isolation?StagingSeed.provisionIsolationCompany(connection):StagingSeed.provision(connection,hash);
-                System.out.println(created?"Synthetic staging dataset created.":"Synthetic staging dataset already exists; unchanged.");
-                if(isolation) System.out.println("IsolationCompany="+StagingSeed.id("foreign-company"));
+                if(resetPassword) {
+                    StagingSeed.resetSyntheticPassword(connection,hash);
+                    System.out.println("Synthetic staging operator password reset.");
+                } else {
+                    boolean created=isolation?StagingSeed.provisionIsolationCompany(connection):StagingSeed.provision(connection,hash);
+                    System.out.println(created?"Synthetic staging dataset created.":"Synthetic staging dataset already exists; unchanged.");
+                    if(isolation) System.out.println("IsolationCompany="+StagingSeed.id("foreign-company"));
+                }
                 System.out.println("Company="+StagingSeed.id("company")+" Bank="+StagingSeed.id("bank")+" IncomeCategory="+StagingSeed.id("income")+" ExpenseCategory="+StagingSeed.id("expense"));
             }
         } catch(Exception failure) {System.err.println("Staging provisioning refused or failed; no configuration values logged.");System.exit(2);}

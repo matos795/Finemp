@@ -38,3 +38,32 @@ Depois da fixture inicial, executar separadamente `java -jar /app/staging-provis
 Cria somente uma segunda Company sintética sem grants, com marcador próprio. Não cria lançamentos, usuários ou permissões. Retry valida o marcador, vínculo ao cliente e ausência de grants; se o acesso tiver mudado, recusa sem revogar nada. Transação e locks protegem concorrência/rollback. O usuário de demonstração deve acessar a própria Company e receber 403 para a segunda Company existente.
 
 Testes PostgreSQL verificam pré-condição, repetição, rollback e preservação de permissões alteradas; o teste HTTP usa as duas Companies reais no banco descartável, login normal e snapshot. A prova em staging usa os mesmos IDs determinísticos e nunca uma Company real. Ao concluir, remover confirmação e segredo temporários e reiniciar o serviço para retirar essas variáveis do processo.
+
+
+## Reset explícito da senha sintética
+
+Quando a credencial do operador sintético não estiver disponível, não tentar
+recuperar o bcrypt, editar `user_accounts` manualmente ou criar bypass HTTP.
+
+O provisionador aceita `--reset-password` exclusivamente para o usuário
+determinístico `demo@finemp.example.invalid`. O modo reutiliza todos os gates de
+staging deste documento, exige o marker `finemp-synthetic-v1` e confere o ID,
+email, estado ativo e ausência de convite pendente antes de qualquer alteração.
+
+A nova senha deve ser definida em `FINEMP_STAGING_SEED_PASSWORD` diretamente no
+armazenamento seguro do ambiente, nunca em argumento de CLI, Issue, commit, log
+ou chat. Em seguida executar, no alvo staging já confirmado:
+
+```text
+java -jar /app/staging-provisioner.jar --reset-password
+```
+
+O comando substitui apenas `password_hash` do operador sintético e incrementa
+`credentials_version`, invalidando sessões anteriores pela mesma semântica usada
+pela aplicação. Grants, permissões, Companies e dados financeiros não são
+alterados. A saída confirma somente a conclusão e IDs sintéticos, nunca senha ou
+hash.
+
+Após validar o novo login, remover novamente
+`FINEMP_STAGING_SEED_PASSWORD` do ambiente. Este comando não é mecanismo de
+reset para usuários reais nem deve ser habilitado em production.
