@@ -20,6 +20,8 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
     List<Company> findAllByClientId(UUID clientId);
 
+    boolean existsByClientId(UUID clientId);
+
     Optional<Company> findByIdAndClientId(
             UUID id,
             UUID clientId);
