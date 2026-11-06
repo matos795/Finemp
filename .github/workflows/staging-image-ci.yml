@@ -7,6 +7,7 @@ on:
       - 'backend/railway.toml'
       - 'backend/pom.xml'
       - 'backend/src/main/java/com/finemp/staging/**'
+      - 'backend/src/main/java/com/finemp/production/**'
       - 'backend/src/main/resources/application-staging.yml'
       - '.github/workflows/staging-image-ci.yml'
 permissions:
@@ -24,6 +25,7 @@ jobs:
         run: |
           test "$(docker run --rm --entrypoint id finemp-staging:test -u)" = "10001"
           docker run --rm --entrypoint java finemp-staging:test -jar /app/staging-provisioner.jar --help
+          docker run --rm --entrypoint java finemp-staging:test -jar /app/production-admin-bootstrap.jar --help
           set +e
           docker run --rm -e SPRING_PROFILES_ACTIVE=staging finemp-staging:test > staging-startup.log 2>&1
           result=$?

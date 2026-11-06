@@ -125,6 +125,12 @@
 						<goals><goal>jar</goal></goals>
 						<configuration><classifier>staging-provisioner</classifier></configuration>
 					</execution>
+					<execution>
+						<id>production-admin-bootstrap-jar</id>
+						<phase>package</phase>
+						<goals><goal>jar</goal></goals>
+						<configuration><classifier>production-admin-bootstrap</classifier></configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>
@@ -148,6 +154,14 @@
 						<configuration>
 							<classifier>staging-provisioner</classifier>
 							<mainClass>com.finemp.staging.StagingProvisioningMain</mainClass>
+						</configuration>
+					</execution>
+					<execution>
+						<id>production-admin-bootstrap-repackage</id>
+						<goals><goal>repackage</goal></goals>
+						<configuration>
+							<classifier>production-admin-bootstrap</classifier>
+							<mainClass>com.finemp.production.ProductionAdminBootstrapMain</mainClass>
 						</configuration>
 					</execution>
 				</executions>
