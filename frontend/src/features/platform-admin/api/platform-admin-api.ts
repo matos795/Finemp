@@ -84,6 +84,15 @@ export async function createAccountingFirm(name: string) {
     })
 }
 
+export async function deleteAccountingFirm(accountingFirmId: string) {
+    return apiRequest<void>(
+        `/api/admin/accounting-firms/${accountingFirmId}`,
+        {
+            method: "DELETE",
+        },
+    )
+}
+
 export async function listClients(accountingFirmId: string) {
     return listAllPages<Client>(
         `/api/accounting-firms/${accountingFirmId}/clients`,
@@ -99,6 +108,18 @@ export async function createClient(
         {
             method: "POST",
             body: JSON.stringify({ name }),
+        },
+    )
+}
+
+export async function deleteClient(
+    accountingFirmId: string,
+    clientId: string,
+) {
+    return apiRequest<void>(
+        `/api/accounting-firms/${accountingFirmId}/clients/${clientId}`,
+        {
+            method: "DELETE",
         },
     )
 }

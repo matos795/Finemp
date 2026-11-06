@@ -26,6 +26,8 @@ public interface AccountingFirmAccessGrantRepository
     java.util.Optional<AccountingFirmAccessGrant> findByUserAccountIdAndAccountingFirmId(
             UUID userAccountId, UUID accountingFirmId);
 
+    long countByAccountingFirmId(UUID accountingFirmId);
+
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"accountingFirm", "permissions"})
     java.util.List<AccountingFirmAccessGrant> findAllByUserAccountId(UUID userAccountId);
 

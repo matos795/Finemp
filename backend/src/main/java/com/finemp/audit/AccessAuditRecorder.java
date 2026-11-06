@@ -57,6 +57,40 @@ public class AccessAuditRecorder {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public UUID recordHierarchyDeletion(
+            AccessAuditAction action,
+            UUID actorId,
+            UUID accountingFirmId,
+            String resourceType,
+            UUID resourceId) {
+
+        if (action != AccessAuditAction.CLIENT_DELETED
+                && action != AccessAuditAction.ACCOUNTING_FIRM_DELETED) {
+            throw new IllegalArgumentException("Ação de exclusão hierárquica inválida.");
+        }
+
+        var event = new AccessAuditEvent(
+                action,
+                actorId,
+                actorId,
+                accountingFirmId,
+                null,
+                clock.instant(),
+                Set.of());
+
+        event.resource(
+                resourceType,
+                resourceId,
+                UUID.randomUUID(),
+                "{\"exists\":true}",
+                null,
+                "EMPTY_HIERARCHY_DELETION");
+
+        entityManager.persist(event);
+        return event.getId();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public UUID record(AccessAuditAction action, UUID actorId, UUID subjectUserId,
                        UUID firmId, UUID companyId, Set<? extends Enum<?>> permissions) {
         var event = new AccessAuditEvent(action, actorId, subjectUserId, firmId, companyId,
