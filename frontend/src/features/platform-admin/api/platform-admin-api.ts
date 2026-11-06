@@ -46,9 +46,37 @@ export type FirmPermission =
     | "ACCOUNTING_SOURCE_MANAGE"
     | "CONNECTOR_MANAGE"
 
+
+async function listAllPages<T>(path: string): Promise<PagedResponse<T>> {
+    const items: T[] = []
+    let page = 0
+    let totalPages = 1
+    let totalItems = 0
+
+    do {
+        const separator = path.includes("?") ? "&" : "?"
+        const response = await apiRequest<PagedResponse<T>>(
+            `${path}${separator}page=${page}&size=100`,
+        )
+
+        items.push(...response.items)
+        totalPages = response.totalPages
+        totalItems = response.totalItems
+        page += 1
+    } while (page < totalPages)
+
+    return {
+        items,
+        page: 0,
+        size: items.length,
+        totalItems,
+        totalPages,
+    }
+}
+
 export async function listAccountingFirms() {
-    return apiRequest<PagedResponse<AccountingFirm>>(
-        "/api/admin/accounting-firms?size=100",
+    return listAllPages<AccountingFirm>(
+        "/api/admin/accounting-firms",
     )
 }
 
@@ -60,8 +88,8 @@ export async function createAccountingFirm(name: string) {
 }
 
 export async function listClients(accountingFirmId: string) {
-    return apiRequest<PagedResponse<Client>>(
-        `/api/accounting-firms/${accountingFirmId}/clients?size=100`,
+    return listAllPages<Client>(
+        `/api/accounting-firms/${accountingFirmId}/clients`,
     )
 }
 
@@ -82,8 +110,8 @@ export async function listCompanies(
     accountingFirmId: string,
     clientId: string,
 ) {
-    return apiRequest<PagedResponse<Company>>(
-        `/api/accounting-firms/${accountingFirmId}/clients/${clientId}/companies?size=100`,
+    return listAllPages<Company>(
+        `/api/accounting-firms/${accountingFirmId}/clients/${clientId}/companies`,
     )
 }
 
@@ -106,8 +134,8 @@ export async function createCompany(
 }
 
 export async function listPlatformUsers() {
-    return apiRequest<PagedResponse<PlatformUser>>(
-        "/api/admin/users?size=100",
+    return listAllPages<PlatformUser>(
+        "/api/admin/users",
     )
 }
 
