@@ -142,11 +142,6 @@ export function OfficialUserOnboardingSection({
     useEffect(() => {
         let active = true
 
-        setUsers([])
-        setSelectedUserId("")
-        setMessage(null)
-        setError(null)
-
         if (!accountingFirmId || !firmAccessReady) {
             return () => {
                 active = false
