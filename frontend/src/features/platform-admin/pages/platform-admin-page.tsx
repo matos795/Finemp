@@ -653,6 +653,7 @@ export function PlatformAdminPage() {
             </section>
 
             <OfficialUserOnboardingSection
+                key={selectedFirmId || "no-firm"}
                 accountingFirmId={selectedFirmId}
                 clientId={selectedClientId}
                 companyId={selectedCompanyId}
