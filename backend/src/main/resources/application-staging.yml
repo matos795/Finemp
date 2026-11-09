@@ -47,6 +47,18 @@ finemp:
       enabled: true
       commands:
         enabled: true
+    statement-read:
+      enabled: true
+    statement-preview:
+      enabled: true
+    statement-import:
+      enabled: true
+    statement-actions:
+      enabled: true
+    statement-candidates:
+      enabled: true
+    open-titles:
+      enabled: true
     presentation:
       enabled: true
     aging:
