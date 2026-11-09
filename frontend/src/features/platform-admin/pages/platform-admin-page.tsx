@@ -28,6 +28,8 @@ import {
     type PlatformUser,
 } from "../api/platform-admin-api"
 
+import { OfficialUserOnboardingSection } from "../components/official-user-onboarding-section"
+
 const FIRM_ADMIN_PERMISSIONS = [
     "HIERARCHY_MANAGE",
     "USER_ACCESS_MANAGE",
@@ -649,6 +651,14 @@ export function PlatformAdminPage() {
                     Conceder meu acesso à empresa
                 </button>
             </section>
+
+            <OfficialUserOnboardingSection
+                key={selectedFirmId || "no-firm"}
+                accountingFirmId={selectedFirmId}
+                clientId={selectedClientId}
+                companyId={selectedCompanyId}
+                firmAccessReady={firmAccessReady}
+            />
 
             <section className="mbox">
                 <h2>Usuários da plataforma</h2>
