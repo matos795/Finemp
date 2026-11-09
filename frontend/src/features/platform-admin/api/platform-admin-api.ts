@@ -157,6 +157,31 @@ export async function listPlatformUsers() {
     )
 }
 
+export async function listFirmUsers(accountingFirmId: string) {
+    return listAllPages<PlatformUser>(
+        `/api/admin/accounting-firms/${accountingFirmId}/users`,
+    )
+}
+
+export async function inviteFirmUser(
+    accountingFirmId: string,
+    name: string,
+    email: string,
+    permissions: FirmPermission[],
+) {
+    return apiRequest<void>(
+        `/api/admin/accounting-firms/${accountingFirmId}/invitations`,
+        {
+            method: "POST",
+            body: JSON.stringify({
+                name,
+                email,
+                permissions,
+            }),
+        },
+    )
+}
+
 export async function replaceFirmAccess(
     accountingFirmId: string,
     userId: string,
