@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { ApiError } from "../../../lib/api/api-client"
+import {
+    ACCOUNTANT_SUGGESTION,
+    CLIENT_FINANCE_SUGGESTION,
+} from "../lib/access-suggestions"
 import type {
     CompanyAccessRole,
     CompanyPermission,
@@ -54,37 +58,6 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
 const READ_ONLY_PERMISSIONS = COMPANY_PERMISSION_OPTIONS
     .map((option) => option.value)
     .filter((permission) => permission.endsWith("_VIEW"))
-
-const ACCOUNTANT_SUGGESTION: CompanyPermission[] = [
-    "DASHBOARD_VIEW",
-    "DRE_VIEW",
-    "BALANCE_SHEET_VIEW",
-    "CASH_FLOW_VIEW",
-    "INDICATORS_VIEW",
-    "ACCOUNTING_MOVEMENT_VIEW",
-    "ACCOUNT_CLASSIFICATION_VIEW",
-    "ACCOUNT_CLASSIFICATION_MANAGE",
-    "MANUAL_ENTRY_MANAGE",
-    "BANK_ACCOUNT_VIEW",
-    "BUSINESS_PARTNER_VIEW",
-    "RESULT_CENTER_VIEW",
-    "FINANCIAL_CATEGORY_VIEW",
-    "FINANCIAL_ENTRY_VIEW",
-    "FINANCIAL_PERIOD_VIEW",
-]
-
-const CLIENT_FINANCE_SUGGESTION: CompanyPermission[] = [
-    "DASHBOARD_VIEW",
-    "CASH_FLOW_VIEW",
-    "INDICATORS_VIEW",
-    "BANK_ACCOUNT_VIEW",
-    "BUSINESS_PARTNER_VIEW",
-    "RESULT_CENTER_VIEW",
-    "FINANCIAL_CATEGORY_VIEW",
-    "FINANCIAL_ENTRY_VIEW",
-    "FINANCIAL_ENTRY_MANAGE",
-    "FINANCIAL_PERIOD_VIEW",
-]
 
 function describeError(error: unknown) {
     if (error instanceof ApiError) {

@@ -10,10 +10,15 @@ import { useCompanyAccess } from "../../companies/company-access-context"
 import { FinancialEntriesTable } from "../components/financial-entries-table"
 import { FinancialEntryDialog } from "../components/financial-entry-dialog"
 import { FinancialEntryFilters } from "../components/financial-entry-filters"
+import { FinancialOnboardingPanel } from "../components/financial-onboarding-panel"
 import { useFinancialEntries } from "../hooks/use-financial-entries"
 import { useFinancialEntryCatalogs } from "../hooks/use-financial-entry-catalogs"
 import { canManageFinancialEntries } from "../lib/financial-entry-access"
 import { describeFinancialEntryError } from "../lib/financial-entry-errors"
+import {
+    financialOnboarding,
+    type CatalogLoad,
+} from "../lib/financial-onboarding"
 import {
     emptyFinancialEntryFilter,
     type FinancialDirection,
@@ -73,20 +78,15 @@ function FinancialEntriesCompanyPage() {
     const centerList = resultCenters.data ?? []
 
     // Antes de lançar: conta e categoria vêm de cadastros próprios. O React
-    // não cria nenhum deles automaticamente.
-    const writeBlocker = !canManage
-        ? null
-        : bankAccounts.isError
-            ? "Seu acesso não inclui as contas bancárias desta empresa. Peça ao administrador para liberar a visualização das contas."
-            : categories.isError
-                ? "Seu acesso não inclui as categorias financeiras desta empresa. Peça ao administrador para liberar a visualização das categorias."
-                : bankAccounts.isSuccess && !bankList.some((account) => account.active)
-                    ? "Cadastre uma conta bancária ativa em Cadastros › Contas bancárias antes de lançar."
-                    : categories.isSuccess && !categoryList.some((category) => category.kind === "SUBCATEGORY")
-                        ? "A empresa ainda não tem categorias financeiras. Elas precisam ser cadastradas antes de lançar."
-                        : null
+    // só orienta (tela de contas, plano padrão por clique); nada é criado ao
+    // abrir a página.
+    const onboarding = financialOnboarding({
+        hasPermission,
+        bankAccounts: toCatalogLoad(bankAccounts),
+        categories: toCatalogLoad(categories),
+    })
 
-    const catalogsReady = bankAccounts.isSuccess && categories.isSuccess && !writeBlocker
+    const catalogsReady = onboarding.ready
 
     const data = entries.data
     const items = data?.items ?? []
@@ -99,7 +99,7 @@ function FinancialEntriesCompanyPage() {
                         type="button"
                         className="btn ent"
                         disabled={!catalogsReady}
-                        title={writeBlocker ?? undefined}
+                        title={catalogsReady ? undefined : "Complete os passos indicados na tela antes de lançar."}
                         onClick={() => setDialog({ companyId: companyId!, mode: "create", direction: "INCOME" })}
                     >
                         + Entrada
@@ -108,7 +108,7 @@ function FinancialEntriesCompanyPage() {
                         type="button"
                         className="btn sai"
                         disabled={!catalogsReady}
-                        title={writeBlocker ?? undefined}
+                        title={catalogsReady ? undefined : "Complete os passos indicados na tela antes de lançar."}
                         onClick={() => setDialog({ companyId: companyId!, mode: "create", direction: "EXPENSE" })}
                     >
                         + Saída
@@ -124,7 +124,12 @@ function FinancialEntriesCompanyPage() {
                 resultCenters={centerList}
             />
 
-            {writeBlocker ? <div className="alert i">{writeBlocker}</div> : null}
+            {companyId ? (
+                <FinancialOnboardingPanel
+                    companyId={companyId}
+                    onboarding={onboarding}
+                />
+            ) : null}
 
             {entries.isError ? (
                 <QueryError
@@ -193,4 +198,17 @@ function FinancialEntriesCompanyPage() {
             ) : null}
         </>
     )
+}
+
+/** Converte o estado de uma consulta de catálogo para a decisão de onboarding. */
+function toCatalogLoad<T>(query: { isPending: boolean, isError: boolean, data?: T[] }): CatalogLoad<T> {
+    if (query.isError) {
+        return { status: "error" }
+    }
+
+    if (query.isPending || !query.data) {
+        return { status: "loading" }
+    }
+
+    return { status: "ready", items: query.data }
 }
