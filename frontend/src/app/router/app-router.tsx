@@ -17,6 +17,8 @@ import { MonthlyCashFlowPage } from "../../features/reports/pages/monthly-cash-f
 import { DailyCashFlowPage } from "../../features/reports/pages/daily-cash-flow-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
+import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
+import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
 
 export function AppRouter() {
     return (
@@ -72,6 +74,17 @@ export function AppRouter() {
                                 ]}
                             >
                                 <BankAccountsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/financial-entries"
+                        element={
+                            <RequirePermission
+                                permission={FINANCIAL_ENTRY_READ_PERMISSIONS}
+                            >
+                                <FinancialEntriesPage />
                             </RequirePermission>
                         }
                     />

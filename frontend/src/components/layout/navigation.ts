@@ -55,7 +55,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/dashboard",
                 permissions: ["DASHBOARD_VIEW"],
             },
-            { id: "lanc", label: "Lançamentos" },
+            {
+                id: "lanc",
+                label: "Lançamentos",
+                path: "/financial-entries",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
             { id: "agenda", label: "Pagar e receber" },
             {
                 id: "ext",
