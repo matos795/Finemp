@@ -45,3 +45,15 @@ test("non-platform user cannot see platform onboarding", () => {
     false,
   )
 })
+
+const entriesItem = navigationModules
+  .find((module) => module.id === "fluxo")
+  .items.find((item) => item.id === "lanc")
+
+test("Lançamentos is routed and visible with VIEW or MANAGE only", () => {
+  assert.equal(entriesItem.path, "/financial-entries")
+  assert.equal(isItemVisible(entriesItem, (permission) => permission === "FINANCIAL_ENTRY_VIEW", () => false), true)
+  assert.equal(isItemVisible(entriesItem, (permission) => permission === "FINANCIAL_ENTRY_MANAGE", () => false), true)
+  assert.equal(isItemVisible(entriesItem, (permission) => permission === "DASHBOARD_VIEW", () => false), false)
+  assert.equal(isItemVisible(entriesItem, () => false, () => true), false)
+})
