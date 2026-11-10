@@ -4,14 +4,21 @@ import {
 } from "../../../lib/formatters/decimal"
 import { formatCompetence } from "../../reports/lib/calendar-labels"
 import type { FinancialEntry } from "../types/financial-entry.types"
+import { settlementCopy } from "../lib/financial-entry-settlement"
 import { FinancialEntryStatusBadge } from "./financial-entry-status-badge"
 
 const PENDING_TITLE = "Aguardando dado da API"
 
 interface FinancialEntriesTableProps {
     entries: FinancialEntry[]
+    /** Mostra a coluna Ações (FINANCIAL_ENTRY_MANAGE). */
     canManage: boolean
+    /** "Editar" depende dos catálogos do formulário estarem prontos. */
+    canEdit: boolean
+    /** "Pagar"/"Receber" por linha (situação do backend + permissão). */
+    canSettle: (entry: FinancialEntry) => boolean
     onEdit: (entry: FinancialEntry) => void
+    onSettle: (entry: FinancialEntry) => void
 }
 
 /**
@@ -21,7 +28,10 @@ interface FinancialEntriesTableProps {
 export function FinancialEntriesTable({
     entries,
     canManage,
+    canEdit,
+    canSettle,
     onEdit,
+    onSettle,
 }: FinancialEntriesTableProps) {
     return (
         <table>
@@ -112,13 +122,26 @@ export function FinancialEntriesTable({
 
                             {canManage ? (
                                 <td style={{ whiteSpace: "nowrap" }}>
-                                    <button
-                                        type="button"
-                                        className="btn sec sm"
-                                        onClick={() => onEdit(entry)}
-                                    >
-                                        Editar
-                                    </button>
+                                    {canSettle(entry) ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className={isIncome ? "btn ent sm" : "btn sai sm"}
+                                                onClick={() => onSettle(entry)}
+                                            >
+                                                {settlementCopy(values.direction).action}
+                                            </button>{" "}
+                                        </>
+                                    ) : null}
+                                    {canEdit ? (
+                                        <button
+                                            type="button"
+                                            className="btn sec sm"
+                                            onClick={() => onEdit(entry)}
+                                        >
+                                            Editar
+                                        </button>
+                                    ) : null}
                                 </td>
                             ) : null}
                         </tr>

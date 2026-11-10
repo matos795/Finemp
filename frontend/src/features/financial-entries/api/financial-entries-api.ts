@@ -5,6 +5,7 @@ import {
     type FinancialEntryCommandValues,
     type FinancialEntryFilter,
     type FinancialEntryPage,
+    type FinancialEntrySettlementValues,
 } from "../types/financial-entry.types.ts"
 
 export const FINANCIAL_ENTRIES_PAGE_SIZE = 50
@@ -102,6 +103,28 @@ export function updateFinancialEntry(
             method: "PUT",
             headers: { "Idempotency-Key": idempotencyKey },
             body: JSON.stringify({ values, expectedVersion }),
+        },
+    )
+}
+
+/**
+ * `POST …/financial-entries/{entryId}/settlements` (settleFinancialEntry):
+ * registra a baixa com a versão lida. O backend aplica período, vínculo
+ * com extrato, auditoria e idempotência.
+ */
+export function settleFinancialEntry(
+    companyId: string,
+    entryId: string,
+    values: FinancialEntrySettlementValues,
+    expectedVersion: number,
+    idempotencyKey: string,
+): Promise<FinancialEntryCommandReceipt> {
+    return apiRequest<FinancialEntryCommandReceipt>(
+        `${financialEntriesPath(companyId)}/${encodeURIComponent(entryId)}/settlements`,
+        {
+            method: "POST",
+            headers: { "Idempotency-Key": idempotencyKey },
+            body: JSON.stringify({ expectedVersion, values }),
         },
     )
 }

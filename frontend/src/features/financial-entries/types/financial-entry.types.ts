@@ -84,13 +84,24 @@ export interface FinancialEntryCommandValues {
     notes: string | null
 }
 
-/** Recibo imutável de POST/PUT (`FinancialEntryCommandReceipt`). */
+/** Recibo imutável dos comandos (`FinancialEntryCommandReceipt`). */
 export interface FinancialEntryCommandReceipt {
     companyId: string
     commandId: string
     entryId: string
-    action: "CREATED" | "UPDATED"
+    action: "CREATED" | "UPDATED" | "SETTLED"
     version: number
+}
+
+/**
+ * `values` de `FinancialEntrySettlementCommand` (baixa). Só data, valor
+ * efetivamente pago (texto exato) e conta; nominal e classificadores são
+ * protegidos pelo backend.
+ */
+export interface FinancialEntrySettlementValues {
+    paymentDate: string
+    paidAmount: DecimalText
+    bankAccountId: string
 }
 
 /** Filtros da listagem; vazios não são enviados ao servidor. */
