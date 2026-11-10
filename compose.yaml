@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: finemp
       POSTGRES_USER: finemp
-      POSTGRES_PASSWORD: finemp_local
+      POSTGRES_PASSWORD: ${FINEMP_LOCAL_DB_PASSWORD:?defina FINEMP_LOCAL_DB_PASSWORD no .env (veja .env.example)}
     ports:
       - "127.0.0.1:5433:5432"
     volumes:

@@ -44,7 +44,15 @@ Não é necessário instalar Maven globalmente, pois o projeto utiliza Maven Wra
 
 ## Banco de dados local
 
-Na raiz do repositório:
+A senha do PostgreSQL local não fica no repositório. Antes do primeiro uso, na raiz do repositório:
+
+```bash
+cp .env.example .env
+```
+
+Preencha `FINEMP_LOCAL_DB_PASSWORD` no `.env` com um valor só seu (o `.env` é ignorado pelo Git). Se você já tem o volume `finemp-postgres-data` criado, use a mesma senha com que ele foi inicializado.
+
+Depois:
 
 ```bash
 docker compose up -d
@@ -78,6 +86,7 @@ No PowerShell:
 cd backend
 
 $env:SPRING_PROFILES_ACTIVE="local"
+$env:FINEMP_LOCAL_DB_PASSWORD="<mesmo valor do .env>"
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -97,6 +106,7 @@ Ao terminar:
 
 ```powershell
 Remove-Item Env:SPRING_PROFILES_ACTIVE
+Remove-Item Env:FINEMP_LOCAL_DB_PASSWORD
 ```
 
 ## Testes
