@@ -1,5 +1,6 @@
 import { test, afterEach } from "node:test"
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import { applyStandardFinancialCategoryPlan } from "../src/features/financial-entries/api/financial-catalogs-api.ts"
 import {
   describeStandardPlanFailure,
@@ -157,4 +158,15 @@ test("an onboarding notice never shows in another Company", () => {
   assert.equal(noticeForCompany(notice, COMPANY_A), notice)
   assert.equal(noticeForCompany(notice, COMPANY_B), null)
   assert.equal(noticeForCompany(notice, undefined), null)
+})
+
+
+test("Lançamentos renders financial onboarding independently from FINANCIAL_ENTRY_MANAGE", async () => {
+  const pageSource = await readFile(
+    new URL("../src/features/financial-entries/pages/financial-entries-page.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(pageSource, /\{companyId \? \([\s\S]*?<FinancialOnboardingPanel/)
+  assert.doesNotMatch(pageSource, /\{canManage && companyId \? \([\s\S]*?<FinancialOnboardingPanel/)
 })

@@ -124,7 +124,7 @@ function FinancialEntriesCompanyPage() {
                 resultCenters={centerList}
             />
 
-            {canManage && companyId ? (
+            {companyId ? (
                 <FinancialOnboardingPanel
                     companyId={companyId}
                     onboarding={onboarding}
