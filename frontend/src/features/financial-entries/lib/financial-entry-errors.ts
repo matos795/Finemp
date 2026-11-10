@@ -1,6 +1,6 @@
 import { ApiError } from "../../../lib/api/api-client.ts"
 
-export type FinancialEntryOperation = "list" | "create" | "update"
+export type FinancialEntryOperation = "list" | "create" | "update" | "settle"
 
 /**
  * Mensagem para o usuário a partir do status e do `code` do ProblemDetail.
@@ -29,6 +29,10 @@ export function describeFinancialEntryError(
 
     switch (error.status) {
         case 400:
+            if (operation === "settle") {
+                return "Confira a data, o valor e a conta: o sistema recusou algum deles."
+            }
+
             return operation === "list"
                 ? "Confira os filtros (a data final não pode ser anterior à inicial)."
                 : "Confira os campos: o sistema recusou algum valor (categoria, conta, cliente/fornecedor ou centro de resultado)."
@@ -37,9 +41,11 @@ export function describeFinancialEntryError(
         case 403:
             return operation === "list"
                 ? "Você não tem acesso aos lançamentos desta empresa."
-                : "Você não tem permissão para alterar lançamentos desta empresa."
+                : operation === "settle"
+                    ? "Você não tem permissão para registrar pagamentos e recebimentos desta empresa."
+                    : "Você não tem permissão para alterar lançamentos desta empresa."
         case 404:
-            return operation === "update"
+            return operation === "update" || operation === "settle"
                 ? "Lançamento não encontrado. Ele pode ter sido excluído; recarregue a lista."
                 : "Lançamentos não estão disponíveis neste ambiente."
         case 409:
@@ -50,6 +56,10 @@ export function describeFinancialEntryError(
             return "Há outras operações em andamento. Aguarde um instante e tente de novo."
         case 503:
             return "O serviço de lançamentos está indisponível no momento. Tente de novo em instantes."
+    }
+
+    if (operation === "settle") {
+        return "Não foi possível registrar a baixa."
     }
 
     return operation === "list"
