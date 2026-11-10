@@ -1,0 +1,56 @@
+import { test, afterEach } from "node:test"
+import assert from "node:assert/strict"
+import {
+  ACCOUNTANT_SUGGESTION,
+  CLIENT_FINANCE_SUGGESTION,
+} from "../src/features/platform-admin/lib/access-suggestions.ts"
+import { replaceCompanyAccess } from "../src/features/platform-admin/api/platform-admin-api.ts"
+
+const originalFetch = globalThis.fetch
+afterEach(() => { globalThis.fetch = originalFetch })
+
+test("client finance suggestion can set up accounts and the standard category plan", () => {
+  for (const permission of [
+    "BANK_ACCOUNT_VIEW",
+    "BANK_ACCOUNT_MANAGE",
+    "FINANCIAL_CATEGORY_VIEW",
+    "FINANCIAL_CATEGORY_MANAGE",
+    "FINANCIAL_ENTRY_VIEW",
+    "FINANCIAL_ENTRY_MANAGE",
+  ]) {
+    assert.ok(CLIENT_FINANCE_SUGGESTION.includes(permission), permission)
+  }
+})
+
+test("client finance suggestion does not add partner, center, accounting or firm management", () => {
+  for (const permission of [
+    "BUSINESS_PARTNER_MANAGE",
+    "RESULT_CENTER_MANAGE",
+    "ACCOUNT_CLASSIFICATION_MANAGE",
+    "MANUAL_ENTRY_MANAGE",
+    "QUESTOR_SYNC",
+    "FINANCIAL_PERIOD_CLOSE",
+    "FINANCIAL_PERIOD_REOPEN",
+  ]) {
+    assert.equal(CLIENT_FINANCE_SUGGESTION.includes(permission), false, permission)
+  }
+  assert.equal(new Set(CLIENT_FINANCE_SUGGESTION).size, CLIENT_FINANCE_SUGGESTION.length)
+  assert.equal(ACCOUNTANT_SUGGESTION.includes("FINANCIAL_CATEGORY_MANAGE"), false)
+})
+
+test("the CLIENT role grants nothing by itself: only the explicit list is sent", async () => {
+  const bodies = []
+  globalThis.fetch = async (path, options = {}) => {
+    if (path === "/api/auth/csrf") {
+      return Response.json({ headerName: "X-XSRF-TOKEN", token: "t" })
+    }
+    bodies.push(JSON.parse(options.body))
+    return new Response(null, { status: 204 })
+  }
+
+  await replaceCompanyAccess("f1", "c1", "co1", "u1", "CLIENT", [])
+  await replaceCompanyAccess("f1", "c1", "co1", "u1", "CLIENT", ["FINANCIAL_ENTRY_VIEW"])
+
+  assert.deepEqual(bodies[0].permissions, [])
+  assert.deepEqual(bodies[1].permissions, ["FINANCIAL_ENTRY_VIEW"])
+})
