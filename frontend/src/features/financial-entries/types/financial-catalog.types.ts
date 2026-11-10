@@ -39,3 +39,10 @@ export interface ResultCenterOption {
 export interface ResultCenterSettings {
     requireResultCenter: boolean
 }
+
+/** Resposta 201 de `POST …/financial-categories/standard-plan`. */
+export interface StandardPlanResult {
+    version: string
+    groups: number
+    subcategories: number
+}
