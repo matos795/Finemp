@@ -10,10 +10,12 @@ import { useCompanyAccess } from "../../companies/company-access-context"
 import { FinancialEntriesTable } from "../components/financial-entries-table"
 import { FinancialEntryDialog } from "../components/financial-entry-dialog"
 import { FinancialEntryFilters } from "../components/financial-entry-filters"
+import { FinancialEntrySettlementDialog } from "../components/financial-entry-settlement-dialog"
 import { FinancialOnboardingPanel } from "../components/financial-onboarding-panel"
 import { useFinancialEntries } from "../hooks/use-financial-entries"
 import { useFinancialEntryCatalogs } from "../hooks/use-financial-entry-catalogs"
 import { canManageFinancialEntries } from "../lib/financial-entry-access"
+import { canSettleFinancialEntry } from "../lib/financial-entry-settlement"
 import { describeFinancialEntryError } from "../lib/financial-entry-errors"
 import {
     financialOnboarding,
@@ -30,6 +32,7 @@ import {
 type DialogState = { companyId: string } & (
     | { mode: "create", direction: FinancialDirection }
     | { mode: "edit", entry: FinancialEntry }
+    | { mode: "settle", entry: FinancialEntry }
 )
 
 const listErrorMessages = {
@@ -40,9 +43,10 @@ const listErrorMessages = {
 
 /**
  * Fluxo de caixa › Lançamentos (renderLanc do protótipo): lista, filtros,
- * "+ Entrada", "+ Saída" e "Editar". Leitura exige FINANCIAL_ENTRY_VIEW
- * ou _MANAGE (rota); escrita, FINANCIAL_ENTRY_MANAGE. Baixa, exclusão,
- * repetição, anexos, lote e exportação ficam para entregas próprias.
+ * "+ Entrada", "+ Saída", "Editar" e "Pagar"/"Receber" (baixa). Leitura
+ * exige FINANCIAL_ENTRY_VIEW ou _MANAGE (rota); escrita,
+ * FINANCIAL_ENTRY_MANAGE. Estorno, exclusão, repetição, anexos, lote e
+ * exportação ficam para entregas próprias.
  */
 export function FinancialEntriesPage() {
     const { selectedCompany } = useCompanyAccess()
@@ -157,8 +161,11 @@ function FinancialEntriesCompanyPage() {
                         >
                             <FinancialEntriesTable
                                 entries={items}
-                                canManage={canManage && catalogsReady}
+                                canManage={canManage}
+                                canEdit={canManage && catalogsReady}
+                                canSettle={(entry) => canSettleFinancialEntry(entry, hasPermission)}
                                 onEdit={(entry) => setDialog({ companyId: companyId!, mode: "edit", entry })}
+                                onSettle={(entry) => setDialog({ companyId: companyId!, mode: "settle", entry })}
                             />
                         </div>
 
@@ -184,7 +191,17 @@ function FinancialEntriesCompanyPage() {
                 </>
             )}
 
-            {dialog && companyId && dialog.companyId === companyId && catalogsReady ? (
+            {dialog?.mode === "settle" && companyId && dialog.companyId === companyId ? (
+                <FinancialEntrySettlementDialog
+                    key={`settle-${dialog.entry.id}-${dialog.entry.version}`}
+                    companyId={companyId}
+                    entry={dialog.entry}
+                    bankAccounts={bankAccounts.isSuccess ? bankList : null}
+                    onClose={() => setDialog(null)}
+                />
+            ) : null}
+
+            {dialog && dialog.mode !== "settle" && companyId && dialog.companyId === companyId && catalogsReady ? (
                 <FinancialEntryDialog
                     key={dialog.mode === "edit" ? `edit-${dialog.entry.id}-${dialog.entry.version}` : `new-${dialog.direction}`}
                     companyId={companyId}
