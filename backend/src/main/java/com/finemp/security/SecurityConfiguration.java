@@ -140,7 +140,8 @@ public class SecurityConfiguration {
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/financial-categories",
                                                                 "/api/companies/{companyId}/financial-categories/{categoryId}",
-                                                                "/api/companies/{companyId}/financial-categories/{groupId}/subcategories")
+                                                                "/api/companies/{companyId}/financial-categories/{groupId}/subcategories",
+                                                                "/api/companies/{companyId}/financial-categories/{categoryId}/rename")
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.GET,
