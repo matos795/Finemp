@@ -9,10 +9,12 @@ import { replaceCompanyAccess } from "../src/features/platform-admin/api/platfor
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })
 
-test("client finance suggestion can set up accounts and the standard category plan", () => {
+test("client finance suggestion can set up accounts, partners and the standard category plan", () => {
   for (const permission of [
     "BANK_ACCOUNT_VIEW",
     "BANK_ACCOUNT_MANAGE",
+    "BUSINESS_PARTNER_VIEW",
+    "BUSINESS_PARTNER_MANAGE",
     "FINANCIAL_CATEGORY_VIEW",
     "FINANCIAL_CATEGORY_MANAGE",
     "FINANCIAL_ENTRY_VIEW",
@@ -22,9 +24,9 @@ test("client finance suggestion can set up accounts and the standard category pl
   }
 })
 
-test("client finance suggestion does not add partner, center, accounting or firm management", () => {
+test("client finance suggestion does not add center, accounting, period or firm management", () => {
+  assert.ok(CLIENT_FINANCE_SUGGESTION.includes("RESULT_CENTER_VIEW"))
   for (const permission of [
-    "BUSINESS_PARTNER_MANAGE",
     "RESULT_CENTER_MANAGE",
     "ACCOUNT_CLASSIFICATION_MANAGE",
     "MANUAL_ENTRY_MANAGE",
