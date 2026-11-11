@@ -10,6 +10,8 @@ import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
 import { RequirePermission } from "../../features/auth/components/require-permission"
 import { RequirePlatformPermission } from "../../features/auth/components/require-platform-permission"
 import { DrePage } from "../../features/dre/pages/dre-page"
+import { BusinessPartnersPage } from "../../features/business-partners/pages/business-partners-page"
+import { BUSINESS_PARTNER_READ_PERMISSIONS } from "../../features/business-partners/lib/business-partner-access"
 import { BankAccountsPage } from "../../features/bank-accounts/pages/bank-accounts-page"
 import { StatementsPage } from "../../features/statements/pages/statements-page"
 import { OpenTitlesPage } from "../../features/reports/pages/open-titles-page"
@@ -60,6 +62,17 @@ export function AppRouter() {
                         element={
                             <RequirePermission permission="DRE_VIEW">
                                 <DrePage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/business-partners"
+                        element={
+                            <RequirePermission
+                                permission={BUSINESS_PARTNER_READ_PERMISSIONS}
+                            >
+                                <BusinessPartnersPage />
                             </RequirePermission>
                         }
                     />
