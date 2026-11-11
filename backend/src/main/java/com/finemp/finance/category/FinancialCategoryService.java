@@ -10,10 +10,21 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 
+/**
+ * Duas camadas de escrita (#331): estrutura (plano padrão, criar, renomear,
+ * excluir) aceita FINANCIAL_CATEGORY_STRUCTURE_MANAGE ou _MANAGE; a
+ * classificação completa (PUT com atividade, DRE e custo) exige _MANAGE.
+ * Leitura aceita VIEW, STRUCTURE_MANAGE ou MANAGE. Papel não concede nada.
+ */
 @Service
 @ConditionalOnProperty(prefix="finemp.finance.catalog",name="enabled",havingValue="true")
 @Transactional(readOnly=true)
 public class FinancialCategoryService {
+    private static final Set<CompanyPermission> READ=Collections.unmodifiableSet(EnumSet.of(CompanyPermission.FINANCIAL_CATEGORY_VIEW,
+            CompanyPermission.FINANCIAL_CATEGORY_STRUCTURE_MANAGE,CompanyPermission.FINANCIAL_CATEGORY_MANAGE));
+    private static final Set<CompanyPermission> STRUCTURE=Collections.unmodifiableSet(EnumSet.of(
+            CompanyPermission.FINANCIAL_CATEGORY_STRUCTURE_MANAGE,CompanyPermission.FINANCIAL_CATEGORY_MANAGE));
+    private static final Set<CompanyPermission> CLASSIFICATION=Collections.unmodifiableSet(EnumSet.of(CompanyPermission.FINANCIAL_CATEGORY_MANAGE));
     private final FinancialCategoryRepository categories;
     private final CompanyRepository companies;
     private final CompanyPermissionAuthorizationService permissions;
@@ -29,7 +40,7 @@ public class FinancialCategoryService {
     }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public StandardPlanResult createStandardPlan(UUID actor,UUID company) {
-        var owner=writeOwner(actor,company);
+        var owner=writeOwner(actor,company,STRUCTURE);
         if(categories.countByCompanyId(company)>0)throw conflict(FinancialCategoryConflictException.Reason.PLAN_NOT_EMPTY);
         var counters=new EnumMap<FinancialDirection,Long>(FinancialDirection.class);
         int groups=0,subcategories=0;
@@ -45,7 +56,7 @@ public class FinancialCategoryService {
     public record StandardPlanResult(String version,int groups,int subcategories) { }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public FinancialCategoryResponse createGroup(UUID actor,UUID company,FinancialCategoryGroupRequest request) {
-        var owner=writeOwner(actor,company);
+        var owner=writeOwner(actor,company,STRUCTURE);
         if(request==null || request.direction()==null)throw invalid();
         var group=categories.saveAndFlush(FinancialCategory.group(owner,request.direction(),next(categories.maxGroupSequence(company,request.direction())),request.name()));
         categories.saveAndFlush(FinancialCategory.subcategory(group,1,"Nova subcategoria"));
@@ -53,7 +64,7 @@ public class FinancialCategoryService {
     }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public FinancialCategoryResponse createSubcategory(UUID actor,UUID company,UUID groupId,FinancialSubcategoryRequest request) {
-        writeOwner(actor,company);
+        writeOwner(actor,company,STRUCTURE);
         if(request==null)throw invalid();
         var parent=group(company,groupId);
         var child=categories.saveAndFlush(FinancialCategory.subcategory(parent,next(categories.maxSubcategorySequence(company,groupId)),request.name()));
@@ -61,7 +72,7 @@ public class FinancialCategoryService {
     }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public FinancialCategoryResponse update(UUID actor,UUID company,UUID id,FinancialCategoryUpdateRequest request) {
-        writeOwner(actor,company);
+        writeOwner(actor,company,CLASSIFICATION);
         if(request==null)throw invalid();
         var row=owned(company,id);version(row,request.expectedVersion());
         FinancialCategory parent=null;
@@ -72,9 +83,23 @@ public class FinancialCategoryService {
         }
         categories.flush();return FinancialCategoryResponse.from(row,parent);
     }
+    /**
+     * Renomeia sem passar pelo PUT completo: não exige nem lê classificação
+     * e, na subcategoria, não fotografa o DRE do grupo (o PUT com dreLine
+     * null fotografa, pela regra homologada). Versão exata, como no PUT.
+     */
+    @Transactional(isolation=Isolation.READ_COMMITTED)
+    public FinancialCategoryResponse rename(UUID actor,UUID company,UUID id,FinancialCategoryRenameRequest request) {
+        writeOwner(actor,company,STRUCTURE);
+        if(request==null)throw invalid();
+        var row=owned(company,id);version(row,request.expectedVersion());
+        var parent=row.getKind()==FinancialCategory.Kind.GROUP?null:group(company,row.getParentId());
+        row.renameOnly(request.name());
+        categories.flush();return FinancialCategoryResponse.from(row,parent);
+    }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public void delete(UUID actor,UUID company,UUID id,long expectedVersion) {
-        writeOwner(actor,company);var row=owned(company,id);version(row,expectedVersion);
+        writeOwner(actor,company,STRUCTURE);var row=owned(company,id);version(row,expectedVersion);
         if(usage.orderedStream().anyMatch(guard->guard.hasEntriesInCategoryOrChildren(company,id)))throw conflict(FinancialCategoryConflictException.Reason.CATEGORY_IN_USE);
         if(row.getKind()==FinancialCategory.Kind.GROUP)categories.deleteChildren(company,id);
         categories.delete(row);categories.flush();
@@ -91,10 +116,10 @@ public class FinancialCategoryService {
                 PageRequest.of(page,size,Sort.by("sortKey").ascending().and(Sort.by("id"))));
         return PagedResponse.from(result,FinancialCategorySnapshot::response);
     }
-    private Company writeOwner(UUID actor,UUID company) {
-        requireManage(actor,company);transactions.requireReadCommitted();
+    private Company writeOwner(UUID actor,UUID company,Set<CompanyPermission> accepted) {
+        requireAny(actor,company,accepted);transactions.requireReadCommitted();
         var owner=companies.findLockedById(company).orElseThrow(OrganizationAccessDeniedException::new);
-        requireManage(actor,company);return owner;
+        requireAny(actor,company,accepted);return owner;
     }
     private FinancialCategory owned(UUID company,UUID id) {
         return categories.findByIdAndCompanyId(id,company).orElseThrow(()->new SaasResourceNotFoundException("Categoria financeira"));
@@ -104,12 +129,10 @@ public class FinancialCategoryService {
         if(row.getKind()!=FinancialCategory.Kind.GROUP)throw conflict(FinancialCategoryConflictException.Reason.NOT_A_GROUP);
         return row;
     }
-    private void requireRead(UUID actor,UUID company) {
-        if(!permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_CATEGORY_VIEW)
-                && !permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_CATEGORY_MANAGE))throw new OrganizationAccessDeniedException();
-    }
-    private void requireManage(UUID actor,UUID company) {
-        if(!permissions.hasFreshPermission(actor,company,CompanyPermission.FINANCIAL_CATEGORY_MANAGE))throw new OrganizationAccessDeniedException();
+    private void requireRead(UUID actor,UUID company) {requireAny(actor,company,READ);}
+    private void requireAny(UUID actor,UUID company,Set<CompanyPermission> accepted) {
+        for(var permission:accepted)if(permissions.hasFreshPermission(actor,company,permission))return;
+        throw new OrganizationAccessDeniedException();
     }
     private void version(FinancialCategory row,Long expected) {
         if(expected==null || expected<0)throw invalid();

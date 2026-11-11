@@ -21,7 +21,10 @@ public enum CompanyPermission {
     RESULT_CENTER_VIEW,
     RESULT_CENTER_MANAGE,
     FINANCIAL_CATEGORY_VIEW,
+    /** Classificação completa: estrutura e também atividade de caixa, linha da DRE e custo. */
     FINANCIAL_CATEGORY_MANAGE,
+    /** Só a estrutura: plano padrão, criar, renomear e excluir sem uso; nunca a classificação (#331). */
+    FINANCIAL_CATEGORY_STRUCTURE_MANAGE,
     FINANCIAL_ENTRY_VIEW,
     FINANCIAL_ENTRY_MANAGE,
     FINANCIAL_PERIOD_VIEW,

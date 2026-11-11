@@ -41,17 +41,21 @@ class FinancialCategoryIntegrationTest {
     @Autowired PlatformTransactionManager transactions;
     @MockitoBean FinancialCategoryUsageGuard usage;
     private Company owner,other;
-    private UserAccount actor,viewer,admin,restricted;
+    private UserAccount actor,viewer,admin,restricted,structural,clientRole,accountantRole;
     private UUID groupId,subId,foreignId;
     private final List<UUID> ownUsers=new ArrayList<>(),clientIds=new ArrayList<>(),firmIds=new ArrayList<>();
     @BeforeEach void prepare() {
         probe.reset();
         owner=company("Owner","67676767000167");other=company("Other","68686868000168");
         actor=createUser("Manager");viewer=createUser("Viewer");admin=createUser("Admin");restricted=createUser("Restricted");
+        structural=createUser("Structural");clientRole=createUser("Client Role");accountantRole=createUser("Accountant Role");
         grant(actor,CompanyAccessRole.CUSTOM,CostCenterScope.ALL,Set.of(CompanyPermission.FINANCIAL_CATEGORY_MANAGE));
         grant(viewer,CompanyAccessRole.VIEWER,CostCenterScope.ALL,Set.of(CompanyPermission.FINANCIAL_CATEGORY_VIEW));
         grant(admin,CompanyAccessRole.ADMIN,CostCenterScope.ALL,Set.of());
         grant(restricted,CompanyAccessRole.CUSTOM,CostCenterScope.RESTRICTED,Set.of(CompanyPermission.FINANCIAL_CATEGORY_VIEW,CompanyPermission.FINANCIAL_CATEGORY_MANAGE));
+        grant(structural,CompanyAccessRole.CLIENT,CostCenterScope.ALL,Set.of(CompanyPermission.FINANCIAL_CATEGORY_STRUCTURE_MANAGE));
+        grant(clientRole,CompanyAccessRole.CLIENT,CostCenterScope.ALL,Set.of());
+        grant(accountantRole,CompanyAccessRole.ACCOUNTANT,CostCenterScope.ALL,Set.of());
         var group=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"São Receitas"));groupId=group.getId();
         subId=categories.saveAndFlush(FinancialCategory.subcategory(group,1,"Synthetic Income")).getId();
         foreignId=categories.saveAndFlush(FinancialCategory.group(other,FinancialDirection.EXPENSE,1,"Foreign Expense")).getId();
@@ -188,6 +192,90 @@ class FinancialCategoryIntegrationTest {
             var read=page.items().stream().filter(row->row.id().equals(child.id())).findFirst().orElseThrow();
             assertThat(read.effective()).isEqualTo(new FinancialCategory.EffectiveClassification(CashActivity.FINANCING,OperationalDreLine.NAO,CostBehavior.FIXED));
         }finally {proceed.countDown();pool.shutdownNow();}
+    }
+    @Test void structuralUserMayMaintainTheTreeButNeverTheClassification()throws Exception {
+        mvc.perform(get(route()).with(user(principal(structural)))).andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(2));
+        mvc.perform(get(route()+"/"+subId).with(user(principal(structural)))).andExpect(status().isOk());
+        mvc.perform(post(route()+"/groups").with(user(principal(structural))).with(csrf()).contentType("application/json").content("{\"direction\":\"EXPENSE\",\"name\":\"Structural Expense\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.code").value("2.1"));
+        var created=mvc.perform(post(route()+"/"+groupId+"/subcategories").with(user(principal(structural))).with(csrf()).contentType("application/json").content("{\"name\":\"Structural Sub\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.code").value("1.1.2")).andReturn().getResponse().getContentAsString();
+        var createdId=UUID.fromString(com.jayway.jsonpath.JsonPath.read(created,"$.id"));
+        // Campos de classificação enviados junto ao rename são ignorados: o comando só lê nome e versão.
+        mvc.perform(post(route()+"/"+groupId+"/rename").with(user(principal(structural))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\"Renamed Income\",\"cashActivity\":\"FINANCING\",\"dreLine\":\"NAO\",\"costBehavior\":\"FIXED\",\"expectedVersion\":0}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Renamed Income")).andExpect(jsonPath("$.version").value(1))
+                .andExpect(jsonPath("$.cashActivity").value("OPERATING")).andExpect(jsonPath("$.dreLine").value("REC")).andExpect(jsonPath("$.costBehavior").isEmpty())
+                .andExpect(jsonPath("$.effective.cashActivity").value("OPERATING")).andExpect(jsonPath("$.effective.dreLine").value("REC"))
+                .andExpect(jsonPath("$.effective.costBehavior").value("VARIABLE"));
+        mvc.perform(put(route()+"/"+groupId).with(user(principal(structural))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\"Denied\",\"cashActivity\":\"FINANCING\",\"dreLine\":\"NAO\",\"costBehavior\":\"FIXED\",\"expectedVersion\":1}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FINANCIAL_CATEGORY_ACCESS_DENIED"));
+        mvc.perform(get(route()+"/"+groupId).with(user(principal(actor)))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Renamed Income")).andExpect(jsonPath("$.version").value(1))
+                .andExpect(jsonPath("$.cashActivity").value("OPERATING")).andExpect(jsonPath("$.dreLine").value("REC")).andExpect(jsonPath("$.costBehavior").isEmpty());
+        mvc.perform(delete(route()+"/"+createdId).with(user(principal(structural))).with(csrf()).param("version","0")).andExpect(status().isNoContent());
+        assertThat(categories.findById(createdId)).isEmpty();
+    }
+    @Test void structuralUserMayApplyTheStandardPlanToAnEmptyCompany()throws Exception {
+        jdbc.update("DELETE FROM financial_categories WHERE company_id=?",owner.getId());
+        mvc.perform(post(route()+"/standard-plan").with(user(principal(structural))).with(csrf())).andExpect(status().isCreated());
+        assertThat(categories.countByCompanyId(owner.getId())).isPositive();
+        mvc.perform(post(route()+"/standard-plan").with(user(principal(structural))).with(csrf()))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PLAN_NOT_EMPTY"));
+    }
+    @Test void renamingASubcategoryMustNotSnapshotTheGroupDreUnlikeTheFullUpdate()throws Exception {
+        mvc.perform(post(route()+"/"+subId+"/rename").with(user(principal(actor))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\"Renamed Sub\",\"expectedVersion\":0}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Renamed Sub")).andExpect(jsonPath("$.version").value(1))
+                .andExpect(jsonPath("$.cashActivity").isEmpty()).andExpect(jsonPath("$.dreLine").isEmpty()).andExpect(jsonPath("$.costBehavior").isEmpty())
+                .andExpect(jsonPath("$.effective.dreLine").value("REC"));
+        mvc.perform(put(route()+"/"+groupId).with(user(principal(actor))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\"Updated Group\",\"cashActivity\":\"FINANCING\",\"dreLine\":\"NAO\",\"costBehavior\":\"FIXED\",\"expectedVersion\":0}"))
+                .andExpect(status().isOk());
+        // Sem fotografia: a sub continua herdando o DRE atual do grupo.
+        mvc.perform(get(route()+"/"+subId).with(user(principal(actor)))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.dreLine").isEmpty()).andExpect(jsonPath("$.effective.dreLine").value("NAO"))
+                .andExpect(jsonPath("$.effective.cashActivity").value("FINANCING")).andExpect(jsonPath("$.effective.costBehavior").value("FIXED"));
+        assertThat(jdbc.queryForObject("SELECT dre_line FROM financial_categories WHERE id=?",String.class,subId)).isNull();
+    }
+    @Test void renameMustRespectVersionCsrfCompanyAndExplicitPermissions()throws Exception {
+        var body="{\"name\":\"Renamed\",\"expectedVersion\":0}";
+        mvc.perform(post(route()+"/"+groupId+"/rename").with(user(principal(structural))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\"Stale\",\"expectedVersion\":3}")).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_VERSION"));
+        mvc.perform(post(route()+"/"+groupId+"/rename").with(user(principal(structural))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\" \",\"expectedVersion\":0}")).andExpect(status().isBadRequest());
+        mvc.perform(post(route()+"/"+groupId+"/rename").with(user(principal(structural))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\"No Version\"}")).andExpect(status().isBadRequest());
+        mvc.perform(post(route()+"/"+groupId+"/rename").with(user(principal(structural))).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post(route()+"/"+foreignId+"/rename").with(user(principal(structural))).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/companies/"+other.getId()+"/financial-categories/"+foreignId+"/rename").with(user(principal(structural))).with(csrf())
+                .contentType("application/json").content(body)).andExpect(status().isForbidden());
+        for(var denied:List.of(viewer,admin,restricted,clientRole,accountantRole))
+            mvc.perform(post(route()+"/"+groupId+"/rename").with(user(principal(denied))).with(csrf()).contentType("application/json").content(body))
+                    .andExpect(status().isForbidden());
+        assertThat(jdbc.queryForObject("SELECT name FROM financial_categories WHERE id=?",String.class,groupId)).isEqualTo("São Receitas");
+        assertThat(jdbc.queryForObject("SELECT name FROM financial_categories WHERE id=?",String.class,foreignId)).isEqualTo("Foreign Expense");
+        jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=? AND user_account_id=?)",owner.getId(),structural.getId());
+        mvc.perform(post(route()+"/"+groupId+"/rename").with(user(principal(structural))).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        assertThat(jdbc.queryForObject("SELECT name FROM financial_categories WHERE id=?",String.class,groupId)).isEqualTo("São Receitas");
+    }
+    @Test void rolesWithoutExplicitGrantsMustNotReadOrWriteCategories()throws Exception {
+        for(var denied:List.of(admin,clientRole,accountantRole)) {
+            mvc.perform(get(route()).with(user(principal(denied)))).andExpect(status().isForbidden());
+            mvc.perform(post(route()+"/groups").with(user(principal(denied))).with(csrf()).contentType("application/json")
+                    .content("{\"direction\":\"INCOME\",\"name\":\"Denied\"}")).andExpect(status().isForbidden());
+            mvc.perform(post(route()+"/standard-plan").with(user(principal(denied))).with(csrf())).andExpect(status().isForbidden());
+            mvc.perform(delete(route()+"/"+subId).with(user(principal(denied))).with(csrf()).param("version","0")).andExpect(status().isForbidden());
+        }
+        mvc.perform(post(route()+"/"+groupId+"/subcategories").with(user(principal(viewer))).with(csrf()).contentType("application/json").content("{\"name\":\"Denied\"}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete(route()+"/"+subId).with(user(principal(viewer))).with(csrf()).param("version","0")).andExpect(status().isForbidden());
+        mvc.perform(put(route()+"/"+subId).with(user(principal(viewer))).with(csrf()).contentType("application/json")
+                .content("{\"name\":\"Denied\",\"expectedVersion\":0}")).andExpect(status().isForbidden());
+        assertThat(categories.findById(subId)).isPresent();
     }
     private Company company(String suffix,String cnpj) {
         var firm=firms.saveAndFlush(new AccountingFirm("Synthetic Category Firm "+suffix,true));firmIds.add(firm.getId());

@@ -47,6 +47,8 @@ public class FinancialCategory {
         // The homologated edit handler stores the group's current DRE when "Do grupo" is selected.
         dreLine=dre==null?parent.dreLine:dre;costBehavior=cost;
     }
+    /** Só nome (e busca); a classificação, inclusive o DRE da subcategoria, fica como está. */
+    public void renameOnly(String name) {rename(name);}
     public EffectiveClassification effective(FinancialCategory parent) {
         if(kind==Kind.GROUP && parent!=null)throw invalid();
         if(kind==Kind.SUBCATEGORY)requireParent(parent);
