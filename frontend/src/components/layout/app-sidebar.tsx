@@ -1,3 +1,4 @@
+import { hasPlatformAccess } from "../../features/auth/types/auth.types"
 import { useState } from "react"
 import {
     NavLink,
@@ -33,7 +34,7 @@ export function AppSidebar({
     function hasPlatformPermission(
         permission: PlatformPermission,
     ) {
-        return (user.platformPermissions ?? []).includes(permission)
+        return hasPlatformAccess(user, permission)
     }
     const location = useLocation()
 

@@ -2,6 +2,7 @@ import { apiRequest } from "../../../lib/api/api-client.ts"
 import type {
     CompanyAccessRole,
     CompanyPermission,
+    PlatformPermission,
 } from "../../auth/types/auth.types"
 
 export interface PagedResponse<T> {
@@ -215,4 +216,15 @@ export async function replaceCompanyAccess(
             }),
         },
     )
+}
+
+export function getUserPlatformPermissions(id: string) {
+    return apiRequest<{ user: PlatformUser; platformPermissions: PlatformPermission[] }>("/api/admin/users/" + id)
+}
+
+export function replaceUserPlatformPermissions(id: string, permissions: PlatformPermission[]) {
+    return apiRequest<void>("/api/admin/users/" + id + "/platform-permissions", {
+        method: "PUT",
+        body: JSON.stringify({ permissions }),
+    })
 }

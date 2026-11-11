@@ -1,3 +1,4 @@
+import { hasPlatformAccess } from "../types/auth.types"
 import type { ReactNode } from "react"
 import { Navigate } from "react-router"
 import type { PlatformPermission } from "../types/auth.types"
@@ -24,7 +25,7 @@ export function RequirePlatformPermission({
             : [permission]
 
     const allowed = permissions.some((candidate) =>
-        (user.platformPermissions ?? []).includes(candidate),
+        hasPlatformAccess(user, candidate),
     )
 
     if (!allowed) {

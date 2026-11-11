@@ -3244,7 +3244,7 @@ paths:
     get:
       tags: [Identity administration]
       operationId: listPlatformUsers
-      summary: Busca identidades globais com PLATFORM_USER_MANAGE explícita.
+      summary: Busca identidades globais com administração de usuários efetiva.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -4587,7 +4587,7 @@ components:
           minimum: 0
     PlatformPermission:
       type: string
-      enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]
+      enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE, SYSTEM_ADMIN]
     SyncRunStatus:
       type: string
       enum: [REQUESTED, RUNNING, SUCCEEDED, FAILED, CANCELLED]
@@ -4905,7 +4905,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE]
+            enum: [ACCOUNTING_FIRM_CREATE, ACCOUNTING_FIRM_VIEW, UNASSIGNED_COMPANY_ASSIGN, PLATFORM_USER_MANAGE, SYSTEM_ADMIN]
         accountingFirms:
           type: array
           items:

@@ -1,3 +1,5 @@
+import { PlatformPermissionsEditor } from "../components/platform-permissions-editor"
+import { hasPlatformAccess } from "../../auth/types/auth.types"
 import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { ApiError } from "../../../lib/api/api-client"
@@ -121,13 +123,12 @@ export function PlatformAdminPage() {
     const firmSelectionRequest = useRef(0)
     const clientSelectionRequest = useRef(0)
 
-    const platformPermissions = user.platformPermissions ?? []
     const canViewFirms =
-        platformPermissions.includes("ACCOUNTING_FIRM_VIEW")
+        hasPlatformAccess(user, "ACCOUNTING_FIRM_VIEW")
     const canCreateFirm =
-        platformPermissions.includes("ACCOUNTING_FIRM_CREATE")
+        hasPlatformAccess(user, "ACCOUNTING_FIRM_CREATE")
     const canManagePlatformUsers =
-        platformPermissions.includes("PLATFORM_USER_MANAGE")
+        hasPlatformAccess(user, "PLATFORM_USER_MANAGE")
 
     useEffect(() => {
         let active = true
@@ -673,6 +674,7 @@ export function PlatformAdminPage() {
                         <div className="card" key={platformUser.id}>
                             <b>{platformUser.name}</b>
                             <div>{platformUser.email}</div>
+                            {canManagePlatformUsers && <PlatformPermissionsEditor id={platformUser.id} globalActor={hasPlatformAccess(user, "SYSTEM_ADMIN")} />}
                             <small>
                                 {platformUser.invitationPending
                                     ? "Convite pendente"
