@@ -103,6 +103,17 @@ class PlatformAdministratorConcurrencyIntegrationTest {
                 Long.class, first, second)).isEqualTo(2);
     }
 
+    @Test
+    void globalDelegationKeepsUserAdministrationAvailableWithoutRedundantPermissions() {
+        first = admin(PlatformPermission.SYSTEM_ADMIN);
+        second = admin(PlatformPermission.PLATFORM_USER_MANAGE);
+        service.replacePermissions(first, first, Set.of(PlatformPermission.SYSTEM_ADMIN, PlatformPermission.PLATFORM_USER_MANAGE));
+        service.replacePermissions(first, second, Set.of(PlatformPermission.SYSTEM_ADMIN));
+        service.replacePermissions(first, first, Set.of(PlatformPermission.SYSTEM_ADMIN));
+        service.setActive(second, first, false);
+        assertThat(users.countActiveByPlatformPermission(PlatformPermission.SYSTEM_ADMIN)).isEqualTo(1);
+    }
+
     private UUID admin(PlatformPermission permission) {
         return users.saveAndFlush(new UserAccount("Synthetic Concurrent Admin", "platform-concurrent-" + UUID.randomUUID()
                 + "@example.invalid", "synthetic-hash", Set.of(permission))).getId();

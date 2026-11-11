@@ -112,11 +112,12 @@ public class PlatformUserAdministrationService {
                 && users.countActiveByPlatformPermission(PlatformPermission.SYSTEM_ADMIN) <= 1) {
             throw new PlatformUserConflictException("Não é permitido remover o último administrador do sistema ativo.");
         }
+        var administratorPermissions = Set.of(PlatformPermission.PLATFORM_USER_MANAGE, PlatformPermission.SYSTEM_ADMIN);
         boolean currentlyAdministrator = target.isActive()
-                && target.getPlatformPermissions().contains(PlatformPermission.PLATFORM_USER_MANAGE);
-        boolean remainsAdministrator = requestedActive && requested.contains(PlatformPermission.PLATFORM_USER_MANAGE);
+                && target.getPlatformPermissions().stream().anyMatch(administratorPermissions::contains);
+        boolean remainsAdministrator = requestedActive && requested.stream().anyMatch(administratorPermissions::contains);
         if (currentlyAdministrator && !remainsAdministrator
-                && users.countActiveByPlatformPermission(PlatformPermission.PLATFORM_USER_MANAGE) <= 1) {
+                && users.countActiveWithAnyPermission(administratorPermissions) <= 1) {
             throw new PlatformUserConflictException("Não é permitido remover o último administrador ativo da plataforma.");
         }
     }
