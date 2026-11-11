@@ -53,6 +53,7 @@ public class PlatformUserAdministrationService {
     public UserAdministrationSummary setActive(UUID actorId, UUID targetId, boolean active) {
         lockAndRevalidate(actorId);
         var target = lockedUser(targetId);
+        requireGlobalDelegation(actorId, target.getPlatformPermissions());
         if (active) {
             if (target.isActive()) return UserAdministrationSummary.from(target);
             try {
@@ -75,6 +76,8 @@ public class PlatformUserAdministrationService {
         lockAndRevalidate(actorId);
         var target = lockedUser(targetId);
         Set<PlatformPermission> permissions = Set.copyOf(requested);
+        requireGlobalDelegation(actorId, target.getPlatformPermissions());
+        requireGlobalDelegation(actorId, permissions);
         protectLastAdministrator(target, target.isActive(), permissions);
         if (target.getPlatformPermissions().equals(permissions)) return;
         target.replacePlatformPermissions(permissions);
@@ -97,7 +100,18 @@ public class PlatformUserAdministrationService {
         }
     }
 
+    private void requireGlobalDelegation(UUID actorId, Set<PlatformPermission> permissions) {
+        if (permissions.contains(PlatformPermission.SYSTEM_ADMIN) && !authorization.isSystemAdmin(actorId)) {
+            throw new OrganizationAccessDeniedException();
+        }
+    }
+
     private void protectLastAdministrator(UserAccount target, boolean requestedActive, Set<PlatformPermission> requested) {
+        if (target.isActive() && target.getPlatformPermissions().contains(PlatformPermission.SYSTEM_ADMIN)
+                && (!requestedActive || !requested.contains(PlatformPermission.SYSTEM_ADMIN))
+                && users.countActiveByPlatformPermission(PlatformPermission.SYSTEM_ADMIN) <= 1) {
+            throw new PlatformUserConflictException("Não é permitido remover o último administrador do sistema ativo.");
+        }
         boolean currentlyAdministrator = target.isActive()
                 && target.getPlatformPermissions().contains(PlatformPermission.PLATFORM_USER_MANAGE);
         boolean remainsAdministrator = requestedActive && requested.contains(PlatformPermission.PLATFORM_USER_MANAGE);

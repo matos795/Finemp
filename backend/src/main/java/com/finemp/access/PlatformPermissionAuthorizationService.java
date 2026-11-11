@@ -17,9 +17,12 @@ public class PlatformPermissionAuthorizationService {
     public boolean hasPermission(
             UUID userAccountId,
             PlatformPermission permission) {
-        return userAccountRepository.existsByIdAndPlatformPermission(
-                userAccountId,
-                permission);
+        return userAccountRepository.existsByIdAndPlatformPermission(userAccountId, permission)
+                || (permission != PlatformPermission.SYSTEM_ADMIN && isSystemAdmin(userAccountId));
+    }
+
+    public boolean isSystemAdmin(UUID userAccountId) {
+        return userAccountRepository.existsByIdAndPlatformPermission(userAccountId, PlatformPermission.SYSTEM_ADMIN);
     }
 }
 

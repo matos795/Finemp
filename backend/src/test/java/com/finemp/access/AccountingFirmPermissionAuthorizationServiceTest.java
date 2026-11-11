@@ -27,8 +27,7 @@ class AccountingFirmPermissionAuthorizationServiceTest {
                 AccountingFirmPermission.HIERARCHY_MANAGE))
                 .thenReturn(true);
 
-        AccountingFirmPermissionAuthorizationService service = new AccountingFirmPermissionAuthorizationService(
-                accountingFirmAccessGrantRepository);
+        AccountingFirmPermissionAuthorizationService service = new AccountingFirmPermissionAuthorizationService(accountingFirmAccessGrantRepository, org.mockito.Mockito.mock(PlatformPermissionAuthorizationService.class));
 
         assertThat(service.hasPermission(
                 userAccountId,

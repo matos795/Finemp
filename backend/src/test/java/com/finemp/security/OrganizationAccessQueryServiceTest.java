@@ -33,7 +33,7 @@ class OrganizationAccessQueryServiceTest {
                 new AccountingFirmAccessGrant(actor, new AccountingFirm("Alpha Synthetic", false),
                         Set.of(AccountingFirmPermission.HIERARCHY_MANAGE))));
 
-        var response = new OrganizationAccessQueryService(users, grants).findForUser(id);
+        var response = new OrganizationAccessQueryService(users, grants, mock(com.finemp.accountingfirm.AccountingFirmRepository.class)).findForUser(id);
 
         assertThat(response.platformPermissions()).containsExactly(PlatformPermission.ACCOUNTING_FIRM_CREATE);
         assertThat(response.accountingFirms()).extracting(OrganizationAccessResponse.AccountingFirmAccess::name)

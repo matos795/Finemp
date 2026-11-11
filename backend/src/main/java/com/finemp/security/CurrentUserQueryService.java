@@ -1,6 +1,9 @@
 package com.finemp.security;
 
-import com.finemp.access.CompanyAccessGrantRepository;
+import com.finemp.access.*;
+import com.finemp.company.CompanyRepository;
+import org.springframework.data.domain.Sort;
+import java.util.EnumSet;
 import com.finemp.access.UserAccount;
 import com.finemp.access.UserAccountRepository;
 import org.springframework.stereotype.Service;
@@ -12,12 +15,14 @@ import java.util.UUID;
 @Service
 public class CurrentUserQueryService {
 
+    private final CompanyRepository companies;
     private final UserAccountRepository userAccountRepository;
     private final CompanyAccessGrantRepository companyAccessGrantRepository;
 
     public CurrentUserQueryService(
             UserAccountRepository userAccountRepository,
-            CompanyAccessGrantRepository companyAccessGrantRepository) {
+            CompanyAccessGrantRepository companyAccessGrantRepository, CompanyRepository companies) {
+        this.companies = companies;
 
         this.userAccountRepository = userAccountRepository;
         this.companyAccessGrantRepository = companyAccessGrantRepository;
@@ -35,7 +40,13 @@ public class CurrentUserQueryService {
                 .sorted()
                 .toList();
 
-        var companies = companyAccessGrantRepository
+        boolean global = userAccount.isActive() && platformPermissions.contains(PlatformPermission.SYSTEM_ADMIN);
+        var accesses = global
+                ? companies.findAll(Sort.by("legalName", "id")).stream()
+                        .map(company -> new CurrentUserCompanyAccessResponse(company.getId(), company.getLegalName(),
+                                CompanyAccessRole.ADMIN, EnumSet.allOf(CompanyPermission.class), CostCenterScope.ALL))
+                        .toList()
+                : companyAccessGrantRepository
                 .findAllByUserAccountId(userAccountId)
                 .stream()
                 .map(CurrentUserCompanyAccessResponse::from)
@@ -49,6 +60,6 @@ public class CurrentUserQueryService {
                 userAccount.getName(),
                 userAccount.getEmail(),
                 platformPermissions,
-                companies);
+                accesses);
     }
 }

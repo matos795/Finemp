@@ -7,11 +7,13 @@ import java.util.UUID;
 @Service
 public class CompanyPermissionAuthorizationService {
 
+    private final PlatformPermissionAuthorizationService platform;
     private final CompanyAccessGrantRepository companyAccessGrantRepository;
 
     public CompanyPermissionAuthorizationService(
-            CompanyAccessGrantRepository companyAccessGrantRepository) {
+            CompanyAccessGrantRepository companyAccessGrantRepository, PlatformPermissionAuthorizationService platform) {
 
+        this.platform = platform;
         this.companyAccessGrantRepository = companyAccessGrantRepository;
     }
 
@@ -20,7 +22,7 @@ public class CompanyPermissionAuthorizationService {
             UUID companyId,
             CompanyPermission permission) {
 
-        return companyAccessGrantRepository
+        return platform.isSystemAdmin(userAccountId) || companyAccessGrantRepository
                 .findByUserAccountIdAndCompanyId(
                         userAccountId,
                         companyId)
@@ -30,6 +32,6 @@ public class CompanyPermissionAuthorizationService {
 
     // Scalar query intentionally bypasses already-initialized grants in the JPA persistence context.
     public boolean hasFreshPermission(UUID userAccountId, UUID companyId, CompanyPermission permission) {
-        return companyAccessGrantRepository.existsCurrentPermission(userAccountId, companyId, CostCenterScope.ALL, permission);
+        return platform.isSystemAdmin(userAccountId) || companyAccessGrantRepository.existsCurrentPermission(userAccountId, companyId, CostCenterScope.ALL, permission);
     }
 }

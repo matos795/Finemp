@@ -29,8 +29,7 @@ class CompanyAccessAuthorizationServiceTest {
                         CostCenterScope.ALL))
                 .thenReturn(true);
 
-        CompanyAccessAuthorizationService service = new CompanyAccessAuthorizationService(
-                companyAccessGrantRepository);
+        CompanyAccessAuthorizationService service = new CompanyAccessAuthorizationService(companyAccessGrantRepository, org.mockito.Mockito.mock(PlatformPermissionAuthorizationService.class));
 
         service.requireAccess(
                 userAccountId,
@@ -50,8 +49,7 @@ class CompanyAccessAuthorizationServiceTest {
                         CostCenterScope.ALL))
                 .thenReturn(false);
 
-        CompanyAccessAuthorizationService service = new CompanyAccessAuthorizationService(
-                companyAccessGrantRepository);
+        CompanyAccessAuthorizationService service = new CompanyAccessAuthorizationService(companyAccessGrantRepository, org.mockito.Mockito.mock(PlatformPermissionAuthorizationService.class));
 
         assertThatThrownBy(() -> service.requireAccess(
                 userAccountId,
