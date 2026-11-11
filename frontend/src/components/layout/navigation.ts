@@ -246,7 +246,12 @@ export const navigationModules: NavigationModule[] = [
         items: [
             { id: "empresas", label: "Empresas" },
             { id: "cadEmp", label: "Dados da empresa" },
-            { id: "parc", label: "Clientes e fornecedores" },
+            {
+                id: "parc",
+                label: "Clientes e fornecedores",
+                path: "/business-partners",
+                permissions: ["BUSINESS_PARTNER_VIEW", "BUSINESS_PARTNER_MANAGE"],
+            },
             {
                 id: "cadContas",
                 label: "Contas bancárias",
