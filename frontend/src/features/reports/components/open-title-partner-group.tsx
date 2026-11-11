@@ -1,6 +1,7 @@
 import { formatExactDecimalCell } from "../../../lib/formatters/decimal"
 import { useOpenTitlesOfPartner } from "../hooks/use-open-titles"
 import type {
+    OpenTitle,
     OpenTitlePartnerTotal,
     OpenTitlesFilter,
 } from "../types/aging.types"
@@ -11,6 +12,7 @@ interface OpenTitlePartnerGroupProps {
     filter: OpenTitlesFilter
     group: OpenTitlePartnerTotal
     isIncome: boolean
+    onSettle?: (title: OpenTitle) => void
 }
 
 function loadedTitles(
@@ -39,6 +41,7 @@ export function OpenTitlePartnerGroup({
     filter,
     group,
     isIncome,
+    onSettle,
 }: OpenTitlePartnerGroupProps) {
     const titles =
         useOpenTitlesOfPartner(companyId, filter, group.partnerId)
@@ -67,6 +70,7 @@ export function OpenTitlePartnerGroup({
                         title={title}
                         partnerName={name}
                         isIncome={isIncome}
+                        onSettle={onSettle}
                     />
                 ))
             )}

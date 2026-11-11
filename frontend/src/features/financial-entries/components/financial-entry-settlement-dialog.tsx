@@ -21,12 +21,13 @@ import {
     validateSettlementForm,
     type SettlementForm,
     type SettlementFormErrors,
+    type SettlementTarget,
 } from "../lib/financial-entry-settlement"
-import type { FinancialEntry } from "../types/financial-entry.types"
 
 interface FinancialEntrySettlementDialogProps {
     companyId: string
-    entry: FinancialEntry
+    /** Título a baixar (de Lançamentos ou do relatório de títulos em aberto). */
+    target: SettlementTarget
     /** Catálogo de contas; null quando o usuário não tem acesso a ele. */
     bankAccounts: BankAccount[] | null
     onClose: () => void
@@ -39,7 +40,7 @@ interface FinancialEntrySettlementDialogProps {
  */
 export function FinancialEntrySettlementDialog({
     companyId,
-    entry,
+    target,
     bankAccounts,
     onClose,
 }: FinancialEntrySettlementDialogProps) {
@@ -48,15 +49,15 @@ export function FinancialEntrySettlementDialog({
     const settle = useSettleFinancialEntry(companyId)
 
     const today = todayIso()
-    const copy = settlementCopy(entry.values.direction)
+    const copy = settlementCopy(target.direction)
 
-    const [form, setForm] = useState<SettlementForm>(() => newSettlementForm(entry, today))
+    const [form, setForm] = useState<SettlementForm>(() => newSettlementForm(target, today))
     const [errors, setErrors] = useState<SettlementFormErrors>({})
     const [saveError, setSaveError] = useState("")
 
     const busy = settle.isPending
-    const accounts = settlementAccountOptions(entry, bankAccounts)
-    const differs = settlementDiffersFromNominal(form, entry)
+    const accounts = settlementAccountOptions(target, bankAccounts)
+    const differs = settlementDiffersFromNominal(form, target)
 
     function update(changes: Partial<SettlementForm>) {
         setForm((current) => ({ ...current, ...changes }))
@@ -78,7 +79,7 @@ export function FinancialEntrySettlementDialog({
         }
 
         try {
-            await settle.mutateAsync({ entry, values: toSettlementValues(form) })
+            await settle.mutateAsync({ target, values: toSettlementValues(form) })
             showToast(copy.done)
             onClose()
         } catch (error) {
@@ -102,7 +103,7 @@ export function FinancialEntrySettlementDialog({
         >
             <h2 id="financial-entry-settlement-title">{copy.title}</h2>
             <p className="help">
-                {entry.values.description} · vencimento {formatIsoDate(entry.values.dueDate)} · {formatExactCurrency(entry.values.nominalAmount)}
+                {target.description} · vencimento {formatIsoDate(target.dueDate)} · {formatExactCurrency(target.nominalAmount)}
             </p>
 
             <div className="fg">

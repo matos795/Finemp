@@ -7,6 +7,7 @@ import {
   settlementAccountOptions,
   settlementCopy,
   settlementDiffersFromNominal,
+  settlementTargetFromEntry,
   toSettlementValues,
   validateSettlementForm,
 } from "../src/features/financial-entries/lib/financial-entry-settlement.ts"
@@ -43,6 +44,8 @@ function entry(overrides = {}) {
     },
   }
 }
+
+const target = (overrides) => settlementTargetFromEntry(entry(overrides))
 
 const can = (...permissions) => (permission) => permissions.includes(permission)
 
@@ -88,13 +91,13 @@ test("Pagar/Receber appear only for OPEN or OVERDUE with FINANCIAL_ENTRY_MANAGE"
 })
 
 test("dialog starts with today, the nominal amount and the entry account", () => {
-  assert.deepEqual(newSettlementForm(entry(), TODAY), {
+  assert.deepEqual(newSettlementForm(target(), TODAY), {
     paymentDate: TODAY,
     amount: "1500,00",
     bankAccountId: BANK,
   })
   // Retenções não entram no valor inicial: continua o nominal.
-  assert.equal(newSettlementForm(entry({ values: { nominalAmount: "99.9" } }), TODAY).amount, "99,90")
+  assert.equal(newSettlementForm(target({ values: { nominalAmount: "99.9" } }), TODAY).amount, "99,90")
 })
 
 test("UX validation requires a past or present date, a positive exact amount and an account", () => {
@@ -111,7 +114,7 @@ test("UX validation requires a past or present date, a positive exact amount and
 })
 
 test("a different paid amount is flagged as full settlement with adjustment, never as partial", () => {
-  const nominal = entry()
+  const nominal = target()
   assert.equal(settlementDiffersFromNominal({ amount: "1.500,00" }, nominal), false)
   assert.equal(settlementDiffersFromNominal({ amount: "1500" }, nominal), false)
   assert.equal(settlementDiffersFromNominal({ amount: "1500,0" }, nominal), false)
@@ -130,7 +133,7 @@ test("accounts: active ones plus the current inactive one, flagged; no other ina
   ]
 
   assert.deepEqual(
-    settlementAccountOptions(entry(), accounts),
+    settlementAccountOptions(target(), accounts),
     [
       { id: BANK, name: "Banco Fictício", inactive: false },
       { id: OTHER_BANK, name: "Caixa Fictício", inactive: false },
@@ -138,7 +141,7 @@ test("accounts: active ones plus the current inactive one, flagged; no other ina
   )
 
   assert.deepEqual(
-    settlementAccountOptions(entry({ values: { bankAccountId: OLD_BANK } }), accounts),
+    settlementAccountOptions(target({ values: { bankAccountId: OLD_BANK } }), accounts),
     [
       { id: BANK, name: "Banco Fictício", inactive: false },
       { id: OTHER_BANK, name: "Caixa Fictício", inactive: false },
@@ -149,7 +152,7 @@ test("accounts: active ones plus the current inactive one, flagged; no other ina
 
 test("without the account catalog, only the entry's current account is offered", () => {
   assert.deepEqual(
-    settlementAccountOptions(entry(), null),
+    settlementAccountOptions(target(), null),
     [{ id: BANK, name: "Banco Fictício", inactive: false }],
   )
 })

@@ -1,5 +1,6 @@
 import type { CompanyPermission } from "../../auth/types/auth.types.ts"
 import type {
+    DecimalText,
     FinancialDirection,
     FinancialEntry,
     FinancialEntrySettlementValues,
@@ -18,6 +19,44 @@ export interface SettlementForm {
 }
 
 export type SettlementFormErrors = Partial<Record<keyof SettlementForm, string>>
+
+/**
+ * O mínimo que a janela de baixa precisa saber do título, venha ele de
+ * Lançamentos (FinancialEntry) ou dos relatórios de títulos em aberto
+ * (OpenTitle). Só campos que a origem já traz; nada é inventado.
+ */
+export interface SettlementTarget {
+    id: string
+    version: number
+    direction: FinancialDirection
+    description: string
+    nominalAmount: DecimalText
+    dueDate: string
+    bankAccountId: string
+    /** Nome da conta atual, quando a origem o traz (só Lançamentos hoje). */
+    bankLabel?: string
+}
+
+/** Lançamento lido em Lançamentos → alvo da baixa. */
+export function settlementTargetFromEntry(
+    entry: Pick<FinancialEntry, "id" | "version" | "values" | "labels">,
+): SettlementTarget {
+    const target: SettlementTarget = {
+        id: entry.id,
+        version: entry.version,
+        direction: entry.values.direction,
+        description: entry.values.description,
+        nominalAmount: entry.values.nominalAmount,
+        dueDate: entry.values.dueDate,
+        bankAccountId: entry.values.bankAccountId,
+    }
+
+    if (entry.labels.bankName) {
+        target.bankLabel = entry.labels.bankName
+    }
+
+    return target
+}
 
 /** Rótulos do protótipo para entrada (Receber) e saída (Pagar). */
 export function settlementCopy(direction: FinancialDirection) {
@@ -41,13 +80,13 @@ export function canSettleFinancialEntry(
 
 /** Valores iniciais: hoje, o nominal (sem retenções) e a conta do lançamento. */
 export function newSettlementForm(
-    entry: Pick<FinancialEntry, "values">,
+    target: Pick<SettlementTarget, "nominalAmount" | "bankAccountId">,
     today: string,
 ): SettlementForm {
     return {
         paymentDate: today,
-        amount: amountInputFromDecimal(entry.values.nominalAmount),
-        bankAccountId: entry.values.bankAccountId,
+        amount: amountInputFromDecimal(target.nominalAmount),
+        bankAccountId: target.bankAccountId,
     }
 }
 
@@ -60,16 +99,16 @@ export interface SettlementAccountOption {
 /**
  * Contas oferecidas: as ativas e, se estiver inativa, a atual do lançamento
  * (sinalizada). Sem acesso ao catálogo de contas (`accounts` null), só a
- * conta atual, pelo rótulo que veio com o lançamento.
+ * conta atual, pelo rótulo que veio com o título (ou "Conta atual").
  */
 export function settlementAccountOptions(
-    entry: Pick<FinancialEntry, "values" | "labels">,
+    target: Pick<SettlementTarget, "bankAccountId" | "bankLabel">,
     accounts: { id: string, name: string, active: boolean }[] | null,
 ): SettlementAccountOption[] {
-    const currentId = entry.values.bankAccountId
+    const currentId = target.bankAccountId
 
     if (!accounts) {
-        return [{ id: currentId, name: entry.labels.bankName ?? "Conta atual", inactive: false }]
+        return [{ id: currentId, name: target.bankLabel ?? "Conta atual", inactive: false }]
     }
 
     return accounts
@@ -123,12 +162,12 @@ function canonicalCents(value: string) {
  */
 export function settlementDiffersFromNominal(
     form: Pick<SettlementForm, "amount">,
-    entry: Pick<FinancialEntry, "values">,
+    target: Pick<SettlementTarget, "nominalAmount">,
 ) {
     const amount = parseNominalAmount(form.amount)
 
     return amount.ok &&
-        canonicalCents(amount.value) !== canonicalCents(entry.values.nominalAmount)
+        canonicalCents(amount.value) !== canonicalCents(target.nominalAmount)
 }
 
 /** Corpo `values` da baixa: dinheiro como texto exato, nunca número JSON. */
@@ -145,6 +184,22 @@ export function toSettlementValues(
         paymentDate: form.paymentDate,
         paidAmount: amount.value,
         bankAccountId: form.bankAccountId,
+    }
+}
+
+/**
+ * Comando de baixa: o id e a versão do título exatamente como vieram da
+ * origem, mais os valores digitados. É também o corpo comparado para
+ * reaproveitar a Idempotency-Key.
+ */
+export function settlementCommand(
+    target: Pick<SettlementTarget, "id" | "version">,
+    values: FinancialEntrySettlementValues,
+) {
+    return {
+        entryId: target.id,
+        expectedVersion: target.version,
+        values,
     }
 }
 

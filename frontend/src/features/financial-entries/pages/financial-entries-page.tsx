@@ -21,6 +21,7 @@ import {
     canReverseFinancialEntrySettlement,
     canSettleFinancialEntry,
     reversalConfirmation,
+    settlementTargetFromEntry,
 } from "../lib/financial-entry-settlement"
 import { useReverseFinancialEntrySettlement } from "../hooks/use-reverse-financial-entry-settlement"
 import { ConfirmDialog } from "../../../components/finemp/confirm-dialog"
@@ -239,7 +240,7 @@ function FinancialEntriesCompanyPage() {
                 <FinancialEntrySettlementDialog
                     key={`settle-${dialog.entry.id}-${dialog.entry.version}`}
                     companyId={companyId}
-                    entry={dialog.entry}
+                    target={settlementTargetFromEntry(dialog.entry)}
                     bankAccounts={bankAccounts.isSuccess ? bankList : null}
                     onClose={() => setDialog(null)}
                 />

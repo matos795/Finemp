@@ -7,13 +7,17 @@ import type { OpenTitle } from "../types/aging.types"
 
 const PENDING_NAME = "Nome ainda não disponível na lista de títulos da API"
 const PENDING_CENTER = "Aguardando nome do centro de resultado na API"
-const PENDING_SETTLEMENT = "Baixa pelo relatório aguardando decisão (ponto aberto)"
 
 interface OpenTitleRowProps {
     title: OpenTitle
     /** Nome do grupo (Agrupar = Sim). Na lista por vencimento a API só envia o ID. */
     partnerName?: string | null
     isIncome: boolean
+    /**
+     * Abre a baixa do título. Ausente quando o usuário não pode baixar
+     * (sem FINANCIAL_ENTRY_MANAGE): a linha fica só para leitura.
+     */
+    onSettle?: (title: OpenTitle) => void
 }
 
 /**
@@ -24,6 +28,7 @@ export function OpenTitleRow({
     title,
     partnerName,
     isIncome,
+    onSettle,
 }: OpenTitleRowProps) {
     const late = title.daysLate > 0
 
@@ -51,16 +56,16 @@ export function OpenTitleRow({
                     <span className="badge b-neu">
                         pago em {formatIsoDate(title.paymentDate)}
                     </span>
-                ) : (
+                ) : onSettle ? (
                     <button
                         type="button"
                         className={`btn ${isIncome ? "ent" : "sai"} sm`}
-                        disabled
-                        title={PENDING_SETTLEMENT}
+                        aria-label={`${isIncome ? "Receber" : "Pagar"} ${title.description}`}
+                        onClick={() => onSettle(title)}
                     >
                         {isIncome ? "Receber" : "Pagar"}
                     </button>
-                )}
+                ) : null}
             </td>
         </tr>
     )
