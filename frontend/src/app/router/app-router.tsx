@@ -4,6 +4,10 @@ import {
     Routes,
 } from "react-router"
 import { LoginPage } from "../../features/auth/pages/login-page"
+import { ActivatePage } from "../../features/auth/pages/activate-page"
+import { ForgotPasswordPage } from "../../features/auth/pages/forgot-password-page"
+import { ResetPasswordPage } from "../../features/auth/pages/reset-password-page"
+import { IDENTITY_PATHS } from "../../features/auth/lib/identity-flow"
 import { ProtectedApp } from "../../features/auth/components/protected-app"
 import { AppLayout } from "../../components/layout/app-layout"
 import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
@@ -25,9 +29,25 @@ import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entri
 export function AppRouter() {
     return (
         <Routes>
+            {/* Públicas: funcionam sem sessão, fora de ProtectedApp. */}
             <Route
-                path="/login"
+                path={IDENTITY_PATHS.login}
                 element={<LoginPage />}
+            />
+
+            <Route
+                path={IDENTITY_PATHS.activate}
+                element={<ActivatePage />}
+            />
+
+            <Route
+                path={IDENTITY_PATHS.forgotPassword}
+                element={<ForgotPasswordPage />}
+            />
+
+            <Route
+                path={IDENTITY_PATHS.resetPassword}
+                element={<ResetPasswordPage />}
             />
 
             <Route element={<ProtectedApp />}>
