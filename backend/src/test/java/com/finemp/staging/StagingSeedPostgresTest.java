@@ -18,7 +18,8 @@ class StagingSeedPostgresTest {
     Connection connect() throws SQLException {return DriverManager.getConnection(postgres.getJdbcUrl(),postgres.getUsername(),postgres.getPassword());}
     @AfterEach void cleanup() throws Exception {try(var c=connect();var s=c.createStatement()){
         s.execute("DROP TRIGGER IF EXISTS reject_seed ON staging_seed_receipts");s.execute("DROP FUNCTION IF EXISTS reject_seed()");
-        for(var table:List.of("staging_seed_receipts","company_access_grant_permissions","company_access_grants","financial_categories","financial_bank_accounts","companies","clients","accounting_firms","user_accounts"))s.executeUpdate("DELETE FROM "+table);
+        s.execute("DROP TRIGGER IF EXISTS reject_platform ON user_account_platform_permissions");s.execute("DROP FUNCTION IF EXISTS reject_platform()");
+        for(var table:List.of("user_account_platform_permissions","staging_seed_receipts","company_access_grant_permissions","company_access_grants","financial_categories","financial_bank_accounts","companies","clients","accounting_firms","user_accounts"))s.executeUpdate("DELETE FROM "+table);
     }}
     long count(Connection c,String table) throws SQLException {try(var s=c.createStatement();var r=s.executeQuery("SELECT count(*) FROM "+table)){r.next();return r.getLong(1);}}
     @Test void createsMinimumAndRepeatNeverChangesPasswordOrGrants() throws Exception {
@@ -135,6 +136,122 @@ class StagingSeedPostgresTest {
             s.setObject(1,UUID.randomUUID());s.setObject(2,StagingSeed.id("user"));s.setObject(3,StagingSeed.id("foreign-company"));s.executeUpdate();
             assertThatThrownBy(()->StagingSeed.provisionIsolationCompany(c)).isInstanceOf(SQLException.class);
             assertThat(count(c,"company_access_grants")).isEqualTo(2);
+        }
+    }
+
+    // #334 — elevação explícita do operador sintético a administrador de plataforma.
+    static final List<String> PLATFORM=List.of("ACCOUNTING_FIRM_CREATE","ACCOUNTING_FIRM_VIEW","PLATFORM_USER_MANAGE","UNASSIGNED_COMPANY_ASSIGN");
+    List<String> platform(Connection c) throws SQLException {
+        var result=new ArrayList<String>();
+        try(var s=c.prepareStatement("SELECT permission FROM user_account_platform_permissions WHERE user_account_id=? ORDER BY permission")){s.setObject(1,StagingSeed.id("user"));
+            try(var r=s.executeQuery()){while(r.next())result.add(r.getString(1));}}
+        return result;
+    }
+    String credentials(Connection c) throws SQLException {
+        try(var s=c.prepareStatement("SELECT password_hash||'|'||credentials_version||'|'||email||'|'||active||'|'||invitation_pending FROM user_accounts WHERE id=?")){
+            s.setObject(1,StagingSeed.id("user"));try(var r=s.executeQuery()){r.next();return r.getString(1);}}
+    }
+    String accessSnapshot(Connection c) throws SQLException {
+        try(var s=c.createStatement();var r=s.executeQuery("""
+                SELECT (SELECT count(*) FROM companies)||'|'||(SELECT count(*) FROM clients)||'|'||(SELECT count(*) FROM accounting_firms)||'|'||
+                (SELECT string_agg(g.id||':'||g.company_id||':'||g.access_role||':'||g.cost_center_scope,',' ORDER BY g.id) FROM company_access_grants g)||'|'||
+                (SELECT string_agg(p.company_access_grant_id||':'||p.permission,',' ORDER BY p.permission) FROM company_access_grant_permissions p)||'|'||
+                (SELECT count(*) FROM accounting_firm_access_grants)||'|'||(SELECT count(*) FROM financial_categories)||'|'||(SELECT count(*) FROM financial_bank_accounts)""")){
+            r.next();return r.getString(1);}
+    }
+    void addPlatform(Connection c,String...permissions) throws SQLException {
+        try(var s=c.prepareStatement("INSERT INTO user_account_platform_permissions(user_account_id,permission) VALUES(?,?)")){
+            for(var permission:permissions){s.setObject(1,StagingSeed.id("user"));s.setString(2,permission);s.executeUpdate();}}
+    }
+    @Test void platformAdminRequiresTheSyntheticMarker() throws Exception {
+        try(var c=connect()) {
+            assertThatThrownBy(()->StagingSeed.grantSyntheticPlatformAdmin(c)).isInstanceOf(SQLException.class);
+            assertThat(count(c,"user_account_platform_permissions")).isZero();
+            // Usuário com o mesmo ID/email, mas sem marcador da fixture, também é recusado.
+            try(var s=c.prepareStatement("INSERT INTO user_accounts(id,name,email,password_hash,active) VALUES(?,'Unmarked synthetic','demo@finemp.example.invalid',?,true)")){
+                s.setObject(1,StagingSeed.id("user"));s.setString(2,HASH);s.executeUpdate();}
+            assertThatThrownBy(()->StagingSeed.grantSyntheticPlatformAdmin(c)).isInstanceOf(SQLException.class);
+            assertThat(count(c,"user_account_platform_permissions")).isZero();
+        }
+    }
+    @Test void platformAdminGrantsExactlyTheFourPermissionsAndRetryIsNoop() throws Exception {
+        try(var c=connect()) {
+            StagingSeed.provision(c,HASH);
+            String credentials=credentials(c),access=accessSnapshot(c);
+            assertThat(StagingSeed.grantSyntheticPlatformAdmin(c)).isTrue();
+            assertThat(platform(c)).containsExactlyElementsOf(PLATFORM);
+            assertThat(count(c,"user_account_platform_permissions")).isEqualTo(4);
+            assertThat(StagingSeed.grantSyntheticPlatformAdmin(c)).isFalse();
+            assertThat(platform(c)).containsExactlyElementsOf(PLATFORM);
+            assertThat(credentials(c)).isEqualTo(credentials);
+            assertThat(accessSnapshot(c)).isEqualTo(access);
+            assertThat(count(c,"accounting_firm_access_grants")).isZero();
+            assertThat(count(c,"user_accounts")).isEqualTo(1);
+            assertThat(c.getAutoCommit()).isTrue();
+        }
+    }
+    @Test void platformAdminRefusesPartialOrExtraPermissionsWithoutRepairingThem() throws Exception {
+        for(var existing:List.of(new String[]{"ACCOUNTING_FIRM_VIEW"},new String[]{"ACCOUNTING_FIRM_CREATE","ACCOUNTING_FIRM_VIEW","PLATFORM_USER_MANAGE"},
+                new String[]{"ACCOUNTING_FIRM_CREATE","ACCOUNTING_FIRM_VIEW","PLATFORM_USER_MANAGE","UNASSIGNED_COMPANY_ASSIGN","SYNTHETIC_UNKNOWN_PERMISSION"},
+                new String[]{"SYNTHETIC_UNKNOWN_PERMISSION"})) {
+            cleanup();
+            try(var c=connect()) {
+                StagingSeed.provision(c,HASH);addPlatform(c,existing);
+                var before=platform(c);String credentials=credentials(c),access=accessSnapshot(c);
+                assertThatThrownBy(()->StagingSeed.grantSyntheticPlatformAdmin(c)).as(String.join(",",existing)).isInstanceOf(SQLException.class);
+                assertThat(platform(c)).isEqualTo(before);
+                assertThat(credentials(c)).isEqualTo(credentials);assertThat(accessSnapshot(c)).isEqualTo(access);
+            }
+        }
+    }
+    @Test void platformAdminRefusesDivergentSyntheticIdentity() throws Exception {
+        for(var change:List.of("email='changed@finemp.example.invalid'","active=false","active=false,invitation_pending=true")) {
+            cleanup();
+            try(var c=connect();var s=c.createStatement()) {
+                StagingSeed.provision(c,HASH);
+                s.executeUpdate("UPDATE user_accounts SET "+change+" WHERE id='"+StagingSeed.id("user")+"'");
+                String credentials=credentials(c);
+                assertThatThrownBy(()->StagingSeed.grantSyntheticPlatformAdmin(c)).as(change).isInstanceOf(SQLException.class);
+                assertThat(platform(c)).isEmpty();assertThat(credentials(c)).isEqualTo(credentials);
+            }
+        }
+        cleanup();
+        // Receipt apontando para outro usuário: identidade divergente.
+        try(var c=connect();var s=c.createStatement()) {
+            StagingSeed.provision(c,HASH);StagingSeed.provisionIsolationCompany(c);
+            s.executeUpdate("UPDATE staging_seed_receipts SET company_id='"+StagingSeed.id("foreign-company")+"' WHERE seed_key='finemp-synthetic-v1'");
+            assertThatThrownBy(()->StagingSeed.grantSyntheticPlatformAdmin(c)).isInstanceOf(SQLException.class);
+            assertThat(platform(c)).isEmpty();
+        }
+    }
+    @Test void platformAdminLateFailureLeavesNoPartialPermissionSet() throws Exception {
+        try(var c=connect();var s=c.createStatement()) {
+            StagingSeed.provision(c,HASH);
+            s.execute("CREATE FUNCTION reject_platform() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.permission='UNASSIGNED_COMPANY_ASSIGN' THEN RAISE EXCEPTION 'Synthetic failure'; END IF; RETURN NEW; END; $$");
+            s.execute("CREATE TRIGGER reject_platform BEFORE INSERT ON user_account_platform_permissions FOR EACH ROW EXECUTE FUNCTION reject_platform()");
+            assertThatThrownBy(()->StagingSeed.grantSyntheticPlatformAdmin(c)).isInstanceOf(SQLException.class);
+            assertThat(platform(c)).isEmpty();
+            assertThat(c.getAutoCommit()).isTrue();
+            s.execute("DROP TRIGGER reject_platform ON user_account_platform_permissions");
+            assertThat(StagingSeed.grantSyntheticPlatformAdmin(c)).isTrue();
+            assertThat(platform(c)).containsExactlyElementsOf(PLATFORM);
+        }
+    }
+    @Test void concurrentPlatformAdminCommandsGrantOnce() throws Exception {
+        try(var c=connect()){StagingSeed.provision(c,HASH);}
+        try(var pool=Executors.newVirtualThreadPerTaskExecutor()){
+            Callable<Boolean> action=()->{try(var c=connect()){return StagingSeed.grantSyntheticPlatformAdmin(c);}};
+            var first=pool.submit(action);var second=pool.submit(action);
+            assertThat(List.of(first.get(30,TimeUnit.SECONDS),second.get(30,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
+        }
+        try(var c=connect()){assertThat(platform(c)).containsExactlyElementsOf(PLATFORM);}
+    }
+    @Test void platformAdminRefusesAnOpenCallerTransaction() throws Exception {
+        try(var c=connect()) {
+            StagingSeed.provision(c,HASH);c.setAutoCommit(false);
+            assertThatThrownBy(()->StagingSeed.grantSyntheticPlatformAdmin(c)).isInstanceOf(IllegalArgumentException.class);
+            c.rollback();c.setAutoCommit(true);
+            assertThat(platform(c)).isEmpty();
         }
     }
 }
