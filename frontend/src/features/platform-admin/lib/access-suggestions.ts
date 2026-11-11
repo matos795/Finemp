@@ -27,9 +27,10 @@ export const ACCOUNTANT_SUGGESTION: CompanyPermission[] = [
 ]
 
 /**
- * Cliente financeiro: o suficiente para sair de uma Company vazia até o
- * primeiro lançamento (cadastrar conta e aplicar o plano padrão de
- * categorias). Parceiros e centros continuam só com visualização.
+ * Cliente financeiro: o suficiente para operar o financeiro da Company
+ * desde o primeiro lançamento: cadastrar conta, aplicar o plano padrão de
+ * categorias e manter os clientes/fornecedores usados nos lançamentos
+ * (#329). Centros de resultado continuam só com visualização.
  */
 export const CLIENT_FINANCE_SUGGESTION: CompanyPermission[] = [
     "DASHBOARD_VIEW",
@@ -38,6 +39,7 @@ export const CLIENT_FINANCE_SUGGESTION: CompanyPermission[] = [
     "BANK_ACCOUNT_VIEW",
     "BANK_ACCOUNT_MANAGE",
     "BUSINESS_PARTNER_VIEW",
+    "BUSINESS_PARTNER_MANAGE",
     "RESULT_CENTER_VIEW",
     "FINANCIAL_CATEGORY_VIEW",
     "FINANCIAL_CATEGORY_MANAGE",
