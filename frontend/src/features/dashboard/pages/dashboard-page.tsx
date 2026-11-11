@@ -64,7 +64,7 @@ function DashboardCompanyPage() {
     const data = snapshot.isError ? undefined : snapshot.data
     const cash = data ? dashboardMonthCash(data) : null
     const overdue = data ? overdueSummary(data) : null
-    const monthLabel = formatCompetence(month)
+    const monthLabel = formatCompetence(data?.month ?? month)
     const generation = data?.indicators.cash.generation
     const netResult = data?.operationalDre?.subtotals.netResult
     const cashMargin = formatIndicatorPercent(data?.indicators.cash.margin)
