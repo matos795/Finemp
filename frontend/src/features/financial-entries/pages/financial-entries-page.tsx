@@ -2,6 +2,7 @@ import {
     useCallback,
     useState,
 } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { BarActions } from "../../../components/layout/bar-actions"
@@ -15,7 +16,17 @@ import { FinancialOnboardingPanel } from "../components/financial-onboarding-pan
 import { useFinancialEntries } from "../hooks/use-financial-entries"
 import { useFinancialEntryCatalogs } from "../hooks/use-financial-entry-catalogs"
 import { canManageFinancialEntries } from "../lib/financial-entry-access"
-import { canSettleFinancialEntry } from "../lib/financial-entry-settlement"
+import {
+    REVERSAL_DONE_MESSAGE,
+    canReverseFinancialEntrySettlement,
+    canSettleFinancialEntry,
+    reversalConfirmation,
+} from "../lib/financial-entry-settlement"
+import { useReverseFinancialEntrySettlement } from "../hooks/use-reverse-financial-entry-settlement"
+import { ConfirmDialog } from "../../../components/finemp/confirm-dialog"
+import { useToast } from "../../../components/finemp/toast-context"
+import { apiErrorStatus } from "../../../lib/api/api-errors"
+import { currentUserQueryKey } from "../../auth/hooks/use-current-user"
 import { describeFinancialEntryError } from "../lib/financial-entry-errors"
 import {
     financialOnboarding,
@@ -33,6 +44,7 @@ type DialogState = { companyId: string } & (
     | { mode: "create", direction: FinancialDirection }
     | { mode: "edit", entry: FinancialEntry }
     | { mode: "settle", entry: FinancialEntry }
+    | { mode: "reverse", entry: FinancialEntry }
 )
 
 const listErrorMessages = {
@@ -43,10 +55,10 @@ const listErrorMessages = {
 
 /**
  * Fluxo de caixa › Lançamentos (renderLanc do protótipo): lista, filtros,
- * "+ Entrada", "+ Saída", "Editar" e "Pagar"/"Receber" (baixa). Leitura
- * exige FINANCIAL_ENTRY_VIEW ou _MANAGE (rota); escrita,
- * FINANCIAL_ENTRY_MANAGE. Estorno, exclusão, repetição, anexos, lote e
- * exportação ficam para entregas próprias.
+ * "+ Entrada", "+ Saída", "Editar", "Pagar"/"Receber" (baixa) e "Desfazer
+ * baixa" (estorno, com confirmação). Leitura exige FINANCIAL_ENTRY_VIEW ou
+ * _MANAGE (rota); escrita, FINANCIAL_ENTRY_MANAGE. Exclusão, repetição,
+ * anexos, lote e exportação ficam para entregas próprias.
  */
 export function FinancialEntriesPage() {
     const { selectedCompany } = useCompanyAccess()
@@ -68,6 +80,26 @@ function FinancialEntriesCompanyPage() {
     const [filter, setFilter] = useState<FinancialEntryFilter>(emptyFinancialEntryFilter)
     const [page, setPage] = useCompanyPage(companyId, JSON.stringify(filter))
     const [dialog, setDialog] = useState<DialogState | null>(null)
+    const queryClient = useQueryClient()
+    const showToast = useToast()
+    const reverse = useReverseFinancialEntrySettlement(companyId ?? "")
+    const reversingId = reverse.isPending ? reverse.variables?.id ?? null : null
+
+    async function confirmReversal(entry: FinancialEntry) {
+        try {
+            await reverse.mutateAsync(entry)
+            showToast(REVERSAL_DONE_MESSAGE)
+        } catch (error) {
+            if (apiErrorStatus(error) === 401) {
+                queryClient.setQueryData(currentUserQueryKey, null)
+                return
+            }
+
+            showToast(describeFinancialEntryError(error, "reverse"), true)
+        } finally {
+            setDialog(null)
+        }
+    }
 
     const entries = useFinancialEntries(companyId, filter, page)
     const { bankAccounts, categories, resultCenters } = useFinancialEntryCatalogs(companyId)
@@ -166,6 +198,9 @@ function FinancialEntriesCompanyPage() {
                                 canSettle={(entry) => canSettleFinancialEntry(entry, hasPermission)}
                                 onEdit={(entry) => setDialog({ companyId: companyId!, mode: "edit", entry })}
                                 onSettle={(entry) => setDialog({ companyId: companyId!, mode: "settle", entry })}
+                                canReverse={(entry) => canReverseFinancialEntrySettlement(entry, hasPermission)}
+                                reversingId={reversingId}
+                                onReverse={(entry) => setDialog({ companyId: companyId!, mode: "reverse", entry })}
                             />
                         </div>
 
@@ -191,6 +226,15 @@ function FinancialEntriesCompanyPage() {
                 </>
             )}
 
+            {dialog?.mode === "reverse" && companyId && dialog.companyId === companyId ? (
+                <ConfirmDialog
+                    {...reversalConfirmation(dialog.entry)}
+                    busy={reverse.isPending}
+                    onConfirm={() => confirmReversal(dialog.entry)}
+                    onCancel={() => setDialog(null)}
+                />
+            ) : null}
+
             {dialog?.mode === "settle" && companyId && dialog.companyId === companyId ? (
                 <FinancialEntrySettlementDialog
                     key={`settle-${dialog.entry.id}-${dialog.entry.version}`}
@@ -201,7 +245,7 @@ function FinancialEntriesCompanyPage() {
                 />
             ) : null}
 
-            {dialog && dialog.mode !== "settle" && companyId && dialog.companyId === companyId && catalogsReady ? (
+            {dialog && (dialog.mode === "create" || dialog.mode === "edit") && companyId && dialog.companyId === companyId && catalogsReady ? (
                 <FinancialEntryDialog
                     key={dialog.mode === "edit" ? `edit-${dialog.entry.id}-${dialog.entry.version}` : `new-${dialog.direction}`}
                     companyId={companyId}
