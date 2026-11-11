@@ -70,3 +70,9 @@ E-mail, senha, hash e credenciais reais nunca devem aparecer em commit, Issue,
 documentação, logs ou chat. Após a execução, remover ou neutralizar imediatamente
 as três variáveis temporárias de recuperação e retirar qualquer pre-deploy usado
 somente para executar o one-shot.
+
+## Primeiro administrador do sistema
+
+O modo separado `--system-admin` eleva uma conta existente. Exige os guards comuns de produção, a confirmação dedicada `FINEMP_PRODUCTION_SYSTEM_ADMIN_CONFIRM=GRANT_FINEMP_PRODUCTION_SYSTEM_ADMIN` e a identificação coincidente por `FINEMP_PRODUCTION_SYSTEM_ADMIN_USER_ID` e `FINEMP_PRODUCTION_SYSTEM_ADMIN_EMAIL`. O alvo deve estar ativo, estabelecido e possuir as quatro permissões originais de plataforma.
+
+A operação serializa a elevação com a administração de permissões. A repetição com o mesmo alvo e estado esperado é idempotente. Uma identidade divergente ou outro administrador global impede a elevação. A operação preserva senha, versão de credenciais e grants. Remova a confirmação e os identificadores temporários após o uso. O bootstrap original continua concedendo apenas as quatro permissões anteriores.
