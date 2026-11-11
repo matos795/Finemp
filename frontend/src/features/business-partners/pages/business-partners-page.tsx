@@ -76,6 +76,17 @@ function BusinessPartnersCompanyPage() {
         return () => window.clearTimeout(timer)
     }, [searchText, filter.search])
 
+    // Uma mutação pode tirar a última linha da página atual (ex.: inativar
+    // ou mudar o papel de um parceiro). Quando o total de páginas encolher,
+    // volta para a última página ainda válida em vez de prender a tela vazia.
+    useEffect(() => {
+        const totalPages = partners.data?.totalPages
+
+        if (totalPages !== undefined && page > 0 && page >= totalPages) {
+            setPage(Math.max(0, totalPages - 1))
+        }
+    }, [partners.data?.totalPages, page, setPage])
+
     async function confirmDelete(partner: BusinessPartner) {
         try {
             const result = await remove.mutateAsync(partner)
@@ -84,9 +95,6 @@ function BusinessPartnersCompanyPage() {
                     ? `${partner.profile.name} tem lançamentos: foi inativado (o histórico continua).`
                     : "Cadastro excluído.",
             )
-            if (page > 0) {
-                setPage(0)
-            }
         } catch (error) {
             if (apiErrorStatus(error) === 401) {
                 queryClient.setQueryData(currentUserQueryKey, null)
