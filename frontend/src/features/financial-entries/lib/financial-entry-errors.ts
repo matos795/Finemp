@@ -1,6 +1,6 @@
 import { ApiError } from "../../../lib/api/api-client.ts"
 
-export type FinancialEntryOperation = "list" | "create" | "update" | "settle"
+export type FinancialEntryOperation = "list" | "create" | "update" | "settle" | "reverse"
 
 /**
  * Mensagem para o usuário a partir do status e do `code` do ProblemDetail.
@@ -14,6 +14,21 @@ export function describeFinancialEntryError(
         return operation === "list"
             ? "Não foi possível carregar os lançamentos."
             : "Não foi possível salvar. Verifique a conexão e tente de novo."
+    }
+
+    if (operation === "reverse") {
+        // Sem janela aberta: a orientação é recarregar a lista e repetir.
+        if (error.code === "STALE_VERSION" || error.code === "IDEMPOTENCY_MISMATCH") {
+            return "Este lançamento foi alterado por outra operação. Recarregue a lista e tente de novo."
+        }
+
+        if (error.status === 400) {
+            return "O sistema recusou o pedido. Recarregue a lista e tente de novo."
+        }
+
+        if (error.status === 403) {
+            return "Você não tem permissão para desfazer baixas nesta empresa."
+        }
     }
 
     switch (error.code) {
@@ -45,7 +60,7 @@ export function describeFinancialEntryError(
                     ? "Você não tem permissão para registrar pagamentos e recebimentos desta empresa."
                     : "Você não tem permissão para alterar lançamentos desta empresa."
         case 404:
-            return operation === "update" || operation === "settle"
+            return operation === "update" || operation === "settle" || operation === "reverse"
                 ? "Lançamento não encontrado. Ele pode ter sido excluído; recarregue a lista."
                 : "Lançamentos não estão disponíveis neste ambiente."
         case 409:
@@ -60,6 +75,10 @@ export function describeFinancialEntryError(
 
     if (operation === "settle") {
         return "Não foi possível registrar a baixa."
+    }
+
+    if (operation === "reverse") {
+        return "Não foi possível desfazer a baixa."
     }
 
     return operation === "list"

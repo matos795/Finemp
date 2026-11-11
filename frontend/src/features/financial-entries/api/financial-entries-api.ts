@@ -128,3 +128,24 @@ export function settleFinancialEntry(
         },
     )
 }
+
+/**
+ * `POST …/financial-entries/{entryId}/settlement-reversals`
+ * (reverseFinancialEntrySettlement): desfaz a baixa. O corpo é só a versão
+ * lida; data, valor e conta não são enviados (o backend mantém a conta).
+ */
+export function reverseFinancialEntrySettlement(
+    companyId: string,
+    entryId: string,
+    expectedVersion: number,
+    idempotencyKey: string,
+): Promise<FinancialEntryCommandReceipt> {
+    return apiRequest<FinancialEntryCommandReceipt>(
+        `${financialEntriesPath(companyId)}/${encodeURIComponent(entryId)}/settlement-reversals`,
+        {
+            method: "POST",
+            headers: { "Idempotency-Key": idempotencyKey },
+            body: JSON.stringify({ expectedVersion }),
+        },
+    )
+}
