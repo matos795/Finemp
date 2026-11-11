@@ -7,13 +7,19 @@ import type { MenuIconName } from "./menu-icons"
 export interface NavigationItem {
     id: string
     label: string
-    /** Rota React. Sem rota = tela ainda não ligada à API (inativa, D5). */
+    /**
+     * Rota React publicada. Sem rota = tela do roadmap ainda não ligada à
+     * API: continua declarada aqui, mas não aparece no menu.
+     */
     path?: string
     /** Qualquer uma das permissões libera o item (só UX; o backend autoriza). */
     permissions?: CompanyPermission[]
     /** Permissões do plano SaaS, separadas das permissões de Company. */
     platformPermissions?: PlatformPermission[]
 }
+
+/** Item com tela publicada (rota definida). */
+export type AvailableNavigationItem = NavigationItem & { path: string }
 
 export interface NavigationModule {
     id: string
@@ -22,9 +28,20 @@ export interface NavigationModule {
     items: NavigationItem[]
 }
 
+export interface AvailableNavigationModule extends Omit<NavigationModule, "items"> {
+    items: AvailableNavigationItem[]
+    /**
+     * Módulo de uma única tela no protótipo ("unico"): vira link direto com
+     * o nome do módulo. Módulos com várias telas continuam em acordeão
+     * mesmo quando só uma está disponível, para o nome da tela aparecer.
+     */
+    standalone: boolean
+}
+
 /**
  * Menu do protótipo homologado (MENU), na mesma ordem e com os mesmos nomes.
- * Telas ainda não ligadas à API não têm rota e aparecem inativas (D5).
+ * Telas ainda não ligadas à API não têm rota: ficam declaradas como roadmap,
+ * mas `visibleNavigation` não as mostra.
  */
 export const navigationModules: NavigationModule[] = [
     {
@@ -287,6 +304,28 @@ export function isItemVisible(
         item.platformPermissions.some(hasPlatformPermission)
 
     return companyVisible && platformVisible
+}
+
+/**
+ * Menu exibido: só itens com rota publicada e liberados pelas permissões
+ * de Company/Platform; módulos que ficam sem itens desaparecem.
+ */
+export function visibleNavigation(
+    modules: NavigationModule[],
+    hasPermission: (permission: CompanyPermission) => boolean,
+    hasPlatformPermission: (permission: PlatformPermission) => boolean,
+): AvailableNavigationModule[] {
+    return modules
+        .map((module) => ({
+            ...module,
+            standalone: module.items.length === 1,
+            items: module.items.filter(
+                (item): item is AvailableNavigationItem =>
+                    item.path !== undefined &&
+                    isItemVisible(item, hasPermission, hasPlatformPermission),
+            ),
+        }))
+        .filter((module) => module.items.length > 0)
 }
 
 export function findNavigationByPath(
