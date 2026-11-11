@@ -17,8 +17,13 @@ interface FinancialEntriesTableProps {
     canEdit: boolean
     /** "Pagar"/"Receber" por linha (situação do backend + permissão). */
     canSettle: (entry: FinancialEntry) => boolean
+    /** "Desfazer baixa" por linha (só título pago, decisão de UX). */
+    canReverse: (entry: FinancialEntry) => boolean
+    /** Id do lançamento cujo estorno está em andamento. */
+    reversingId: string | null
     onEdit: (entry: FinancialEntry) => void
     onSettle: (entry: FinancialEntry) => void
+    onReverse: (entry: FinancialEntry) => void
 }
 
 /**
@@ -30,8 +35,11 @@ export function FinancialEntriesTable({
     canManage,
     canEdit,
     canSettle,
+    canReverse,
+    reversingId,
     onEdit,
     onSettle,
+    onReverse,
 }: FinancialEntriesTableProps) {
     return (
         <table>
@@ -130,6 +138,19 @@ export function FinancialEntriesTable({
                                                 onClick={() => onSettle(entry)}
                                             >
                                                 {settlementCopy(values.direction).action}
+                                            </button>{" "}
+                                        </>
+                                    ) : null}
+                                    {canReverse(entry) ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className="btn sec sm"
+                                                title="Voltar para em aberto"
+                                                disabled={reversingId !== null}
+                                                onClick={() => onReverse(entry)}
+                                            >
+                                                {reversingId === entry.id ? "Desfazendo…" : "Desfazer baixa"}
                                             </button>{" "}
                                         </>
                                     ) : null}

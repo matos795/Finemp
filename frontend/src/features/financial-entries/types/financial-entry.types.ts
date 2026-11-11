@@ -89,7 +89,7 @@ export interface FinancialEntryCommandReceipt {
     companyId: string
     commandId: string
     entryId: string
-    action: "CREATED" | "UPDATED" | "SETTLED"
+    action: "CREATED" | "UPDATED" | "SETTLED" | "SETTLEMENT_REVERSED"
     version: number
 }
 

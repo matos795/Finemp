@@ -8,6 +8,7 @@ import {
     nextCommandAttempt,
     type CommandAttempt,
 } from "../lib/command-key"
+import { refreshCompanyFinancialData } from "../lib/financial-entry-refresh"
 import type {
     FinancialEntry,
     FinancialEntrySettlementValues,
@@ -43,10 +44,6 @@ export function useSettleFinancialEntry(
         onSuccess: () => {
             lastAttempt.current = null
         },
-        onSettled: () =>
-            Promise.all([
-                queryClient.invalidateQueries({ queryKey: ["companies", companyId, "financial-entries"] }),
-                queryClient.invalidateQueries({ queryKey: ["companies", companyId, "financial-reports"] }),
-            ]),
+        onSettled: () => refreshCompanyFinancialData(queryClient, companyId),
     })
 }

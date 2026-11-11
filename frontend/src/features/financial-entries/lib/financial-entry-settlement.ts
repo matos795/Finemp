@@ -147,3 +147,29 @@ export function toSettlementValues(
         bankAccountId: form.bankAccountId,
     }
 }
+
+/**
+ * "Desfazer baixa" só para título pago (situação do backend) e com
+ * FINANCIAL_ENTRY_MANAGE. É uma decisão de UX desta tela: o backend aceita
+ * estornar título já aberto, e isso continua sendo regra dele.
+ */
+export function canReverseFinancialEntrySettlement(
+    entry: Pick<FinancialEntry, "status">,
+    hasPermission: (permission: CompanyPermission) => boolean,
+) {
+    return entry.status === "PAID" && hasPermission("FINANCIAL_ENTRY_MANAGE")
+}
+
+/** Texto da confirmação antes de desfazer a baixa (#321). */
+export function reversalConfirmation(
+    entry: { values: Pick<FinancialEntry["values"], "description"> },
+) {
+    return {
+        title: `Desfazer a baixa de "${entry.values.description}"?`,
+        message: "O título voltará para em aberto. A conta bancária usada na baixa será mantida no lançamento.",
+        confirmLabel: "Desfazer baixa",
+    }
+}
+
+/** Aviso do protótipo (estornarBaixa) depois do estorno. */
+export const REVERSAL_DONE_MESSAGE = "Baixa desfeita: voltou para em aberto."
