@@ -21,7 +21,10 @@ export type CategoryStep =
     | { kind: "ok" }
     | { kind: "loading" }
     | { kind: "no-access" }
-    /** Catálogo totalmente vazio e FINANCIAL_CATEGORY_MANAGE: oferece o plano padrão. */
+    /**
+     * Catálogo totalmente vazio e FINANCIAL_CATEGORY_STRUCTURE_MANAGE ou
+     * _MANAGE: oferece o plano padrão (o backend aceita as duas, #331).
+     */
     | { kind: "empty", action: { type: "apply-standard-plan" } }
     /** Catálogo vazio sem permissão de gerenciar: só informa. */
     | { kind: "empty-no-permission" }
@@ -71,7 +74,7 @@ export function financialOnboarding({
                     ? { kind: "ok" }
                     : categories.items.length > 0
                         ? { kind: "incomplete" }
-                        : hasPermission("FINANCIAL_CATEGORY_MANAGE")
+                        : hasPermission("FINANCIAL_CATEGORY_STRUCTURE_MANAGE") || hasPermission("FINANCIAL_CATEGORY_MANAGE")
                             ? { kind: "empty", action: { type: "apply-standard-plan" } }
                             : { kind: "empty-no-permission" }
 

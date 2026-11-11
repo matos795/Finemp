@@ -18,7 +18,14 @@ POST groups recebe direction/name e cria uma subcategoria inicial; permitir o no
 
 Classificações de fluxo: OPERATING/INVESTING/FINANCING, correspondentes a op/inv/fin. Custo FIXED/VARIABLE corresponde F/V. DRE conserva os treze identificadores observados REC,DED,CUS,DCOM,DADM,DPES,DTRI,OUT,DEP,RFIN,DFIN,IR,NAO; não são mapeamento novo do PlanoQ.
 
-Leitura exige FINANCIAL_CATEGORY_VIEW ou MANAGE explícitos ALL; escrita exige MANAGE. Administração não substitui grants. Autorização atual é revalidada depois da trava de Empresa; versões exatas (incluindo zero) e flush antes da resposta evitam sobrescrita silenciosa. Transações READ_COMMITTED/timeout5s serializam sequência, alterações e exclusão. API pagina1–100 (padrão50), busca literal normalizada e filtros por direção/tipo/pai. Categoria e classificação do pai são projetadas como valores escalares pela mesma instrução SQL company-scoped, compartilhando o snapshot MVCC e evitando reutilizar entidades antigas do contexto JPA. Validação do filtro de pai também é escalar. Exclusão concorrente ou grupo previamente carregado não mistura classificações de momentos distintos. Não há N+1 nem cálculo no cliente.
+Leitura exige FINANCIAL_CATEGORY_VIEW, STRUCTURE_MANAGE ou MANAGE explícitos ALL. A escrita tem duas camadas (#331):
+
+- **Estrutura** — FINANCIAL_CATEGORY_STRUCTURE_MANAGE ou MANAGE: plano padrão, criar grupo/subcategoria, renomear (POST /{categoryId}/rename) e excluir sem uso. "Structure" nomeia o que muda a árvore/catálogo sem dar poder sobre como a categoria entra no caixa/DRE.
+- **Classificação** — somente FINANCIAL_CATEGORY_MANAGE: o PUT completo com cashActivity/dreLine/costBehavior, que afeta fluxo de caixa e DRE operacional. MANAGE continua sendo gestão completa, preservando grants existentes.
+
+O rename tem comando próprio porque o PUT não tem "não alterar": ele sempre grava os três campos e, na sub, dreLine null fotografa a DRE do grupo. O rename lê só name/expectedVersion, altera nome/busca/versão e mantém a classificação bruta e efetiva; na sub, dreLine null continua herdando o grupo. Esconder campos no React não seria autorização, por isso a separação é no servidor.
+
+Administração não substitui grants. Autorização atual é revalidada depois da trava de Empresa; versões exatas (incluindo zero) e flush antes da resposta evitam sobrescrita silenciosa. Transações READ_COMMITTED/timeout5s serializam sequência, alterações e exclusão. API pagina1–100 (padrão50), busca literal normalizada e filtros por direção/tipo/pai. Categoria e classificação do pai são projetadas como valores escalares pela mesma instrução SQL company-scoped, compartilhando o snapshot MVCC e evitando reutilizar entidades antigas do contexto JPA. Validação do filtro de pai também é escalar. Exclusão concorrente ou grupo previamente carregado não mistura classificações de momentos distintos. Não há N+1 nem cálculo no cliente.
 
 Feature FINEMP_FINANCE_CATALOG_ENABLED continua desligada por padrão. Erros fixos não expõem diagnósticos SQL. Nenhum dado real, secreto ou leitura operacional externa é utilizado.
 

@@ -62,6 +62,23 @@ test("empty catalog offers the standard plan only with FINANCIAL_CATEGORY_MANAGE
   assert.equal(Object.hasOwn(viewer.categories, "action"), false)
 })
 
+test("the structural permission alone also offers the standard plan (#331)", () => {
+  const structural = financialOnboarding({
+    hasPermission: can("FINANCIAL_CATEGORY_STRUCTURE_MANAGE"),
+    bankAccounts: ready(ACTIVE_ACCOUNT),
+    categories: ready([]),
+  })
+  assert.deepEqual(structural.categories, { kind: "empty", action: { type: "apply-standard-plan" } })
+
+  // Outras permissões de escrita não abrem o plano de categorias.
+  const unrelated = financialOnboarding({
+    hasPermission: can("FINANCIAL_CATEGORY_VIEW", "BANK_ACCOUNT_MANAGE", "FINANCIAL_ENTRY_MANAGE", "RESULT_CENTER_MANAGE"),
+    bankAccounts: ready(ACTIVE_ACCOUNT),
+    categories: ready([]),
+  })
+  assert.deepEqual(unrelated.categories, { kind: "empty-no-permission" })
+})
+
 test("groups without subcategories do not offer the plan (backend would answer PLAN_NOT_EMPTY)", () => {
   const state = financialOnboarding({
     hasPermission: can("FINANCIAL_CATEGORY_MANAGE"),

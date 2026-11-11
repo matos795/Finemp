@@ -30,6 +30,8 @@ export type CompanyPermission =
     | "RESULT_CENTER_MANAGE"
     | "FINANCIAL_CATEGORY_VIEW"
     | "FINANCIAL_CATEGORY_MANAGE"
+    /** Estrutura do plano (aplicar padrão, criar, renomear, excluir), sem classificação (#331). */
+    | "FINANCIAL_CATEGORY_STRUCTURE_MANAGE"
     | "FINANCIAL_ENTRY_VIEW"
     | "FINANCIAL_ENTRY_MANAGE"
     | "FINANCIAL_PERIOD_VIEW"

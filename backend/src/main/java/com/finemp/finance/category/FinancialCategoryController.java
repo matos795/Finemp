@@ -42,6 +42,10 @@ public class FinancialCategoryController {
     public FinancialCategoryResponse update(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,@PathVariable UUID categoryId,@Valid @RequestBody FinancialCategoryUpdateRequest request) {
         return service.update(actor.getUserAccountId(),companyId,categoryId,request);
     }
+    @PostMapping("/{categoryId}/rename")
+    public FinancialCategoryResponse rename(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,@PathVariable UUID categoryId,@Valid @RequestBody FinancialCategoryRenameRequest request) {
+        return service.rename(actor.getUserAccountId(),companyId,categoryId,request);
+    }
     @DeleteMapping("/{categoryId}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@AuthenticationPrincipal UserAccountPrincipal actor,@PathVariable UUID companyId,@PathVariable UUID categoryId,@RequestParam long version) {
         service.delete(actor.getUserAccountId(),companyId,categoryId,version);
