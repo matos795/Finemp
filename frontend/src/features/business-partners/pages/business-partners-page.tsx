@@ -84,6 +84,9 @@ function BusinessPartnersCompanyPage() {
                     ? `${partner.profile.name} tem lançamentos: foi inativado (o histórico continua).`
                     : "Cadastro excluído.",
             )
+            if (page > 0) {
+                setPage(0)
+            }
         } catch (error) {
             if (apiErrorStatus(error) === 401) {
                 queryClient.setQueryData(currentUserQueryKey, null)
