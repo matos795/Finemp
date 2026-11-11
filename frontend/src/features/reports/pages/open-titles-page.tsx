@@ -9,7 +9,9 @@ import {
     formatIsoDate,
 } from "../../../lib/formatters/decimal"
 import { todayIso } from "../../../lib/formatters/local-date"
+import { useAllBankAccounts } from "../../bank-accounts/hooks/use-bank-accounts"
 import { useCompanyAccess } from "../../companies/company-access-context"
+import { FinancialEntrySettlementDialog } from "../../financial-entries/components/financial-entry-settlement-dialog"
 import { OpenTitlePartnerGroup } from "../components/open-title-partner-group"
 import { OpenTitleRow } from "../components/open-title-row"
 import {
@@ -21,10 +23,15 @@ import {
     agingBands,
     isOverdueBand,
 } from "../lib/aging-bands"
+import {
+    canSettleOpenTitle,
+    settlementTargetFromOpenTitle,
+} from "../lib/open-title-settlement"
 import type {
     AgingBandCode,
     AgingDirection,
     AgingScope,
+    OpenTitle,
     OpenTitlesFilter,
 } from "../types/aging.types"
 
@@ -54,14 +61,37 @@ const TITLES_PAGE_SIZE = 50
  * protótipo). Totais, vencidos, a vencer em 30 dias, faixas, subtotais por
  * parceiro, dias de atraso e a lista vêm do backend. Percentuais, prazo
  * médio, centro de resultado e exportação seguem pendentes (PA13).
+ * "Receber"/"Pagar" abre a mesma baixa de Lançamentos (#330), só com
+ * FINANCIAL_ENTRY_MANAGE; depois dela o relatório é recarregado.
  */
 export function OpenTitlesPage({
     direction,
 }: OpenTitlesPageProps) {
-    const { selectedCompany } =
+    const { selectedCompany, hasPermission } =
         useCompanyAccess()
 
     const companyId = selectedCompany?.id
+
+    // A janela de baixa pertence à Company (e ao relatório) em que foi aberta.
+    const [settling, setSettling] =
+        useState<{ companyId: string, title: OpenTitle } | null>(null)
+
+    const settlingHere =
+        settling && settling.companyId === companyId && settling.title.direction === direction
+            ? settling
+            : null
+
+    // Catálogo de contas só quando a janela abre; sem acesso, só a conta do título.
+    const bankAccounts = useAllBankAccounts(settlingHere ? companyId : undefined)
+
+    // Sem FINANCIAL_ENTRY_MANAGE não há handler: as linhas ficam só leitura.
+    const onSettle = hasPermission("FINANCIAL_ENTRY_MANAGE")
+        ? (title: OpenTitle) => {
+            if (companyId && canSettleOpenTitle(title, hasPermission)) {
+                setSettling({ companyId, title })
+            }
+        }
+        : undefined
 
     const [asOf, setAsOf] = useState(todayIso)
     const [scope, setScope] = useState<AgingScope>("ALL")
@@ -323,6 +353,7 @@ export function OpenTitlesPage({
                                                         filter={filter}
                                                         group={group}
                                                         isIncome={isIncome}
+                                                        onSettle={onSettle}
                                                     />
                                                 ))
                                                 : list.data?.items.map((title) => (
@@ -330,6 +361,7 @@ export function OpenTitlesPage({
                                                         key={title.id}
                                                         title={title}
                                                         isIncome={isIncome}
+                                                        onSettle={onSettle}
                                                     />
                                                 ))}
                                         </tbody>
@@ -419,6 +451,16 @@ export function OpenTitlesPage({
                     </Panel>
                 </div>
             )}
+
+            {settlingHere && companyId ? (
+                <FinancialEntrySettlementDialog
+                    key={`settle-${settlingHere.title.id}-${settlingHere.title.version}`}
+                    companyId={companyId}
+                    target={settlementTargetFromOpenTitle(settlingHere.title)}
+                    bankAccounts={bankAccounts.isSuccess ? bankAccounts.data : null}
+                    onClose={() => setSettling(null)}
+                />
+            ) : null}
         </>
     )
 }
