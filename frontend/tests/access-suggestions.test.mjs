@@ -9,19 +9,31 @@ import { replaceCompanyAccess } from "../src/features/platform-admin/api/platfor
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })
 
-test("client finance suggestion can set up accounts, partners and the standard category plan", () => {
+test("client finance suggestion can set up accounts, partners and the category structure", () => {
   for (const permission of [
     "BANK_ACCOUNT_VIEW",
     "BANK_ACCOUNT_MANAGE",
     "BUSINESS_PARTNER_VIEW",
     "BUSINESS_PARTNER_MANAGE",
     "FINANCIAL_CATEGORY_VIEW",
-    "FINANCIAL_CATEGORY_MANAGE",
+    "FINANCIAL_CATEGORY_STRUCTURE_MANAGE",
     "FINANCIAL_ENTRY_VIEW",
     "FINANCIAL_ENTRY_MANAGE",
   ]) {
     assert.ok(CLIENT_FINANCE_SUGGESTION.includes(permission), permission)
   }
+})
+
+test("client finance suggestion keeps the category classification (cash/DRE/cost) out (#331)", () => {
+  assert.equal(CLIENT_FINANCE_SUGGESTION.includes("FINANCIAL_CATEGORY_MANAGE"), false)
+  assert.ok(CLIENT_FINANCE_SUGGESTION.includes("FINANCIAL_CATEGORY_STRUCTURE_MANAGE"))
+  assert.ok(CLIENT_FINANCE_SUGGESTION.includes("BUSINESS_PARTNER_MANAGE"))
+})
+
+test("accountant suggestion is unchanged by the category split", () => {
+  assert.ok(ACCOUNTANT_SUGGESTION.includes("FINANCIAL_CATEGORY_VIEW"))
+  assert.equal(ACCOUNTANT_SUGGESTION.includes("FINANCIAL_CATEGORY_STRUCTURE_MANAGE"), false)
+  assert.equal(ACCOUNTANT_SUGGESTION.includes("FINANCIAL_CATEGORY_MANAGE"), false)
 })
 
 test("client finance suggestion does not add center, accounting, period or firm management", () => {

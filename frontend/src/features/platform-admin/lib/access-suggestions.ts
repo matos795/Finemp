@@ -30,7 +30,10 @@ export const ACCOUNTANT_SUGGESTION: CompanyPermission[] = [
  * Cliente financeiro: o suficiente para operar o financeiro da Company
  * desde o primeiro lançamento: cadastrar conta, aplicar o plano padrão de
  * categorias e manter os clientes/fornecedores usados nos lançamentos
- * (#329). Centros de resultado continuam só com visualização.
+ * (#329). Nas categorias, só a estrutura (criar, renomear, excluir):
+ * atividade de caixa, linha da DRE e fixo/variável exigem
+ * FINANCIAL_CATEGORY_MANAGE, que fica fora da sugestão (#331). Centros de
+ * resultado continuam só com visualização.
  */
 export const CLIENT_FINANCE_SUGGESTION: CompanyPermission[] = [
     "DASHBOARD_VIEW",
@@ -42,7 +45,7 @@ export const CLIENT_FINANCE_SUGGESTION: CompanyPermission[] = [
     "BUSINESS_PARTNER_MANAGE",
     "RESULT_CENTER_VIEW",
     "FINANCIAL_CATEGORY_VIEW",
-    "FINANCIAL_CATEGORY_MANAGE",
+    "FINANCIAL_CATEGORY_STRUCTURE_MANAGE",
     "FINANCIAL_ENTRY_VIEW",
     "FINANCIAL_ENTRY_MANAGE",
     "FINANCIAL_PERIOD_VIEW",
