@@ -9,8 +9,8 @@ import { useCompanyAccess } from "../../features/companies/company-access-contex
 import { MenuIcon } from "./menu-icon"
 import {
     findNavigationByPath,
-    isItemVisible,
     navigationModules,
+    visibleNavigation,
 } from "./navigation"
 
 interface AppSidebarProps {
@@ -45,18 +45,12 @@ export function AppSidebar({
         location.pathname,
     )
 
-    const modules = navigationModules
-        .map((module) => ({
-            ...module,
-            items: module.items.filter((item) =>
-                isItemVisible(
-                    item,
-                    hasPermission,
-                    hasPlatformPermission,
-                ),
-            ),
-        }))
-        .filter((module) => module.items.length > 0)
+    // Só telas publicadas e liberadas; o roadmap sem rota fica fora do menu.
+    const modules = visibleNavigation(
+        navigationModules,
+        hasPermission,
+        hasPlatformPermission,
+    )
 
     function handleNavigate() {
         setOpenModuleId(null)
@@ -74,7 +68,7 @@ export function AppSidebar({
                 const isCurrent =
                     current?.module.id === module.id
 
-                if (module.items.length === 1) {
+                if (module.standalone) {
                     const [item] = module.items
 
                     return (
@@ -82,28 +76,16 @@ export function AppSidebar({
                             key={module.id}
                             className="mod"
                         >
-                            {item.path ? (
-                                <NavLink
-                                    to={item.path}
-                                    onClick={handleNavigate}
-                                    className={({ isActive }) =>
-                                        cn("mod-h unico", isActive && "on")
-                                    }
-                                >
-                                    <MenuIcon name={module.icon} />
-                                    {module.label}
-                                </NavLink>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="mod-h unico"
-                                    disabled
-                                    title="Em breve"
-                                >
-                                    <MenuIcon name={module.icon} />
-                                    {module.label}
-                                </button>
-                            )}
+                            <NavLink
+                                to={item.path}
+                                onClick={handleNavigate}
+                                className={({ isActive }) =>
+                                    cn("mod-h unico", isActive && "on")
+                                }
+                            >
+                                <MenuIcon name={module.icon} />
+                                {module.label}
+                            </NavLink>
                         </div>
                     )
                 }
@@ -139,30 +121,18 @@ export function AppSidebar({
                         </button>
 
                         {isOpen &&
-                            module.items.map((item) =>
-                                item.path ? (
-                                    <NavLink
-                                        key={item.id}
-                                        to={item.path}
-                                        onClick={handleNavigate}
-                                        className={({ isActive }) =>
-                                            cn("mi", isActive && "on")
-                                        }
-                                    >
-                                        {item.label}
-                                    </NavLink>
-                                ) : (
-                                    <button
-                                        key={item.id}
-                                        type="button"
-                                        className="mi"
-                                        disabled
-                                        title="Em breve"
-                                    >
-                                        {item.label}
-                                    </button>
-                                ),
-                            )}
+                            module.items.map((item) => (
+                                <NavLink
+                                    key={item.id}
+                                    to={item.path}
+                                    onClick={handleNavigate}
+                                    className={({ isActive }) =>
+                                        cn("mi", isActive && "on")
+                                    }
+                                >
+                                    {item.label}
+                                </NavLink>
+                            ))}
                     </div>
                 )
             })}
