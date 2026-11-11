@@ -68,6 +68,41 @@ final class StagingSeed {
         finally {connection.setAutoCommit(true);}
     }
 
+    /** Platform administration for staging identity smoke tests (#334); the bootstrap never grants firm or Company access. */
+    static final java.util.List<String> PLATFORM_ADMIN=java.util.List.of("ACCOUNTING_FIRM_CREATE","ACCOUNTING_FIRM_VIEW","PLATFORM_USER_MANAGE","UNASSIGNED_COMPANY_ASSIGN");
+
+    /**
+     * Elevates only the deterministic, marked synthetic operator. No permissions:
+     * inserts exactly the four. Exactly the four: no-op (false). Anything else,
+     * or a divergent identity: refuses without repairing. Never touches the
+     * password, credentials version, Company grants or organizations.
+     */
+    static boolean grantSyntheticPlatformAdmin(Connection connection) throws SQLException {
+        if(!connection.getAutoCommit()) throw new IllegalArgumentException("Invalid staging seed context");
+        connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        connection.setAutoCommit(false);
+        try {
+            execute(connection,"SET LOCAL lock_timeout='10s'");
+            execute(connection,"SET LOCAL statement_timeout='30s'");
+            execute(connection,"SELECT pg_advisory_xact_lock(534826201)");
+            execute(connection,"LOCK TABLE user_accounts,user_account_platform_permissions,staging_seed_receipts IN SHARE ROW EXCLUSIVE MODE");
+            require(connection,"SELECT count(*) FROM staging_seed_receipts WHERE seed_key=? AND company_id=? AND user_id=?",1,KEY,id("company"),id("user"));
+            require(connection,"SELECT count(*) FROM user_accounts WHERE id=? AND email='demo@finemp.example.invalid' AND active=true AND invitation_pending=false",1,id("user"));
+            var current=new java.util.TreeSet<String>();
+            try(var query=connection.prepareStatement("SELECT permission FROM user_account_platform_permissions WHERE user_account_id=?")) {
+                query.setObject(1,id("user"));
+                try(var rows=query.executeQuery()){while(rows.next())current.add(rows.getString(1));}
+            }
+            if(current.equals(new java.util.TreeSet<>(PLATFORM_ADMIN))) {connection.commit();return false;}
+            if(!current.isEmpty()) throw new SQLException("Synthetic platform permissions diverge; refusing to repair");
+            for(var permission:PLATFORM_ADMIN)
+                execute(connection,"INSERT INTO user_account_platform_permissions(user_account_id,permission) VALUES(?,?)",id("user"),permission);
+            require(connection,"SELECT count(*) FROM user_account_platform_permissions WHERE user_account_id=?",PLATFORM_ADMIN.size(),id("user"));
+            connection.commit();return true;
+        } catch(SQLException|RuntimeException ex) {connection.rollback();throw ex;}
+        finally {connection.setAutoCommit(true);}
+    }
+
     /** Explicit negative-access fixture; never changes the existing operator or its grants. */
     static boolean provisionIsolationCompany(Connection connection) throws SQLException {
         if(!connection.getAutoCommit()) throw new IllegalArgumentException("Invalid staging seed context");
