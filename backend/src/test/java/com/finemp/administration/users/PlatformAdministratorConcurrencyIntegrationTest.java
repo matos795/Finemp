@@ -41,10 +41,11 @@ class PlatformAdministratorConcurrencyIntegrationTest {
         jdbc.update("DELETE FROM user_accounts WHERE id IN (?, ?)", first, second);
     }
 
-    @Test
-    void shouldNeverRemoveBothLastAdministratorsAcrossConcurrentTransactions() throws Exception {
-        first = admin();
-        second = admin();
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = PlatformPermission.class, names = {"PLATFORM_USER_MANAGE", "SYSTEM_ADMIN"})
+    void shouldNeverRemoveBothLastAdministratorsAcrossConcurrentTransactions(PlatformPermission permission) throws Exception {
+        first = admin(permission);
+        second = admin(permission);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         try (var executor = Executors.newFixedThreadPool(2)) {
@@ -65,14 +66,14 @@ class PlatformAdministratorConcurrencyIntegrationTest {
             assertThat(List.of(firstResult.get(15, TimeUnit.SECONDS), secondResult.get(15, TimeUnit.SECONDS)))
                     .containsExactlyInAnyOrder(true, false);
         }
-        assertThat(users.countActiveByPlatformPermission(PlatformPermission.PLATFORM_USER_MANAGE)).isEqualTo(1);
+        assertThat(users.countActiveByPlatformPermission(permission)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM access_audit_events WHERE subject_user_account_id IN (?, ?)",
                 Long.class, first, second)).isEqualTo(1L);
     }
 
     @Test
     void shouldRejectAnOuterTransactionWithAnIncompatibleSnapshotInsteadOfUsingStaleCounts() {
-        first = admin();
+        first = admin(PlatformPermission.PLATFORM_USER_MANAGE);
         var transaction = new TransactionTemplate(transactions);
         transaction.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
 
@@ -83,8 +84,27 @@ class PlatformAdministratorConcurrencyIntegrationTest {
         assertThat(users.existsByIdAndPlatformPermission(first, PlatformPermission.PLATFORM_USER_MANAGE)).isTrue();
     }
 
-    private UUID admin() {
+    @Test
+    void normalManagerCannotManageGlobalIdentityOrPromoteItself() {
+        first = admin(PlatformPermission.PLATFORM_USER_MANAGE);
+        second = admin(PlatformPermission.SYSTEM_ADMIN);
+        assertThatThrownBy(() -> service.replacePermissions(first, first, Set.of(PlatformPermission.SYSTEM_ADMIN)))
+                .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
+        assertThatThrownBy(() -> service.replacePermissions(first, second, Set.of()))
+                .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
+        assertThatThrownBy(() -> service.setActive(first, second, false))
+                .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
+        assertThatThrownBy(() -> service.setActive(second, second, false))
+                .isInstanceOf(PlatformUserConflictException.class);
+        service.replacePermissions(second, first, Set.of(PlatformPermission.SYSTEM_ADMIN, PlatformPermission.PLATFORM_USER_MANAGE));
+        service.replacePermissions(first, second, Set.of());
+        assertThat(users.countActiveByPlatformPermission(PlatformPermission.SYSTEM_ADMIN)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM access_audit_events WHERE subject_user_account_id IN (?,?)",
+                Long.class, first, second)).isEqualTo(2);
+    }
+
+    private UUID admin(PlatformPermission permission) {
         return users.saveAndFlush(new UserAccount("Synthetic Concurrent Admin", "platform-concurrent-" + UUID.randomUUID()
-                + "@example.invalid", "synthetic-hash", Set.of(PlatformPermission.PLATFORM_USER_MANAGE))).getId();
+                + "@example.invalid", "synthetic-hash", Set.of(permission))).getId();
     }
 }
