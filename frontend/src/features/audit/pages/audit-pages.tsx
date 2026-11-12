@@ -268,6 +268,7 @@ export function CompanyAuditTrailPage() {
 
     return (
         <AuditLogView
+            key={selectedCompany.id}
             companyId={selectedCompany.id}
             title="Trilha de auditoria"
             description={`Eventos auditados exclusivamente da empresa ${selectedCompany.name}.`}
