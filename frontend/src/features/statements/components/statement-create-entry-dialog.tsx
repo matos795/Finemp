@@ -28,6 +28,7 @@ interface StatementCreateEntryDialogProps {
     categories: FinancialCategoryOption[]
     resultCenters: ResultCenterOption[]
     onClose: () => void
+    onCreated: () => void
 }
 
 export function StatementCreateEntryDialog({
@@ -37,6 +38,7 @@ export function StatementCreateEntryDialog({
     categories,
     resultCenters,
     onClose,
+    onCreated,
 }: StatementCreateEntryDialogProps) {
     const queryClient = useQueryClient()
     const lastAttempt = useRef<CommandAttempt | null>(null)
@@ -62,6 +64,7 @@ export function StatementCreateEntryDialog({
         },
         onSuccess: () => {
             lastAttempt.current = null
+            onCreated()
         },
         onSettled: () =>
             Promise.all([
