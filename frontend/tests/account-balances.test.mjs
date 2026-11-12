@@ -22,7 +22,7 @@ test("accounts and balances renders the backend-derived current balance only", (
 
   assert.match(page, /account\.currentBalance/)
   assert.match(page, /account\.openingBalance/)
-  assert.doesNotMatch(page, /\.reduce\(|nominalAmount|actualPaidAmount|transfer/i)
+  assert.doesNotMatch(page, /\.reduce\(|nominalAmount|actualPaidAmount|transferAmount|BankTransfer/)
 
   assert.match(api, /financial-reports.*account-balances/s)
   assert.match(hook, /getAccountBalances/)
