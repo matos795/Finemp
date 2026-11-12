@@ -89,3 +89,17 @@ test("accounting screens preserve the read/write boundary", () => {
   assert.match(movements, /somente leitura/)
   assert.doesNotMatch(movements, /POST|PUT|DELETE|classifyAccountingAccount/)
 })
+
+
+test("accounting routes use the matching authorization guards", () => {
+  const router = readFileSync(
+    new URL("../src/app/router/app-router.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(router, /path="\/accounting-accounts"/)
+  assert.match(router, /ACCOUNT_CLASSIFICATION_VIEW/)
+  assert.match(router, /ACCOUNT_CLASSIFICATION_MANAGE/)
+  assert.match(router, /path="\/accounting-movements"/)
+  assert.match(router, /permission="ACCOUNTING_MOVEMENT_VIEW"/)
+})
