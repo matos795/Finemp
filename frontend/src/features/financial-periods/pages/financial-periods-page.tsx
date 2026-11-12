@@ -7,6 +7,7 @@ import { ApiError } from "../../../lib/api/api-client"
 import { useCompanyAccess } from "../../companies/company-access-context"
 import {
     closeFinancialPeriod,
+    getFinancialPeriod,
     listFinancialPeriodHistory,
     listFinancialPeriods,
     reopenFinancialPeriod,
@@ -96,21 +97,22 @@ function FinancialPeriodsForCompany({
     async function close() {
         if (!period || !canClose) return
 
-        const current =
-            result?.items.find(
-                (item) => item.period === period,
-            ) ?? null
-
         setMutationBusy(true)
         setMutationError("")
         setMessage("")
 
         try {
+            const current =
+                await getFinancialPeriod(
+                    companyId,
+                    period,
+                )
+
             const receipt =
                 await closeFinancialPeriod(
                     companyId,
                     period,
-                    current?.version ?? null,
+                    current.version,
                 )
 
             setMessage(
