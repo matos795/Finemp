@@ -43,7 +43,9 @@ jobs:
 
       - name: Generate Connector SHA-256
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: sha256sum target/finemp-api-0.0.1-SNAPSHOT-connector.jar > target/finemp-api-0.0.1-SNAPSHOT-connector.jar.sha256
+        run: |
+          cd target
+          sha256sum finemp-api-0.0.1-SNAPSHOT-connector.jar > finemp-api-0.0.1-SNAPSHOT-connector.jar.sha256
 
       - name: Publish Connector homologation artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
