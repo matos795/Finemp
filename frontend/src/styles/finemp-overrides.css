@@ -61,3 +61,29 @@
   opacity: .5;
   cursor: default;
 }
+
+/* #340 — roadmap visível só ao SYSTEM_ADMIN. Não parece clicável e não
+   promete data: "Em breve" descreve apenas disponibilidade do produto. */
+.fin .roadmap-soon{
+    color:var(--mut);
+    cursor:default;
+}
+.fin .roadmap-soon:hover{
+    background:transparent;
+}
+.fin .mi.roadmap-soon{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+}
+.fin .roadmap-soon-badge{
+    margin-left:auto;
+    color:var(--mut);
+    font-size:10px;
+    font-weight:700;
+    line-height:1;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
