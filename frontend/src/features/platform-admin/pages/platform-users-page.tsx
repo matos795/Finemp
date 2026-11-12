@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react"
+import { useEffect, useState } from "react"\nimport type { FormEvent } from "react"
 import { ApiError } from "../../../lib/api/api-client"
 import { useCurrentUser } from "../../auth/hooks/use-current-user"
 import {
