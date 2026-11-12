@@ -40,24 +40,25 @@ public record GoalResponse(
         }
 
         var current = latest.getMeasuredValue();
+        var progress = GoalProgress.calculate(
+                goal.getDirection(),
+                goal.getBaselineValue(),
+                goal.getTargetValue(),
+                current);
 
         return new GoalResponse(
                 goal.getId(),
                 goal.getName(),
                 goal.getDirection(),
-                goal.getBaselineValue(),
-                goal.getTargetValue(),
+                goal.getBaselineValue().toPlainString(),
+                goal.getTargetValue().toPlainString(),
                 goal.getDueOn(),
                 goal.getNotes(),
                 goal.isActive(),
                 goal.getVersion(),
-                current,
+                current.toPlainString(),
                 latest.getMeasuredOn(),
-                GoalProgress.calculate(
-                        goal.getDirection(),
-                        goal.getBaselineValue().toPlainString(),
-                        goal.getTargetValue().toPlainString(),
-                        current),
+                progress.toPlainString(),
                 GoalProgress.isAchieved(
                         goal.getDirection(),
                         current,
