@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
   createGoal,
+  listAllActiveGoals,
   measureGoal,
   setActionCompleted,
   updateGoal,
@@ -271,4 +272,65 @@ test("goal history query keeps its page in state and query key", () => {
   )
   assert.match(page, /setHistoryPage\(0\)[\s\S]*?setHistoryTarget\(goal\)/)
   assert.match(page, /historyQuery\.data\.totalPages/)
+})
+
+
+test("action goal selector loads every active goal page", async () => {
+  const calls = []
+
+  globalThis.fetch = async (path, options = {}) => {
+    calls.push({ path, options })
+
+    const url = new URL(String(path), "https://finemp.invalid")
+    const page = Number(url.searchParams.get("page"))
+
+    return Response.json({
+      items: [{
+        id: `goal-${page}`,
+        name: `Meta ${page}`,
+        direction: "UP",
+        baselineValue: "0.0000",
+        targetValue: "1.0000",
+        dueOn: "2027-01-01",
+        notes: null,
+        active: true,
+        version: 0,
+        currentValue: null,
+        currentMeasuredOn: null,
+        progress: null,
+        achieved: null,
+      }],
+      page,
+      size: 100,
+      totalItems: 2,
+      totalPages: 2,
+    })
+  }
+
+  const goals = await listAllActiveGoals("company-1")
+
+  assert.deepEqual(goals.map((goal) => goal.id), ["goal-0", "goal-1"])
+  assert.deepEqual(
+    calls.map(({ path }) => path),
+    [
+      "/api/companies/company-1/goals?page=0&size=100&active=true",
+      "/api/companies/company-1/goals?page=1&size=100&active=true",
+    ],
+  )
+})
+
+test("all paged planning screens reconcile an empty page after mutations", () => {
+  for (const path of [
+    "../src/features/planning/pages/planning-meetings-page.tsx",
+    "../src/features/planning/pages/planning-goals-page.tsx",
+    "../src/features/planning/pages/planning-actions-page.tsx",
+  ]) {
+    const source = readFileSync(
+      new URL(path, import.meta.url),
+      "utf8",
+    )
+
+    assert.match(source, /reconcilePlanningPage/)
+    assert.match(source, /setPage\(nextPage\)/)
+  }
 })
