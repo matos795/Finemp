@@ -14,8 +14,19 @@ public final class ProductionAdminBootstrapMain {
             return;
         }
         try {
-            if (args.length != 0) throw new IllegalArgumentException();
             var env = System.getenv();
+            if (args.length == 1 && "--system-admin".equals(args[0])) {
+                validateElevationTarget(env);
+                var target = java.util.UUID.fromString(required(env, "FINEMP_PRODUCTION_SYSTEM_ADMIN_USER_ID"));
+                String email = required(env, "FINEMP_PRODUCTION_SYSTEM_ADMIN_EMAIL").trim();
+                try (var connection = DriverManager.getConnection(required(env, "SPRING_DATASOURCE_URL"),
+                        required(env, "SPRING_DATASOURCE_USERNAME"), required(env, "SPRING_DATASOURCE_PASSWORD"))) {
+                    boolean granted = ProductionAdminBootstrap.elevate(connection, target, email);
+                    System.out.println(granted ? "Global administration granted." : "Global administration already established.");
+                }
+                return;
+            }
+            if (args.length != 0) throw new IllegalArgumentException();
             validateTarget(env);
             String name = required(env, "FINEMP_PRODUCTION_ADMIN_NAME").trim();
             String email = required(env, "FINEMP_PRODUCTION_ADMIN_EMAIL").trim().toLowerCase(Locale.ROOT);
@@ -35,6 +46,10 @@ public final class ProductionAdminBootstrapMain {
             System.err.println("First-admin bootstrap refused or failed; no configuration values logged.");
             System.exit(2);
         }
+    }
+
+    static void validateElevationTarget(Map<String,String> env) {
+        ProductionTargetGuard.validate(env, "FINEMP_PRODUCTION_SYSTEM_ADMIN_CONFIRM", "GRANT_FINEMP_PRODUCTION_SYSTEM_ADMIN");
     }
 
     static void validateTarget(Map<String,String> env) {

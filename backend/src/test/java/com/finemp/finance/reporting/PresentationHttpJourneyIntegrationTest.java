@@ -101,6 +101,45 @@ class PresentationHttpJourneyIntegrationTest {
         }
     }
 
+    @Test void globalAccessWithoutDelegatedGrantsUsesNormalHttpSession() throws Exception {
+        var firm = firms.saveAndFlush(new AccountingFirm("Global HTTP test", true));
+        var client = clients.saveAndFlush(new Client(firm, "Global HTTP test", true));
+        var a = companies.saveAndFlush(new Company(client, "Tie", "90919191000191"));
+        var b = companies.saveAndFlush(new Company(client, "Tie", "90929292000192"));
+        String password = UUID.randomUUID().toString();
+        var global = users.saveAndFlush(new UserAccount("Global", UUID.randomUUID()+"@example.invalid",
+                passwords.encode(password), Set.of(PlatformPermission.SYSTEM_ADMIN)));
+        var normal = users.saveAndFlush(new UserAccount("Normal", UUID.randomUUID()+"@example.invalid", passwords.encode(password)));
+        String report = "/api/companies/"+a.getId()+"/financial-reports/presentation-snapshot?month=2026-07&asOf=2026-07-31&scope=ALL";
+        try {
+            assertThat(post("/api/auth/login", Map.of("email",global.getEmail(),"password",password),null).statusCode()).isEqualTo(204);
+            var me = json.readTree(get("/api/auth/me").body());
+            var tiedIds = new java.util.ArrayList<String>();
+            for (var company : me.get("companies")) {
+                assertThat(company.get("role").asString()).isEqualTo("ADMIN");
+                assertThat(company.get("costCenterScope").asString()).isEqualTo("ALL");
+                assertThat(company.get("permissions").size()).isEqualTo(CompanyPermission.values().length);
+                if ("Tie".equals(company.get("name").asString())) tiedIds.add(company.get("id").asString());
+            }
+            assertThat(tiedIds).containsExactlyElementsOf(java.util.stream.Stream.of(a.getId(), b.getId()).map(UUID::toString).sorted().toList());
+            assertThat(get(report).statusCode()).isEqualTo(200);
+            var unprotectedLogout = HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/auth/logout"))
+                    .POST(HttpRequest.BodyPublishers.noBody()).build();
+            assertThat(http.send(unprotectedLogout,HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(403);
+            assertThat(post("/api/auth/logout",Map.of(),null).statusCode()).isEqualTo(204);
+            assertThat(post("/api/auth/login", Map.of("email",normal.getEmail(),"password",password),null).statusCode()).isEqualTo(204);
+            assertThat(get(report).statusCode()).isEqualTo(403);
+            assertThat(json.readTree(get("/api/auth/me").body()).get("companies").size()).isZero();
+            for (String table : List.of("company_access_grants","accounting_firm_access_grants"))
+                assertThat(jdbc.queryForObject("SELECT count(*) FROM "+table+" WHERE user_account_id IN (?,?)",
+                        Long.class,global.getId(),normal.getId())).isZero();
+        } finally {
+            companies.deleteById(a.getId()); companies.deleteById(b.getId());
+            clients.deleteById(client.getId()); firms.deleteById(firm.getId());
+            users.deleteById(global.getId()); users.deleteById(normal.getId());
+        }
+    }
+
     private HttpResponse<String> get(String path) throws Exception {
         return http.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).timeout(Duration.ofSeconds(20)).GET().build(),HttpResponse.BodyHandlers.ofString());
     }

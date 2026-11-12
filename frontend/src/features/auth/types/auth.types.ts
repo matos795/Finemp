@@ -3,6 +3,7 @@ export type PlatformPermission =
     | "ACCOUNTING_FIRM_VIEW"
     | "UNASSIGNED_COMPANY_ASSIGN"
     | "PLATFORM_USER_MANAGE"
+    | "SYSTEM_ADMIN"
 
 export type CompanyAccessRole =
     | "CUSTOM"
@@ -59,4 +60,8 @@ export interface CurrentUser {
 export interface LoginRequest {
     email: string
     password: string
+}
+export function hasPlatformAccess(user: CurrentUser, permission: PlatformPermission): boolean {
+    const assigned = user.platformPermissions ?? []
+    return assigned.includes("SYSTEM_ADMIN") || assigned.includes(permission)
 }

@@ -20,6 +20,17 @@ class ProductionAdminBootstrapTargetTest {
         return env;
     }
 
+    @Test void confirmationsAreIndependentAndBothModesCheckTheProductionTarget() {
+        var env = valid();
+        assertThatThrownBy(() -> ProductionAdminBootstrapMain.validateElevationTarget(env)).isInstanceOf(IllegalArgumentException.class);
+        env.remove("FINEMP_PRODUCTION_BOOTSTRAP_CONFIRM");
+        env.put("FINEMP_PRODUCTION_SYSTEM_ADMIN_CONFIRM", "GRANT_FINEMP_PRODUCTION_SYSTEM_ADMIN");
+        ProductionAdminBootstrapMain.validateElevationTarget(env);
+        assertThatThrownBy(() -> ProductionAdminBootstrapMain.validateTarget(env)).isInstanceOf(IllegalArgumentException.class);
+        env.put("SPRING_PROFILES_ACTIVE", "local");
+        assertThatThrownBy(() -> ProductionAdminBootstrapMain.validateElevationTarget(env)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Test void acceptsOnlyExplicitProductionTarget() {
         ProductionAdminBootstrapMain.validateTarget(valid());
         for (String key : valid().keySet()) {

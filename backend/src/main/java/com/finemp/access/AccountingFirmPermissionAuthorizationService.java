@@ -7,10 +7,12 @@ import java.util.UUID;
 @Service
 public class AccountingFirmPermissionAuthorizationService {
 
+    private final PlatformPermissionAuthorizationService platform;
     private final AccountingFirmAccessGrantRepository accountingFirmAccessGrantRepository;
 
     public AccountingFirmPermissionAuthorizationService(
-            AccountingFirmAccessGrantRepository accountingFirmAccessGrantRepository) {
+            AccountingFirmAccessGrantRepository accountingFirmAccessGrantRepository, PlatformPermissionAuthorizationService platform) {
+        this.platform = platform;
         this.accountingFirmAccessGrantRepository = accountingFirmAccessGrantRepository;
     }
 
@@ -18,7 +20,7 @@ public class AccountingFirmPermissionAuthorizationService {
             UUID userAccountId,
             UUID accountingFirmId,
             AccountingFirmPermission permission) {
-        return accountingFirmAccessGrantRepository
+        return platform.isSystemAdmin(userAccountId) || accountingFirmAccessGrantRepository
                 .existsByUserAccountIdAndAccountingFirmIdAndPermission(
                         userAccountId,
                         accountingFirmId,

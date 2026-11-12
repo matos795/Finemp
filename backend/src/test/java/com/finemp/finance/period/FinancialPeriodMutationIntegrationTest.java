@@ -49,6 +49,18 @@ class FinancialPeriodMutationIntegrationTest {
         jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)",owner.getId());jdbc.update("DELETE FROM company_access_grants WHERE company_id=?",owner.getId());
         companies.deleteById(owner.getId());clients.deleteById(client.getId());firms.deleteById(firm.getId());users.deleteById(actor.getId());
     }
+    @Test void systemAdministratorWithoutGrantsMustRespectClosedCompetence() {
+        jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id IN (SELECT id FROM company_access_grants WHERE company_id=?)", owner.getId());
+        jdbc.update("DELETE FROM company_access_grants WHERE company_id=?", owner.getId());
+        jdbc.update("INSERT INTO user_account_platform_permissions(user_account_id,permission) VALUES (?,'SYSTEM_ADMIN')", actor.getId());
+        close(july);
+        assertThatThrownBy(() -> create(july, null)).isInstanceOf(FinancialPeriodClosedException.class);
+        assertThat(count("financial_entry_events")).isZero();
+        reopen(july);
+        create(july, null);
+        assertThat(count("financial_entry_events")).isEqualTo(1);
+    }
+
     @Test void competenceLockMustBlockCaptureAndBothSidesOfEditAsWellAsDeletionWithoutAnyJournalEffects() {
         var first=create(july,null);close(july);
         assertThatThrownBy(()->create(july,null)).isInstanceOf(FinancialPeriodClosedException.class);

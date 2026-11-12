@@ -69,6 +69,37 @@ class ProductionAdminBootstrapPostgresTest {
         }
     }
 
+    @Test void concurrentElevationAddsOnlyTheGlobalCapabilityToTheEstablishedTarget() throws Exception {
+        String email = "existing@example.invalid";
+        java.util.UUID target;
+        try (var c = connect(); var s = c.createStatement()) {
+            assertThatThrownBy(() -> ProductionAdminBootstrap.elevate(c, java.util.UUID.randomUUID(), email)).isInstanceOf(SQLException.class);
+            ProductionAdminBootstrap.provision(c, "Existing", email, HASH);
+            try (var result = s.executeQuery("SELECT id FROM user_accounts")) {
+                result.next(); target = result.getObject(1, java.util.UUID.class);
+            }
+            assertThatThrownBy(() -> ProductionAdminBootstrap.elevate(c, target, "other@example.invalid")).isInstanceOf(SQLException.class);
+            s.executeUpdate("UPDATE user_accounts SET active=false");
+            assertThatThrownBy(() -> ProductionAdminBootstrap.elevate(c, target, email)).isInstanceOf(SQLException.class);
+            s.executeUpdate("UPDATE user_accounts SET active=false, invitation_pending=true, password_hash='!pending-invitation'");
+            assertThatThrownBy(() -> ProductionAdminBootstrap.elevate(c, target, email)).isInstanceOf(SQLException.class);
+            s.executeUpdate("UPDATE user_accounts SET active=true, invitation_pending=false, password_hash='" + HASH.replace("'", "''") + "'");
+        }
+        try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+            Callable<Boolean> command = () -> { try (var c = connect()) { return ProductionAdminBootstrap.elevate(c, target, email); } };
+            var first = pool.submit(command); var second = pool.submit(command);
+            assertThat(List.of(first.get(30,TimeUnit.SECONDS),second.get(30,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
+        }
+        try (var c = connect(); var s = c.createStatement()) {
+            assertThat(count(c,"user_account_platform_permissions")).isEqualTo(5);
+            assertThat(count(c,"accounting_firm_access_grants")).isZero();
+            assertThat(count(c,"company_access_grants")).isZero();
+            try (var r = s.executeQuery("SELECT password_hash,credentials_version FROM user_accounts")) {
+                r.next(); assertThat(r.getString(1)).isEqualTo(HASH); assertThat(r.getLong(2)).isZero();
+            }
+        }
+    }
+
     @Test void concurrentBootstrapsCreateOneAdministrator() throws Exception {
         try(var pool=Executors.newVirtualThreadPerTaskExecutor()) {
             Callable<Boolean> action=()->{

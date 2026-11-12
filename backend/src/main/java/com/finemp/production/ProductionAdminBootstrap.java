@@ -74,6 +74,47 @@ final class ProductionAdminBootstrap {
         }
     }
 
+    static boolean elevate(Connection connection, UUID target, String email) throws SQLException {
+        if (!connection.getAutoCommit() || target == null || email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Invalid elevation context");
+        }
+        connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        connection.setAutoCommit(false);
+        try {
+            execute(connection, "SET LOCAL lock_timeout='10s'");
+            execute(connection, "SET LOCAL statement_timeout='30s'");
+            // Serialize with the API's last-administrator check and the original bootstrap.
+            execute(connection, "SELECT pg_advisory_xact_lock(1179209285, 1431520594)");
+            execute(connection, "SELECT pg_advisory_xact_lock(534826299)");
+            execute(connection, "LOCK TABLE user_accounts, user_account_platform_permissions IN SHARE ROW EXCLUSIVE MODE");
+            require(connection, """
+                    SELECT count(*) FROM user_accounts WHERE id=? AND lower(email)=lower(?)
+                      AND active=true AND invitation_pending=false
+                    """, 1, target, email);
+            for (String permission : PLATFORM_PERMISSIONS) {
+                require(connection, "SELECT count(*) FROM user_account_platform_permissions WHERE user_account_id=? AND permission=?",
+                        1, target, permission);
+            }
+            long existing = count(connection, "SELECT count(*) FROM user_account_platform_permissions WHERE permission='SYSTEM_ADMIN'");
+            boolean grant = existing == 0;
+            require(connection, "SELECT count(*) FROM user_account_platform_permissions WHERE user_account_id=?",
+                    PLATFORM_PERMISSIONS.size() + (grant ? 0 : 1), target);
+            if (grant) {
+                execute(connection, "INSERT INTO user_account_platform_permissions(user_account_id,permission) VALUES (?,'SYSTEM_ADMIN')", target);
+            } else {
+                if (existing != 1) throw new SQLException("Unexpected global administration state");
+                require(connection, "SELECT count(*) FROM user_account_platform_permissions WHERE user_account_id=? AND permission='SYSTEM_ADMIN'", 1, target);
+            }
+            connection.commit();
+            return grant;
+        } catch (SQLException | RuntimeException failure) {
+            connection.rollback();
+            throw failure;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
     private static long count(Connection connection, String sql, Object... args) throws SQLException {
         try (var statement = connection.prepareStatement(sql)) {
             bind(statement, args);

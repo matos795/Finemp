@@ -29,6 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class BusinessPartnerIntegrationTest {
+    @Autowired PlatformPermissionAuthorizationService platformPermissions;
+    @Autowired AccountingFirmPermissionAuthorizationService officePermissions;
+    @Autowired CompanyPermissionAuthorizationService companyPermissions;
     @Autowired BusinessPartnerService service;
     @Autowired BusinessPartnerRepository partners;
     @Autowired CompanyRepository companies;
@@ -152,6 +155,47 @@ class BusinessPartnerIntegrationTest {
         mvc.perform(delete(route()+"/"+partnerId).with(user(principal)).with(csrf()).param("version","0")).andExpect(status().isForbidden());
         assertThat(partners.findById(partnerId)).isPresent();
     }
+    @Test void revokingGlobalAccessDuringCompanyLockWaitPreventsDeletion() throws Exception {
+        var operator = createUser("Global");
+        var id = operator.getId();
+        jdbc.update("INSERT INTO user_account_platform_permissions(user_account_id,permission) VALUES (?,'SYSTEM_ADMIN')", id);
+        for (var permission : PlatformPermission.values())
+            assertThat(platformPermissions.hasPermission(id,permission)).isTrue();
+        for (var permission : AccountingFirmPermission.values())
+            assertThat(officePermissions.hasPermission(id,firmIds.getFirst(),permission)).isTrue();
+        for (var permission : CompanyPermission.values())
+            assertThat(companyPermissions.hasFreshPermission(id,owner.getId(),permission)).isTrue();
+        try (var pool = Executors.newVirtualThreadPerTaskExecutor();
+             var lock = jdbc.getDataSource().getConnection()) {
+            lock.setAutoCommit(false);
+            try (var statement = lock.prepareStatement("SELECT pg_backend_pid() FROM companies WHERE id=? FOR UPDATE")) {
+                statement.setObject(1, owner.getId());
+                int blocker;
+                try (var row = statement.executeQuery()) { row.next(); blocker = row.getInt(1); }
+                var waiting = pool.submit(() -> service.delete(id,owner.getId(),partnerId,0));
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!Boolean.TRUE.equals(jdbc.queryForObject(
+                        "SELECT EXISTS(SELECT FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid)))",Boolean.class,blocker))) {
+                    if (System.nanoTime() > deadline) throw new AssertionError("Company lock was never contested");
+                    Thread.sleep(20);
+                }
+                try (var revoke = lock.prepareStatement("DELETE FROM user_account_platform_permissions WHERE user_account_id=?")) {
+                    revoke.setObject(1,id);
+                    revoke.executeUpdate();
+                }
+                lock.commit();
+                assertThatThrownBy(() -> waiting.get(10,TimeUnit.SECONDS))
+                        .hasCauseInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
+            } finally {
+                lock.rollback();
+            }
+        } finally {
+            jdbc.update("DELETE FROM user_account_platform_permissions WHERE user_account_id=?",id);
+        }
+        assertThat(companyPermissions.hasFreshPermission(id,owner.getId(),CompanyPermission.BUSINESS_PARTNER_MANAGE)).isFalse();
+        assertThat(partners.findById(partnerId)).isPresent();
+    }
+
     @Test void ambientRepeatableReadMustBeRefusedBeforeMutation() {
         var template=new TransactionTemplate(transactions);template.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
         assertThatThrownBy(()->template.execute(status->service.delete(actor.getId(),owner.getId(),partnerId,0)))

@@ -15,7 +15,7 @@ class CompanyPermissionAuthorizationServiceTest {
     @Test
     void shouldRequireEachExplicitReadPermissionAndNeverInferItFromAdminRole() {
         var repository = mock(CompanyAccessGrantRepository.class);
-        var service = new CompanyPermissionAuthorizationService(repository);
+        var service = new CompanyPermissionAuthorizationService(repository, org.mockito.Mockito.mock(PlatformPermissionAuthorizationService.class));
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
         var user = new UserAccount("Synthetic", "read@example.invalid", "hash");
@@ -33,7 +33,7 @@ class CompanyPermissionAuthorizationServiceTest {
     @Test
     void shouldNeverGrantUnsegmentedPermissionToARestrictedScope() {
         var repository = mock(CompanyAccessGrantRepository.class);
-        var service = new CompanyPermissionAuthorizationService(repository);
+        var service = new CompanyPermissionAuthorizationService(repository, org.mockito.Mockito.mock(PlatformPermissionAuthorizationService.class));
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
         var grant = new CompanyAccessGrant(new UserAccount("Synthetic", "scope@example.invalid", "hash"),
@@ -47,7 +47,7 @@ class CompanyPermissionAuthorizationServiceTest {
     @Test
     void shouldPreserveExplicitPermissionChecksForAllScope() {
         var repository = mock(CompanyAccessGrantRepository.class);
-        var service = new CompanyPermissionAuthorizationService(repository);
+        var service = new CompanyPermissionAuthorizationService(repository, org.mockito.Mockito.mock(PlatformPermissionAuthorizationService.class));
         UUID userId = UUID.randomUUID();
         UUID companyId = UUID.randomUUID();
         var grant = new CompanyAccessGrant(new UserAccount("Synthetic", "scope@example.invalid", "hash"),

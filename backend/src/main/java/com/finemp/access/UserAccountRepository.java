@@ -65,4 +65,11 @@ public interface UserAccountRepository
             """)
     org.springframework.data.domain.Page<UserAccount> searchForAdministration(
             @Param("search") String search, org.springframework.data.domain.Pageable pageable);
+
+    @Query("""
+            select count(distinct account.id) from UserAccount account
+            join account.platformPermissions permission
+            where account.active = true and permission in :permissions
+            """)
+    long countActiveWithAnyPermission(@Param("permissions") java.util.Set<PlatformPermission> permissions);
 }

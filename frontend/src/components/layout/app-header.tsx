@@ -93,6 +93,7 @@ export function AppHeader({
             </div>
 
             <div className="hd-right">
+                {user.platformPermissions?.includes("SYSTEM_ADMIN") && <small>Administrador do sistema</small>}
                 <CompanySwitcher />
 
                 <button
