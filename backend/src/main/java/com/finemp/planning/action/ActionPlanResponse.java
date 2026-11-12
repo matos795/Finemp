@@ -1,6 +1,5 @@
 package com.finemp.planning.action;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -14,7 +13,7 @@ public record ActionPlanResponse(
         LocalDate dueOn,
         String where,
         String how,
-        BigDecimal cost,
+        String cost,
         String workflowStatus,
         Instant completedAt,
         long version) {
@@ -29,7 +28,7 @@ public record ActionPlanResponse(
                 item.getDueOn(),
                 item.getWhere(),
                 item.getHow(),
-                item.getCost(),
+                item.getCost() == null ? null : item.getCost().toPlainString(),
                 item.getWorkflowStatus(),
                 item.getCompletedAt(),
                 item.getVersion());
