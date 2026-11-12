@@ -366,7 +366,7 @@ function ContractDialog({
                             onChange={(event) => setBusinessPartnerId(event.target.value)}
                         >
                             <option value="">Selecione</option>
-                            {currentPartnerMissing ? (
+                            {currentPartnerMissing && contract ? (
                                 <option value={contract.businessPartnerId}>
                                     {contract.businessPartnerName}
                                 </option>
