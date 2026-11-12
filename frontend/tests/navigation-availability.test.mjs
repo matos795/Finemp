@@ -115,7 +115,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admLog"]) {
+  for (const id of ["crmFunil", "orc", "bens", "cadCtb"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -157,6 +157,37 @@ test("availability batch routes are published with their real permission boundar
     ids(visibleNavigation(navigationModules, none, can("ACCOUNTING_FIRM_VIEW"))),
     ["admin:adminOnboarding,admClientes", "ajuda:faq,tutor"],
   )
+})
+
+test("audit routes are visible only with SYSTEM_ADMIN", () => {
+  assert.equal(
+    findNavigationByPath(navigationModules, "/admin/activity-log").item.id,
+    "admLog",
+  )
+  assert.equal(
+    findNavigationByPath(navigationModules, "/audit-trail").item.id,
+    "audit",
+  )
+
+  assert.equal(
+    visibleNavigation(
+      navigationModules,
+      () => false,
+      (permission) => permission === "PLATFORM_USER_MANAGE",
+    )
+      .flatMap((module) => module.items)
+      .some((item) => item.id === "admLog" || item.id === "audit"),
+    false,
+  )
+
+  const systemAdmin = visibleNavigation(
+    navigationModules,
+    () => false,
+    (permission) => permission === "SYSTEM_ADMIN",
+  ).flatMap((module) => module.items.map((item) => item.id))
+
+  assert.equal(systemAdmin.includes("admLog"), true)
+  assert.equal(systemAdmin.includes("audit"), true)
 })
 
 test("normal users still receive only published and authorized items", () => {
