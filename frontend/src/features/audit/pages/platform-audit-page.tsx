@@ -33,7 +33,7 @@ const actionLabels: Record<string, string> = {
     FINANCIAL_STATEMENT_RECONCILED: "Movimento de extrato conciliado",
 }
 
-export function auditActionLabel(action: string) {
+function auditActionLabel(action: string) {
     return actionLabels[action] ?? action
 }
 
