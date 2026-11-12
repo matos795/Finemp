@@ -249,3 +249,26 @@ test("planning permissions are selectable without being silently assigned by rol
     assert.match(source, /PLANNING_MANAGE/)
   }
 })
+
+
+test("goal history query keeps its page in state and query key", () => {
+  const page = readFileSync(
+    new URL(
+      "../src/features/planning/pages/planning-goals-page.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  )
+
+  assert.match(page, /const \[historyPage, setHistoryPage\] = useState\(0\)/)
+  assert.match(
+    page,
+    /"planning-goal-measurements"[\s\S]*?historyTarget\?\.id[\s\S]*?historyPage/,
+  )
+  assert.match(
+    page,
+    /listGoalMeasurements\([\s\S]*?historyTarget!\.id,[\s\S]*?historyPage,[\s\S]*?50/,
+  )
+  assert.match(page, /setHistoryPage\(0\)[\s\S]*?setHistoryTarget\(goal\)/)
+  assert.match(page, /historyQuery\.data\.totalPages/)
+})
