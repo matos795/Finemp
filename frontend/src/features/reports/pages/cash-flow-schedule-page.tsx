@@ -172,7 +172,11 @@ export function CashFlowSchedulePage() {
                                                 {formatExactDecimalCell(title.nominalAmount)}
                                             </td>
                                             <td style={{ whiteSpace: "nowrap" }}>
-                                                {onSettle ? (
+                                                {title.paymentDate ? (
+                                                    <span className="badge b-neu">
+                                                        pago em {formatIsoDate(title.paymentDate)}
+                                                    </span>
+                                                ) : onSettle ? (
                                                     <button
                                                         type="button"
                                                         className={`btn ${isIncome ? "ent" : "sai"} sm`}
