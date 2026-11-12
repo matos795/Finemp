@@ -67,7 +67,8 @@ export function CashFlowSchedulePage() {
     )
 
     const settlingHere =
-        settling?.companyId === companyId &&
+        settling &&
+        settling.companyId === companyId &&
         settling.title.direction === direction
             ? settling
             : null
