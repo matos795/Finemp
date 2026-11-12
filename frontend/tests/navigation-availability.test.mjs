@@ -64,7 +64,7 @@ test("Company and Platform permissions keep filtering the available items", () =
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, none, can("PLATFORM_USER_MANAGE"))),
-    ["admin:adminOnboarding", "ajuda:faq,tutor"],
+    ["admin:adminOnboarding,admUsers", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
@@ -115,7 +115,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admUsers", "admLog"]) {
+  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admLog"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -127,6 +127,16 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   }
 })
 
+
+test("Usuários e acessos stays published after the availability batch", () => {
+  const item = navigationModules
+    .find((module) => module.id === "admin")
+    .items.find((candidate) => candidate.id === "admUsers")
+
+  assert.equal(item.path, "/admin/users")
+  assert.deepEqual(item.platformPermissions, ["PLATFORM_USER_MANAGE"])
+  assert.equal(findNavigationByPath(navigationModules, "/admin/users").item.id, "admUsers")
+})
 
 test("availability batch routes are published with their real permission boundaries", () => {
   assert.equal(findNavigationByPath(navigationModules, "/admin/clients").item.id, "admClientes")

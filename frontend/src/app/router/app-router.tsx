@@ -29,6 +29,7 @@ import { AccountBalancesPage } from "../../features/reports/pages/account-balanc
 import { PresentationResultsPage } from "../../features/reports/pages/presentation-results-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
+import { PlatformUsersPage } from "../../features/platform-admin/pages/platform-users-page"
 import { PlatformClientsPage } from "../../features/platform-admin/pages/platform-clients-page"
 import { ResultCentersPage } from "../../features/result-centers/pages/result-centers-page"
 import { FinancialPeriodsPage } from "../../features/financial-periods/pages/financial-periods-page"
@@ -84,6 +85,15 @@ export function AppRouter() {
                                 ]}
                             >
                                 <PlatformAdminPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
+
+                    <Route
+                        path="/admin/users"
+                        element={
+                            <RequirePlatformPermission permission="PLATFORM_USER_MANAGE">
+                                <PlatformUsersPage />
                             </RequirePlatformPermission>
                         }
                     />
