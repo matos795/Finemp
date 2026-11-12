@@ -29,6 +29,11 @@ import { AccountBalancesPage } from "../../features/reports/pages/account-balanc
 import { PresentationResultsPage } from "../../features/reports/pages/presentation-results-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
+import { PlatformClientsPage } from "../../features/platform-admin/pages/platform-clients-page"
+import { ResultCentersPage } from "../../features/result-centers/pages/result-centers-page"
+import { FinancialPeriodsPage } from "../../features/financial-periods/pages/financial-periods-page"
+import { FaqPage } from "../../features/help/pages/faq-page"
+import { TutorialsPage } from "../../features/help/pages/tutorials-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
 import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
 
@@ -82,6 +87,47 @@ export function AppRouter() {
                             </RequirePlatformPermission>
                         }
                     />
+
+                    <Route
+                        path="/admin/clients"
+                        element={
+                            <RequirePlatformPermission permission="ACCOUNTING_FIRM_VIEW">
+                                <PlatformClientsPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
+
+                    <Route
+                        path="/result-centers"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "RESULT_CENTER_VIEW",
+                                    "RESULT_CENTER_MANAGE",
+                                ]}
+                            >
+                                <ResultCentersPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/financial-periods"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_PERIOD_VIEW",
+                                    "FINANCIAL_PERIOD_CLOSE",
+                                    "FINANCIAL_PERIOD_REOPEN",
+                                ]}
+                            >
+                                <FinancialPeriodsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route path="/help/faq" element={<FaqPage />} />
+                    <Route path="/help/tutorials" element={<TutorialsPage />} />
 
                     <Route
                         path="/dre"
