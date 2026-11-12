@@ -94,3 +94,28 @@ export interface StatementCandidate {
 }
 
 export type StatementCandidatePage = PageResponse<StatementCandidate>
+
+export interface StatementReconciliationReceipt {
+    companyId: string
+    itemId: string
+    entryId: string
+    commandId: string
+    itemVersion: number
+    entryVersion: number
+    auditEventId: string
+}
+
+export interface StatementCreateEntryValues {
+    description: string
+    documentDate: string
+    entryDate: string
+    competence: string
+    dueDate: string
+    categoryId: string
+    partnerId: string | null
+    resultCenterId: string | null
+    costBehaviorOverride: "FIXED" | "VARIABLE" | null
+    paymentMethod: string | null
+    documentNumber: string | null
+    notes: string | null
+}
