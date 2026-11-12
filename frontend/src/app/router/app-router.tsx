@@ -35,6 +35,8 @@ import { ResultCentersPage } from "../../features/result-centers/pages/result-ce
 import { FinancialPeriodsPage } from "../../features/financial-periods/pages/financial-periods-page"
 import { FaqPage } from "../../features/help/pages/faq-page"
 import { TutorialsPage } from "../../features/help/pages/tutorials-page"
+import { PlatformAuditPage } from "../../features/audit/pages/platform-audit-page"
+import { CompanyAuditPage } from "../../features/audit/pages/company-audit-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
 import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
 
@@ -138,6 +140,24 @@ export function AppRouter() {
 
                     <Route path="/help/faq" element={<FaqPage />} />
                     <Route path="/help/tutorials" element={<TutorialsPage />} />
+
+                    <Route
+                        path="/admin/activity-log"
+                        element={
+                            <RequirePlatformPermission permission="SYSTEM_ADMIN">
+                                <PlatformAuditPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
+
+                    <Route
+                        path="/audit-trail"
+                        element={
+                            <RequirePlatformPermission permission="SYSTEM_ADMIN">
+                                <CompanyAuditPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
 
                     <Route
                         path="/dre"
