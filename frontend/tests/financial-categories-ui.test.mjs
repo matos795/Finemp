@@ -35,7 +35,11 @@ test("cadPlano publishes /financial-categories for VIEW, STRUCTURE_MANAGE or MAN
 
   for (const permission of FINANCIAL_CATEGORY_READ_PERMISSIONS) {
     const visible = visibleNavigation(navigationModules, can(permission), () => false)
-    assert.deepEqual(visible.map((module) => `${module.id}:${module.items.map((item) => item.id).join(",")}`), ["cad:cadPlano"], permission)
+    assert.deepEqual(
+      visible.map((module) => `${module.id}:${module.items.map((item) => item.id).join(",")}`),
+      ["cad:cadPlano", "ajuda:faq,tutor"],
+      permission,
+    )
   }
   assert.deepEqual(visibleNavigation(navigationModules, can("FINANCIAL_ENTRY_VIEW"), () => false)
     .flatMap((module) => module.items.map((item) => item.id)).includes("cadPlano"), false)

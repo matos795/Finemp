@@ -39,10 +39,10 @@ test("items without a published route are not shown", () => {
 test("modules left without available items disappear", () => {
   const moduleIds = visibleNavigation(navigationModules, () => true, () => true).map((module) => module.id)
 
-  for (const empty of ["grp", "div", "crm", "pes", "ctr", "est", "pat", "pln", "orc", "ajuda"]) {
+  for (const empty of ["grp", "div", "crm", "pes", "ctr", "est", "pat", "pln", "orc"]) {
     assert.equal(moduleIds.includes(empty), false, empty)
   }
-  for (const published of ["fluxo", "rel", "cad", "dem"]) {
+  for (const published of ["fluxo", "rel", "cad", "ajuda", "dem"]) {
     assert.equal(moduleIds.includes(published), true, published)
   }
 })
@@ -52,25 +52,29 @@ test("a financial client sees the published financial screens it is allowed to o
     "fluxo:painel,lanc,agenda,ext,mensal,diario,bancos",
     "rel:relRec,relPag,dre,relApres",
     "cad:cadContas,cadPlano",
+    "ajuda:faq,tutor",
   ])
 })
 
 test("Company and Platform permissions keep filtering the available items", () => {
-  assert.deepEqual(visibleNavigation(navigationModules, none, none), [])
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, none, none)),
+    ["ajuda:faq,tutor"],
+  )
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, none, can("PLATFORM_USER_MANAGE"))),
-    ["admin:adminOnboarding,admUsers"],
+    ["admin:adminOnboarding,admUsers", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("BANK_ACCOUNT_VIEW"), none)),
-    ["cad:cadContas"],
+    ["cad:cadContas", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("DRE_VIEW"), none)),
-    ["dem:dreContabil"],
+    ["ajuda:faq,tutor", "dem:dreContabil"],
   )
 })
 
@@ -95,8 +99,14 @@ test("only single-screen modules of the prototype become direct links", () => {
 test("Clientes e fornecedores is published for BUSINESS_PARTNER_VIEW or MANAGE only", () => {
   const item = navigationModules.find((module) => module.id === "cad").items.find((candidate) => candidate.id === "parc")
   assert.equal(item.path, "/business-partners")
-  assert.deepEqual(ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_VIEW"), none)), ["cad:parc"])
-  assert.deepEqual(ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_MANAGE", "BANK_ACCOUNT_VIEW"), none)), ["cad:parc,cadContas"])
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_VIEW"), none)),
+    ["cad:parc", "ajuda:faq,tutor"],
+  )
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_MANAGE", "BANK_ACCOUNT_VIEW"), none)),
+    ["cad:parc,cadContas", "ajuda:faq,tutor"],
+  )
   assert.equal(findNavigationByPath(navigationModules, "/business-partners").item.id, "parc")
 })
 
@@ -105,7 +115,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admLog", "admClientes"]) {
+  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admLog"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -118,17 +128,34 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
 })
 
 
-
-test("Usuários e acessos is published for platform user administrators", () => {
+test("Usuários e acessos stays published after the availability batch", () => {
   const item = navigationModules
     .find((module) => module.id === "admin")
     .items.find((candidate) => candidate.id === "admUsers")
 
   assert.equal(item.path, "/admin/users")
   assert.deepEqual(item.platformPermissions, ["PLATFORM_USER_MANAGE"])
-  assert.equal(
-    findNavigationByPath(navigationModules, "/admin/users").item.id,
-    "admUsers",
+  assert.equal(findNavigationByPath(navigationModules, "/admin/users").item.id, "admUsers")
+})
+
+test("availability batch routes are published with their real permission boundaries", () => {
+  assert.equal(findNavigationByPath(navigationModules, "/admin/clients").item.id, "admClientes")
+  assert.equal(findNavigationByPath(navigationModules, "/result-centers").item.id, "cr")
+  assert.equal(findNavigationByPath(navigationModules, "/financial-periods").item.id, "perFech")
+  assert.equal(findNavigationByPath(navigationModules, "/help/faq").item.id, "faq")
+  assert.equal(findNavigationByPath(navigationModules, "/help/tutorials").item.id, "tutor")
+
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("RESULT_CENTER_VIEW"), none)),
+    ["cad:cr", "ajuda:faq,tutor"],
+  )
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("FINANCIAL_PERIOD_VIEW"), none)),
+    ["ajuda:faq,tutor", "dem:perFech"],
+  )
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, none, can("ACCOUNTING_FIRM_VIEW"))),
+    ["admin:adminOnboarding,admClientes", "ajuda:faq,tutor"],
   )
 })
 
