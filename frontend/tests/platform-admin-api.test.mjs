@@ -4,6 +4,7 @@ import {
   inviteFirmUser,
   listAccountingFirms,
   listFirmUsers,
+  listPlatformUsersPage,
 } from "../src/features/platform-admin/api/platform-admin-api.ts"
 
 const originalFetch = globalThis.fetch
@@ -125,4 +126,37 @@ test("firm invitation uses csrf and never sends a password", async () => {
     permissions: [],
   })
   assert.equal("password" in body, false)
+})
+
+
+test("platform users use server-side search and pagination", async () => {
+  const calls = []
+
+  globalThis.fetch = async (path, options) => {
+    calls.push({ path, options })
+
+    return Response.json({
+      items: [{
+        id: "user-2",
+        name: "João Exemplo",
+        email: "joao@example.invalid",
+        active: true,
+        invitationPending: false,
+      }],
+      page: 2,
+      size: 20,
+      totalItems: 55,
+      totalPages: 3,
+    })
+  }
+
+  const result = await listPlatformUsersPage("  joao  ", 2, 20)
+
+  assert.equal(result.page, 2)
+  assert.equal(result.totalPages, 3)
+  assert.equal(
+    calls[0].path,
+    "/api/admin/users?search=joao&page=2&size=20",
+  )
+  assert.equal(calls[0].options.credentials, "include")
 })
