@@ -150,3 +150,37 @@ test("roadmap mode preserves module order and declares every reference screen", 
     assert.ok(declared.has(screen.id), `missing reference screen: ${screen.id}`)
   }
 })
+
+
+test("sidebar renders roadmap items disabled instead of links", () => {
+  const sidebar = readFileSync(
+    new URL("../src/components/layout/app-sidebar.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(sidebar, /item\.available \? \([\s\S]*?<NavLink/)
+  assert.match(sidebar, /className="mi roadmap-soon"[\s\S]*?aria-disabled="true"/)
+  assert.match(sidebar, /roadmap-soon-badge">Em breve</)
+  assert.match(sidebar, /platformPermissions \?\? \[\]\)\.includes\("SYSTEM_ADMIN"\)/)
+
+  const unavailableBranch = sidebar.slice(
+    sidebar.indexOf('className="mi roadmap-soon"') - 120,
+    sidebar.indexOf('className="mi roadmap-soon"') + 420,
+  )
+  assert.doesNotMatch(unavailableBranch, /<NavLink|\bto=|onClick=/)
+})
+
+test("roadmap styling lives in overrides, not the generated theme", () => {
+  const overrides = readFileSync(
+    new URL("../src/styles/finemp-overrides.css", import.meta.url),
+    "utf8",
+  )
+  const theme = readFileSync(
+    new URL("../src/styles/finemp-theme.css", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(overrides, /\.fin \.roadmap-soon/)
+  assert.match(overrides, /\.fin \.roadmap-soon-badge/)
+  assert.doesNotMatch(theme, /roadmap-soon/)
+})
