@@ -58,8 +58,7 @@ function PresentationResultsCompanyPage() {
     const data = snapshot.isError ? undefined : snapshot.data
     const cash = data ? dashboardMonthCash(data) : null
     const dre = data?.operationalDre
-    const indicators = data?.indicators
-    const dreIndicators = indicators?.dre
+    const dreIndicators = data?.indicators.dre
     const monthLabel = formatCompetence(data?.month ?? month)
 
     return (
@@ -120,10 +119,10 @@ function PresentationResultsCompanyPage() {
                         <div className="card">
                             <div className="lb">Geração de caixa</div>
                             <div className="vl">
-                                {formatExactCurrency(indicators.cash.generation)}
+                                {formatExactCurrency(data.indicators.cash.generation)}
                             </div>
                             <div className="sub">
-                                Margem {formatIndicatorPercent(indicators.cash.margin) ?? "—"}
+                                Margem {formatIndicatorPercent(data.indicators.cash.margin) ?? "—"}
                             </div>
                         </div>
                         <div className="card">
@@ -149,7 +148,7 @@ function PresentationResultsCompanyPage() {
                         <div className="card">
                             <div className="lb">Inadimplência</div>
                             <div className="vl">
-                                {formatIndicatorPercent(indicators.receivables.overdueRate) ?? "—"}
+                                {formatIndicatorPercent(data.indicators.receivables.overdueRate) ?? "—"}
                             </div>
                         </div>
                     </div>
