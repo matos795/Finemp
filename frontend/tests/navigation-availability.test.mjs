@@ -202,6 +202,22 @@ test("Empresas is published for every authenticated user without granting access
   )
 })
 
+
+
+test("audit surfaces are published only for SYSTEM_ADMIN", () => {
+  const global = navigationModules
+    .find((module) => module.id === "admin")
+    .items.find((candidate) => candidate.id === "admLog")
+  const company = navigationModules
+    .find((module) => module.id === "dem")
+    .items.find((candidate) => candidate.id === "audit")
+
+  assert.equal(global.path, "/admin/activity-log")
+  assert.deepEqual(global.platformPermissions, ["SYSTEM_ADMIN"])
+  assert.equal(company.path, "/audit")
+  assert.deepEqual(company.platformPermissions, ["SYSTEM_ADMIN"])
+})
+
 test("normal users still receive only published and authorized items", () => {
   const normal = visibleNavigation(navigationModules, FINANCE_CLIENT, none)
   const roadmap = normal.flatMap((module) => module.items).filter((item) => !item.available)
