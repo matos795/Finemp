@@ -232,6 +232,33 @@ class BankStatementPersistenceIntegrationTest {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(route).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor))).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()).header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content("{\"expectedVersion\":0}"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.version").value(1));
     }
+    @Test void reconciliationHttpRoutesAreAuthorizedAndProtectedByCsrf()throws Exception{
+        var statement=save(owner,bank,value("-1.00","Synthetic reconcile http","reconcile-http"));
+        var reconcileRoute="/api/companies/"+owner.getId()+"/statement-items/"+statement.getId()+"/reconcile";
+        var reconcileBody="{\"expectedStatementVersion\":0,\"entryId\":\""+entry.getId()+"\",\"expectedEntryVersion\":0}";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(reconcileRoute)
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor)))
+                .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(reconcileBody))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(reconcileRoute)
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor)))
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+                .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(reconcileBody))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.itemVersion").value(1));
+
+        var createStatement=save(owner,bank,value("-2.50","Synthetic create http","create-http"));
+        var createRoute="/api/companies/"+owner.getId()+"/statement-items/"+createStatement.getId()+"/create-entry";
+        var category=categoryIds.get(owner.getId());
+        var createBody="{\"expectedStatementVersion\":0,\"values\":{\"description\":\"Synthetic create http\",\"documentDate\":\"2026-07-01\",\"entryDate\":\"2026-07-01\",\"competence\":\"2026-07\",\"dueDate\":\"2026-07-01\",\"categoryId\":\""+category+"\",\"partnerId\":null,\"resultCenterId\":null,\"costBehaviorOverride\":null,\"paymentMethod\":\"Pix\",\"documentNumber\":\"\",\"notes\":\"\"}}";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(createRoute)
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(new com.finemp.security.UserAccountPrincipal(actor)))
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+                .header("Idempotency-Key",UUID.randomUUID()).contentType("application/json").content(createBody))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.itemVersion").value(1));
+    }
+
     @Test void monthlyCashTotalsUsePaymentDateAndEffectiveValueOrOpenDueDate()throws Exception{
         var paid=entry(owner,bank);jdbc.update("UPDATE financial_entries SET nominal_amount=100,payment_date=DATE '2026-08-05',actual_paid_amount=75.30 WHERE id=?",paid.getId());
         var group=categories.saveAndFlush(FinancialCategory.group(owner,FinancialDirection.INCOME,1,"Synthetic Income Group"));var sub=categories.saveAndFlush(FinancialCategory.subcategory(group,1,"Synthetic Income Category"));
