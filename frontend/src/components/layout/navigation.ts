@@ -267,9 +267,24 @@ export const navigationModules: NavigationModule[] = [
         label: "Planejamento",
         icon: "pln",
         items: [
-            { id: "plnCron", label: "Cronograma de encontros" },
-            { id: "plnMetas", label: "Metas e indicadores" },
-            { id: "plnAcoes", label: "Plano de ação" },
+            {
+                id: "plnCron",
+                label: "Cronograma de encontros",
+                path: "/planning/meetings",
+                permissions: ["PLANNING_VIEW", "PLANNING_MANAGE"],
+            },
+            {
+                id: "plnMetas",
+                label: "Metas e indicadores",
+                path: "/planning/goals",
+                permissions: ["PLANNING_VIEW", "PLANNING_MANAGE"],
+            },
+            {
+                id: "plnAcoes",
+                label: "Plano de ação",
+                path: "/planning/actions",
+                permissions: ["PLANNING_VIEW", "PLANNING_MANAGE"],
+            },
         ],
     },
     {

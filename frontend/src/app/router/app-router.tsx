@@ -42,6 +42,9 @@ import { AccountingMovementsPage } from "../../features/accounting/pages/account
 import { CompaniesPage } from "../../features/companies/pages/companies-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
 import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
+import { PlanningMeetingsPage } from "../../features/planning/pages/planning-meetings-page"
+import { PlanningGoalsPage } from "../../features/planning/pages/planning-goals-page"
+import { PlanningActionsPage } from "../../features/planning/pages/planning-actions-page"
 
 export function AppRouter() {
     return (
@@ -191,6 +194,39 @@ export function AppRouter() {
                     />
 
                     <Route path="/companies" element={<CompaniesPage />} />
+
+                    <Route
+                        path="/planning/meetings"
+                        element={
+                            <RequirePermission
+                                permission={["PLANNING_VIEW", "PLANNING_MANAGE"]}
+                            >
+                                <PlanningMeetingsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/planning/goals"
+                        element={
+                            <RequirePermission
+                                permission={["PLANNING_VIEW", "PLANNING_MANAGE"]}
+                            >
+                                <PlanningGoalsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/planning/actions"
+                        element={
+                            <RequirePermission
+                                permission={["PLANNING_VIEW", "PLANNING_MANAGE"]}
+                            >
+                                <PlanningActionsPage />
+                            </RequirePermission>
+                        }
+                    />
 
                     <Route
                         path="/dre"

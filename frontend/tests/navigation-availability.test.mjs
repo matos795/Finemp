@@ -39,7 +39,7 @@ test("items without a published route are not shown", () => {
 test("modules left without available items disappear", () => {
   const moduleIds = visibleNavigation(navigationModules, () => true, () => true).map((module) => module.id)
 
-  for (const empty of ["grp", "div", "crm", "pes", "ctr", "est", "pat", "pln", "orc"]) {
+  for (const empty of ["grp", "div", "crm", "pes", "ctr", "est", "pat", "orc"]) {
     assert.equal(moduleIds.includes(empty), false, empty)
   }
   for (const published of ["fluxo", "rel", "cad", "ajuda", "dem"]) {
@@ -76,6 +76,30 @@ test("Company and Platform permissions keep filtering the available items", () =
     ids(visibleNavigation(navigationModules, can("DRE_VIEW"), none)),
     ["cad:empresas,cadEmp", "ajuda:faq,tutor", "dem:dreContabil"],
   )
+})
+
+test("Planejamento is published as one module for VIEW or MANAGE", () => {
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("PLANNING_VIEW"), none)),
+    [
+      "pln:plnCron,plnMetas,plnAcoes",
+      "cad:empresas,cadEmp",
+      "ajuda:faq,tutor",
+    ],
+  )
+
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("PLANNING_MANAGE"), none)),
+    [
+      "pln:plnCron,plnMetas,plnAcoes",
+      "cad:empresas,cadEmp",
+      "ajuda:faq,tutor",
+    ],
+  )
+
+  assert.equal(findNavigationByPath(navigationModules, "/planning/meetings").item.id, "plnCron")
+  assert.equal(findNavigationByPath(navigationModules, "/planning/goals").item.id, "plnMetas")
+  assert.equal(findNavigationByPath(navigationModules, "/planning/actions").item.id, "plnAcoes")
 })
 
 test("the roadmap stays declared and the current route is still identified", () => {
