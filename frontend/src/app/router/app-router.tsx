@@ -37,6 +37,7 @@ import { FaqPage } from "../../features/help/pages/faq-page"
 import { TutorialsPage } from "../../features/help/pages/tutorials-page"
 import { AccountingAccountsPage } from "../../features/accounting/pages/accounting-accounts-page"
 import { AccountingMovementsPage } from "../../features/accounting/pages/accounting-movements-page"
+import { CompaniesPage } from "../../features/companies/pages/companies-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
 import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
 
@@ -163,6 +164,8 @@ export function AppRouter() {
                             </RequirePermission>
                         }
                     />
+
+                    <Route path="/companies" element={<CompaniesPage />} />
 
                     <Route
                         path="/dre"

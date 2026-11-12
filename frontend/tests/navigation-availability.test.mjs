@@ -51,7 +51,7 @@ test("a financial client sees the published financial screens it is allowed to o
   assert.deepEqual(ids(visibleNavigation(navigationModules, FINANCE_CLIENT, none)), [
     "fluxo:painel,lanc,agenda,ext,mensal,diario,bancos",
     "rel:relRec,relPag,dre,relApres",
-    "cad:cadContas,cadPlano",
+    "cad:empresas,cadContas,cadPlano",
     "ajuda:faq,tutor",
   ])
 })
@@ -59,22 +59,22 @@ test("a financial client sees the published financial screens it is allowed to o
 test("Company and Platform permissions keep filtering the available items", () => {
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, none, none)),
-    ["ajuda:faq,tutor"],
+    ["cad:empresas", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, none, can("PLATFORM_USER_MANAGE"))),
-    ["admin:adminOnboarding,admUsers", "ajuda:faq,tutor"],
+    ["admin:adminOnboarding,admUsers", "cad:empresas", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("BANK_ACCOUNT_VIEW"), none)),
-    ["cad:cadContas", "ajuda:faq,tutor"],
+    ["cad:empresas,cadContas", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("DRE_VIEW"), none)),
-    ["ajuda:faq,tutor", "dem:dreContabil"],
+    ["cad:empresas", "ajuda:faq,tutor", "dem:dreContabil"],
   )
 })
 
@@ -91,7 +91,7 @@ test("the roadmap stays declared and the current route is still identified", () 
 test("only single-screen modules of the prototype become direct links", () => {
   const modules = visibleNavigation(navigationModules, FINANCE_CLIENT, none)
   const cadastros = modules.find((module) => module.id === "cad")
-  assert.equal(cadastros.items.length, 2)
+  assert.equal(cadastros.items.length, 3)
   assert.equal(cadastros.standalone, false)
   assert.equal(modules.find((module) => module.id === "fluxo").standalone, false)
 })
@@ -101,11 +101,11 @@ test("Clientes e fornecedores is published for BUSINESS_PARTNER_VIEW or MANAGE o
   assert.equal(item.path, "/business-partners")
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_VIEW"), none)),
-    ["cad:parc", "ajuda:faq,tutor"],
+    ["cad:empresas,parc", "ajuda:faq,tutor"],
   )
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_MANAGE", "BANK_ACCOUNT_VIEW"), none)),
-    ["cad:parc,cadContas", "ajuda:faq,tutor"],
+    ["cad:empresas,parc,cadContas", "ajuda:faq,tutor"],
   )
   assert.equal(findNavigationByPath(navigationModules, "/business-partners").item.id, "parc")
 })
@@ -147,15 +147,15 @@ test("availability batch routes are published with their real permission boundar
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("RESULT_CENTER_VIEW"), none)),
-    ["cad:cr", "ajuda:faq,tutor"],
+    ["cad:empresas,cr", "ajuda:faq,tutor"],
   )
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, can("FINANCIAL_PERIOD_VIEW"), none)),
-    ["ajuda:faq,tutor", "dem:perFech"],
+    ["cad:empresas", "ajuda:faq,tutor", "dem:perFech"],
   )
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, none, can("ACCOUNTING_FIRM_VIEW"))),
-    ["admin:adminOnboarding,admClientes", "ajuda:faq,tutor"],
+    ["admin:adminOnboarding,admClientes", "cad:empresas", "ajuda:faq,tutor"],
   )
 })
 
@@ -175,7 +175,7 @@ test("accounting read routes are published with distinct permissions", () => {
       can("ACCOUNT_CLASSIFICATION_VIEW"),
       none,
     )),
-    ["cad:cadCtb", "ajuda:faq,tutor"],
+    ["cad:empresas,cadCtb", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
@@ -184,7 +184,21 @@ test("accounting read routes are published with distinct permissions", () => {
       can("ACCOUNTING_MOVEMENT_VIEW"),
       none,
     )),
-    ["ajuda:faq,tutor", "dem:ctb"],
+    ["cad:empresas", "ajuda:faq,tutor", "dem:ctb"],
+  )
+})
+
+test("Empresas is published for every authenticated user without granting access", () => {
+  const item = navigationModules
+    .find((module) => module.id === "cad")
+    .items.find((candidate) => candidate.id === "empresas")
+
+  assert.equal(item.path, "/companies")
+  assert.equal(item.permissions, undefined)
+  assert.equal(item.platformPermissions, undefined)
+  assert.equal(
+    findNavigationByPath(navigationModules, "/companies").item.id,
+    "empresas",
   )
 })
 
