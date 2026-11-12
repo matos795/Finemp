@@ -81,9 +81,9 @@ class ProductionAdminBootstrapPostgresTest {
             assertThatThrownBy(() -> ProductionAdminBootstrap.elevate(c, target, "other@example.invalid")).isInstanceOf(SQLException.class);
             s.executeUpdate("UPDATE user_accounts SET active=false");
             assertThatThrownBy(() -> ProductionAdminBootstrap.elevate(c, target, email)).isInstanceOf(SQLException.class);
-            s.executeUpdate("UPDATE user_accounts SET active=true, invitation_pending=true");
+            s.executeUpdate("UPDATE user_accounts SET active=false, invitation_pending=true, password_hash='!pending-invitation'");
             assertThatThrownBy(() -> ProductionAdminBootstrap.elevate(c, target, email)).isInstanceOf(SQLException.class);
-            s.executeUpdate("UPDATE user_accounts SET invitation_pending=false");
+            s.executeUpdate("UPDATE user_accounts SET active=true, invitation_pending=false, password_hash='" + HASH.replace("'", "''") + "'");
         }
         try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
             Callable<Boolean> command = () -> { try (var c = connect()) { return ProductionAdminBootstrap.elevate(c, target, email); } };
