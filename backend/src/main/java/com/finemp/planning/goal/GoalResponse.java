@@ -1,6 +1,5 @@
 package com.finemp.planning.goal;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -8,15 +7,15 @@ public record GoalResponse(
         UUID id,
         String name,
         GoalDirection direction,
-        BigDecimal baselineValue,
-        BigDecimal targetValue,
+        String baselineValue,
+        String targetValue,
         LocalDate dueOn,
         String notes,
         boolean active,
         long version,
-        BigDecimal currentValue,
+        String currentValue,
         LocalDate currentMeasuredOn,
-        BigDecimal progress,
+        String progress,
         Boolean achieved) {
 
     public static GoalResponse from(
@@ -28,8 +27,8 @@ public record GoalResponse(
                     goal.getId(),
                     goal.getName(),
                     goal.getDirection(),
-                    goal.getBaselineValue(),
-                    goal.getTargetValue(),
+                    goal.getBaselineValue().toPlainString(),
+                    goal.getTargetValue().toPlainString(),
                     goal.getDueOn(),
                     goal.getNotes(),
                     goal.isActive(),
@@ -56,8 +55,8 @@ public record GoalResponse(
                 latest.getMeasuredOn(),
                 GoalProgress.calculate(
                         goal.getDirection(),
-                        goal.getBaselineValue(),
-                        goal.getTargetValue(),
+                        goal.getBaselineValue().toPlainString(),
+                        goal.getTargetValue().toPlainString(),
                         current),
                 GoalProgress.isAchieved(
                         goal.getDirection(),
