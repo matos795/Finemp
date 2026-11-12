@@ -94,7 +94,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/financial-entries",
                 permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
             },
-            { id: "agenda", label: "Pagar e receber" },
+            {
+                id: "agenda",
+                label: "Pagar e receber",
+                path: "/cash-flow/schedule",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
             {
                 id: "ext",
                 label: "Extratos e conciliação",

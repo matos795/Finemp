@@ -23,6 +23,7 @@ import { StatementsPage } from "../../features/statements/pages/statements-page"
 import { OpenTitlesPage } from "../../features/reports/pages/open-titles-page"
 import { MonthlyCashFlowPage } from "../../features/reports/pages/monthly-cash-flow-page"
 import { DailyCashFlowPage } from "../../features/reports/pages/daily-cash-flow-page"
+import { CashFlowSchedulePage } from "../../features/reports/pages/cash-flow-schedule-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
@@ -193,6 +194,20 @@ export function AppRouter() {
                                     key="EXPENSE"
                                     direction="EXPENSE"
                                 />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/cash-flow/schedule"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <CashFlowSchedulePage />
                             </RequirePermission>
                         }
                     />

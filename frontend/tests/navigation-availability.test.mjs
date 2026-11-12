@@ -31,7 +31,7 @@ test("items without a published route are not shown", () => {
   }
 
   const all = modules.flatMap((module) => module.items.map((item) => item.id))
-  for (const placeholder of ["agenda", "bancos", "relApres", "crmFunil", "orc", "bens", "cadCtb"]) {
+  for (const placeholder of ["bancos", "relApres", "crmFunil", "orc", "bens", "cadCtb"]) {
     assert.equal(all.includes(placeholder), false, placeholder)
   }
 })
@@ -49,7 +49,7 @@ test("modules left without available items disappear", () => {
 
 test("a financial client sees the published financial screens it is allowed to open", () => {
   assert.deepEqual(ids(visibleNavigation(navigationModules, FINANCE_CLIENT, none)), [
-    "fluxo:painel,lanc,ext,mensal,diario",
+    "fluxo:painel,lanc,agenda,ext,mensal,diario",
     "rel:relRec,relPag,dre",
     "cad:cadContas,cadPlano",
   ])
@@ -75,8 +75,8 @@ test("Company and Platform permissions keep filtering the available items", () =
 })
 
 test("the roadmap stays declared and the current route is still identified", () => {
-  const lanc = navigationModules.find((module) => module.id === "fluxo").items.find((item) => item.id === "agenda")
-  assert.equal(lanc.path, undefined)
+  const agenda = navigationModules.find((module) => module.id === "fluxo").items.find((item) => item.id === "agenda")
+  assert.equal(agenda.path, "/cash-flow/schedule")
 
   const current = findNavigationByPath(navigationModules, "/financial-entries")
   assert.equal(current.module.id, "fluxo")
@@ -105,7 +105,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["agenda", "bancos", "crmFunil", "orc", "bens", "cadCtb", "admUsers", "admLog", "admClientes"]) {
+  for (const id of ["bancos", "crmFunil", "orc", "bens", "cadCtb", "admUsers", "admLog", "admClientes"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
