@@ -78,4 +78,10 @@ class OfxPreviewParserTest {
         var unsupported=xml.replace("<MEMO><![CDATA[texto]]></MEMO>","<MEMO xml:space=\"preserve\">ignored</MEMO><MEMO>valid</MEMO>");assertThat(parser.parse(unsupported.getBytes(StandardCharsets.UTF_8)).rows().getFirst().error()).isEqualTo(OfxPreviewParser.Error.INVALID_TEXT);
         assertThatThrownBy(()->parser.parse(xml.replace("<OFX>","<!DOCTYPE OFX [<!ENTITY x SYSTEM 'file:///not-read'>]><OFX>").getBytes(StandardCharsets.UTF_8))).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void misleadingLegacyCharsetMustNotMojibakeValidUtf8Bytes() {
+        var file="OFXHEADER:100\nCHARSET:1252\n<OFX><BANKTRANLIST><STMTTRN><TRNAMT>-10.00\n<DTPOSTED>20261112\n<MEMO>Serviço em São Paulo - Café\n</STMTTRN></BANKTRANLIST></OFX>";
+        var row=parser.parse(file.getBytes(StandardCharsets.UTF_8)).rows().getFirst();
+        assertThat(row.values().memo()).isEqualTo("Serviço em São Paulo - Café");
+    }
+
 }
