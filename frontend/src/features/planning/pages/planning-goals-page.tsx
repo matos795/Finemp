@@ -100,6 +100,7 @@ function PlanningGoalsCompanyPage() {
         notes: "",
     })
     const [historyTarget, setHistoryTarget] = useState<Goal | null>(null)
+    const [historyPage, setHistoryPage] = useState(0)
     const [busy, setBusy] = useState(false)
     const [mutationError, setMutationError] = useState("")
 
@@ -120,12 +121,13 @@ function PlanningGoalsCompanyPage() {
             "planning-goal-measurements",
             companyId,
             historyTarget?.id,
+            historyPage,
         ] as const,
         queryFn: () =>
             listGoalMeasurements(
                 companyId!,
                 historyTarget!.id,
-                0,
+                historyPage,
                 50,
             ),
         enabled: Boolean(companyId && historyTarget && canRead),
@@ -205,6 +207,11 @@ function PlanningGoalsCompanyPage() {
         } finally {
             setBusy(false)
         }
+    }
+
+    function openHistory(goal: Goal) {
+        setHistoryPage(0)
+        setHistoryTarget(goal)
     }
 
     function openMeasure(goal: Goal) {
@@ -397,7 +404,7 @@ function PlanningGoalsCompanyPage() {
                                         type="button"
                                         className="btn sec sm"
                                         onClick={() =>
-                                            setHistoryTarget(goal)
+                                            openHistory(goal)
                                         }
                                     >
                                         Histórico
@@ -796,6 +803,48 @@ function PlanningGoalsCompanyPage() {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        ) : null}
+
+                        {historyQuery.data &&
+                        historyQuery.data.totalPages > 1 ? (
+                            <div className="tools">
+                                <button
+                                    type="button"
+                                    className="btn sec"
+                                    disabled={
+                                        historyQuery.isFetching ||
+                                        historyQuery.data.page === 0
+                                    }
+                                    onClick={() =>
+                                        setHistoryPage((current) =>
+                                            Math.max(0, current - 1),
+                                        )
+                                    }
+                                >
+                                    Anterior
+                                </button>
+                                <span style={{ flex: 1 }} />
+                                <span className="help">
+                                    Página {historyQuery.data.page + 1} de{" "}
+                                    {historyQuery.data.totalPages}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="btn sec"
+                                    disabled={
+                                        historyQuery.isFetching ||
+                                        historyQuery.data.page + 1 >=
+                                            historyQuery.data.totalPages
+                                    }
+                                    onClick={() =>
+                                        setHistoryPage(
+                                            (current) => current + 1,
+                                        )
+                                    }
+                                >
+                                    Próxima
+                                </button>
                             </div>
                         ) : null}
 
