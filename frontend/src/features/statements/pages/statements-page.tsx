@@ -21,14 +21,16 @@ import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useCompanyPage } from "../../../lib/api/use-company-page"
 import { useCompanyAccess } from "../../companies/company-access-context"
-import { useAllBankAccounts } from "../../bank-accounts/hooks/use-bank-accounts"
+import { useFinancialEntryCatalogs } from "../../financial-entries/hooks/use-financial-entry-catalogs"
 import {
     useStatementItemCounts,
     useStatementItems,
 } from "../hooks/use-statement-items"
 import { StatementItemsTable } from "../components/statement-items-table"
+import { StatementCreateEntryDialog } from "../components/statement-create-entry-dialog"
 import type {
     CsvSeparator,
+    StatementItem,
     StatementItemStatus,
     StatementPreviewSession,
 } from "../types/statement.types"
@@ -93,6 +95,9 @@ function StatementsCompanyPage() {
     const [previewSession, setPreviewSession] =
         useState<StatementPreviewSession | null>(null)
 
+    const [createItem, setCreateItem] =
+        useState<StatementItem | null>(null)
+
     const preview = useMutation({
         mutationFn: ({
             companyId: requestCompanyId,
@@ -145,8 +150,11 @@ function StatementsCompanyPage() {
         })
     }
 
-    const accounts =
-        useAllBankAccounts(companyId)
+    const {
+        bankAccounts: accounts,
+        categories,
+        resultCenters,
+    } = useFinancialEntryCatalogs(companyId)
 
     const [selection, setSelection] = useState<{
         companyId: string | undefined
@@ -174,7 +182,7 @@ function StatementsCompanyPage() {
     const counts =
         useStatementItemCounts(companyId, bankId)
 
-    function handleStatementIgnored() {
+    function handleStatementResolved() {
         if (
             status === "PENDING" &&
             page > 0 &&
@@ -346,8 +354,9 @@ function StatementsCompanyPage() {
                             <>
                                 <StatementItemsTable
                                     companyId={companyId}
-                                    canIgnore={canImport}
-                                    onIgnored={handleStatementIgnored}
+                                    canManage={canImport}
+                                    onResolved={handleStatementResolved}
+                                    onCreateEntry={setCreateItem}
                                     items={items.data?.items ?? []}
                                     loading={items.isPending}
                                     dimmed={items.isPlaceholderData}
@@ -376,6 +385,17 @@ function StatementsCompanyPage() {
                     </div>
                 </>
             )}
+            {createItem && companyId && (
+                <StatementCreateEntryDialog
+                    companyId={companyId}
+                    item={createItem}
+                    bankAccounts={accounts.data ?? []}
+                    categories={categories.data ?? []}
+                    resultCenters={resultCenters.data ?? []}
+                    onClose={() => setCreateItem(null)}
+                />
+            )}
+
             {previewSession &&
                 companyId &&
                 previewSession.companyId === companyId && (
