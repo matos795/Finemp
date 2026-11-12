@@ -37,6 +37,8 @@ import { FaqPage } from "../../features/help/pages/faq-page"
 import { TutorialsPage } from "../../features/help/pages/tutorials-page"
 import { PlatformAuditPage } from "../../features/audit/pages/platform-audit-page"
 import { CompanyAuditPage } from "../../features/audit/pages/company-audit-page"
+import { AccountingAccountsPage } from "../../features/accounting/pages/accounting-accounts-page"
+import { AccountingMovementsPage } from "../../features/accounting/pages/accounting-movements-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
 import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
 
@@ -156,6 +158,29 @@ export function AppRouter() {
                             <RequirePlatformPermission permission="SYSTEM_ADMIN">
                                 <CompanyAuditPage />
                             </RequirePlatformPermission>
+                        }
+                    />
+
+                    <Route
+                        path="/accounting-accounts"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "ACCOUNT_CLASSIFICATION_VIEW",
+                                    "ACCOUNT_CLASSIFICATION_MANAGE",
+                                ]}
+                            >
+                                <AccountingAccountsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/accounting-movements"
+                        element={
+                            <RequirePermission permission="ACCOUNTING_MOVEMENT_VIEW">
+                                <AccountingMovementsPage />
+                            </RequirePermission>
                         }
                     />
 
