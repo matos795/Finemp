@@ -1,13 +1,25 @@
-import type { ReactNode } from "react"
+import {
+    useState,
+    type ReactNode,
+} from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { formatIsoDate } from "../../../lib/formatters/decimal"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
+import { useToast } from "../../../components/finemp/toast-context"
+import { currentUserQueryKey } from "../../auth/hooks/use-current-user"
 import { useStatementCandidates } from "../hooks/use-statement-candidates"
-import type { StatementCandidate } from "../types/statement.types"
+import { useReconcileStatement } from "../hooks/use-statement-reconciliation"
+import { describeStatementResolutionError } from "../lib/statement-resolution-errors"
+import type {
+    StatementCandidate,
+    StatementItem,
+} from "../types/statement.types"
 
 interface StatementCandidatesCellsProps {
     companyId: string | undefined
-    statementId: string
-    /** Ações do movimento pendente (Criar lançamento, Ignorar). */
+    item: StatementItem
+    canManage: boolean
+    onResolved: () => void
     actions: ReactNode
 }
 
@@ -38,8 +50,12 @@ function loadedCandidateItems(
 
 function CandidatesContent({
     candidates,
+    selectedEntryId,
+    onSelect,
 }: {
     candidates: ReturnType<typeof useStatementCandidates>
+    selectedEntryId: string
+    onSelect: (entryId: string) => void
 }) {
     if (candidates.isPending) {
         return <span className="mut">Buscando sugestões…</span>
@@ -61,6 +77,10 @@ function CandidatesContent({
         return <span className="mut">Sem lançamento correspondente</span>
     }
 
+    const value = items.some((candidate) => candidate.entryId === selectedEntryId)
+        ? selectedEntryId
+        : items[0].entryId
+
     return (
         <div
             style={{
@@ -71,7 +91,8 @@ function CandidatesContent({
         >
             <select
                 aria-label="Lançamento sugerido"
-                defaultValue={items[0].entryId}
+                value={value}
+                onChange={(event) => onSelect(event.target.value)}
             >
                 {items.map((candidate) => (
                     <option
@@ -107,37 +128,67 @@ function CandidatesContent({
     )
 }
 
-/**
- * Células "Lançamento no sistema" e "Ações" de um movimento pendente:
- * as sugestões do servidor num select, como no protótipo. Só consulta
- * (D3); "Conciliar" aparece com sugestões, mas fica inativo (PA1).
- */
 export function StatementCandidatesCells({
     companyId,
-    statementId,
+    item,
+    canManage,
+    onResolved,
     actions,
 }: StatementCandidatesCellsProps) {
     const candidates =
-        useStatementCandidates(companyId, statementId, true)
+        useStatementCandidates(companyId, item.id, true)
+    const [selectedEntryId, setSelectedEntryId] = useState("")
+    const reconcile = useReconcileStatement(companyId, item)
+    const queryClient = useQueryClient()
+    const showToast = useToast()
 
-    const hasCandidates = loadedCandidateItems(candidates).length > 0
+    const items = loadedCandidateItems(candidates)
+    const selected =
+        items.find((candidate) => candidate.entryId === selectedEntryId) ??
+        items[0]
+
+    function submit() {
+        if (!selected) {
+            return
+        }
+
+        reconcile.mutate(selected, {
+            onSuccess: () => {
+                showToast("Movimento conciliado.")
+                onResolved()
+            },
+            onError: (error) => {
+                if (apiErrorStatus(error) === 401) {
+                    queryClient.setQueryData(currentUserQueryKey, null)
+                    return
+                }
+
+                showToast(describeStatementResolutionError(error), true)
+            },
+        })
+    }
 
     return (
         <>
             <td>
-                <CandidatesContent candidates={candidates} />
+                <CandidatesContent
+                    candidates={candidates}
+                    selectedEntryId={selectedEntryId}
+                    onSelect={setSelectedEntryId}
+                />
             </td>
 
             <td style={{ whiteSpace: "nowrap" }}>
-                {hasCandidates && (
+                {selected && (
                     <>
                         <button
                             type="button"
                             className="btn ok sm"
-                            disabled
-                            title="Conciliar ainda não existe na API"
+                            disabled={!canManage || reconcile.isPending}
+                            title={canManage ? undefined : "Sem permissão para conciliar extratos"}
+                            onClick={submit}
                         >
-                            Conciliar
+                            {reconcile.isPending ? "Conciliando…" : "Conciliar"}
                         </button>{" "}
                     </>
                 )}
