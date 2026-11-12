@@ -35,6 +35,8 @@ import { ResultCentersPage } from "../../features/result-centers/pages/result-ce
 import { FinancialPeriodsPage } from "../../features/financial-periods/pages/financial-periods-page"
 import { FaqPage } from "../../features/help/pages/faq-page"
 import { TutorialsPage } from "../../features/help/pages/tutorials-page"
+import { AccountingAccountsPage } from "../../features/accounting/pages/accounting-accounts-page"
+import { AccountingMovementsPage } from "../../features/accounting/pages/accounting-movements-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
 import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
 
@@ -138,6 +140,29 @@ export function AppRouter() {
 
                     <Route path="/help/faq" element={<FaqPage />} />
                     <Route path="/help/tutorials" element={<TutorialsPage />} />
+
+                    <Route
+                        path="/accounting-accounts"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "ACCOUNT_CLASSIFICATION_VIEW",
+                                    "ACCOUNT_CLASSIFICATION_MANAGE",
+                                ]}
+                            >
+                                <AccountingAccountsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/accounting-movements"
+                        element={
+                            <RequirePermission permission="ACCOUNTING_MOVEMENT_VIEW">
+                                <AccountingMovementsPage />
+                            </RequirePermission>
+                        }
+                    />
 
                     <Route
                         path="/dre"
