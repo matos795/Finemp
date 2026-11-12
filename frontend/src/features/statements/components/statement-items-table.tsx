@@ -10,8 +10,9 @@ import { IgnoreStatementButton } from "./ignore-statement-button"
 interface StatementItemsTableProps {
     companyId: string | undefined
     /** FINANCIAL_ENTRY_MANAGE (só UX; o backend autoriza). */
-    canIgnore: boolean
-    onIgnored: () => void
+    canManage: boolean
+    onResolved: () => void
+    onCreateEntry: (item: StatementItem) => void
     items: StatementItem[]
     loading: boolean
     dimmed: boolean
@@ -19,14 +20,15 @@ interface StatementItemsTableProps {
 
 /**
  * Tabela de movimentos do extrato (ext do protótipo homologado).
- * Pendentes mostram as sugestões do servidor. Conciliar, criar
- * lançamento e desfazer dependem de contratos ainda inexistentes na API
- * (PA1) e ficam inativos.
+ * Pendentes mostram sugestões do servidor e permitem conciliar, criar
+ * lançamento a partir do movimento ou ignorá-lo. Desfazer continua
+ * indisponível enquanto o contrato de desconciliação não existir.
  */
 export function StatementItemsTable({
     companyId,
-    canIgnore,
-    onIgnored,
+    canManage,
+    onResolved,
+    onCreateEntry,
     items,
     loading,
     dimmed,
@@ -82,22 +84,25 @@ export function StatementItemsTable({
                                 {item.status === "PENDING" ? (
                                     <StatementCandidatesCells
                                         companyId={companyId}
-                                        statementId={item.id}
+                                        item={item}
+                                        canManage={canManage}
+                                        onResolved={onResolved}
                                         actions={
                                             <>
                                                 <button
                                                     type="button"
                                                     className="btn sec sm"
-                                                    disabled
-                                                    title="Em breve"
+                                                    disabled={!canManage}
+                                                    title={canManage ? undefined : "Sem permissão para alterar extratos"}
+                                                    onClick={() => onCreateEntry(item)}
                                                 >
                                                     Criar lançamento
                                                 </button>{" "}
                                                 <IgnoreStatementButton
                                                     companyId={companyId}
                                                     item={item}
-                                                    canIgnore={canIgnore}
-                                                    onIgnored={onIgnored}
+                                                    canIgnore={canManage}
+                                                    onIgnored={onResolved}
                                                 />
                                             </>
                                         }

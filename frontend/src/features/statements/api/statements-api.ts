@@ -1,8 +1,8 @@
 import {
     apiFetch,
     apiRequest,
-} from "../../../lib/api/api-client"
-import type { PageRequest } from "../../../lib/api/pagination.types"
+} from "../../../lib/api/api-client.ts"
+import type { PageRequest } from "../../../lib/api/pagination.types.ts"
 import type {
     CsvSeparator,
     StatementCandidatePage,
@@ -11,9 +11,11 @@ import type {
     StatementItemPage,
     StatementImportReceipt,
     StatementPreview,
+    StatementReconciliationReceipt,
+    StatementCreateEntryValues,
     StatementPreviewSession,
-} from "../types/statement.types"
-import { readFileAsBase64 } from "../lib/file-base64"
+} from "../types/statement.types.ts"
+import { readFileAsBase64 } from "../lib/file-base64.ts"
 
 export function bankAccountStatementPath(
     companyId: string,
@@ -176,3 +178,50 @@ export async function ignoreStatementItem(
         },
     )
 }
+
+export async function reconcileStatementItem(
+    companyId: string,
+    statementId: string,
+    expectedStatementVersion: number,
+    entryId: string,
+    expectedEntryVersion: number,
+    idempotencyKey: string,
+): Promise<StatementReconciliationReceipt> {
+    return apiRequest<StatementReconciliationReceipt>(
+        `/api/companies/${encodeURIComponent(companyId)}/statement-items/${encodeURIComponent(statementId)}/reconcile`,
+        {
+            method: "POST",
+            headers: {
+                "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+                expectedStatementVersion,
+                entryId,
+                expectedEntryVersion,
+            }),
+        },
+    )
+}
+
+export async function createEntryFromStatement(
+    companyId: string,
+    statementId: string,
+    expectedStatementVersion: number,
+    values: StatementCreateEntryValues,
+    idempotencyKey: string,
+): Promise<StatementReconciliationReceipt> {
+    return apiRequest<StatementReconciliationReceipt>(
+        `/api/companies/${encodeURIComponent(companyId)}/statement-items/${encodeURIComponent(statementId)}/create-entry`,
+        {
+            method: "POST",
+            headers: {
+                "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+                expectedStatementVersion,
+                values,
+            }),
+        },
+    )
+}
+

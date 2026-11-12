@@ -29,6 +29,7 @@ import type {
 import type {
     FinancialDirection,
     FinancialEntry,
+    FinancialEntryCommandValues,
 } from "../types/financial-entry.types"
 
 const PAYMENT_METHODS = [
@@ -51,6 +52,15 @@ interface FinancialEntryDialogProps {
     categories: FinancialCategoryOption[]
     resultCenters: ResultCenterOption[]
     onClose: () => void
+    initialForm?: FinancialEntryForm
+    fixedSource?: boolean
+    titleOverride?: string
+    createOverride?: {
+        submit: (values: FinancialEntryCommandValues) => Promise<unknown>
+        pending: boolean
+        successMessage: string
+        describeError: (error: unknown) => string
+    }
 }
 
 /**
@@ -66,6 +76,10 @@ export function FinancialEntryDialog({
     categories,
     resultCenters,
     onClose,
+    initialForm,
+    fixedSource = false,
+    titleOverride,
+    createOverride,
 }: FinancialEntryDialogProps) {
     const editing = Boolean(entry)
     const queryClient = useQueryClient()
@@ -74,7 +88,7 @@ export function FinancialEntryDialog({
     const [form, setForm] = useState<FinancialEntryForm>(() =>
         entry
             ? financialEntryFormFrom(entry)
-            : newFinancialEntryForm(
+            : initialForm ?? newFinancialEntryForm(
                 direction,
                 todayIso(),
                 bankAccounts.find((account) => account.active)?.id ?? "",
@@ -88,7 +102,7 @@ export function FinancialEntryDialog({
     const save = useSaveFinancialEntry(companyId)
 
     const isIncome = form.direction === "INCOME"
-    const busy = save.isPending
+    const busy = createOverride?.pending ?? save.isPending
 
     function clearErrors(fields: (keyof FinancialEntryForm)[]) {
         setErrors((current) => {
@@ -104,7 +118,7 @@ export function FinancialEntryDialog({
     }
 
     function changeDirection(next: FinancialDirection) {
-        if (editing || next === form.direction) {
+        if (editing || fixedSource || next === form.direction) {
             return
         }
 
@@ -127,12 +141,22 @@ export function FinancialEntryDialog({
         }
 
         try {
-            await save.mutateAsync({
-                values: toCommandValues(form, entry),
-                original: entry,
-            })
+            const values = toCommandValues(form, entry)
 
-            showToast(editing ? "Lançamento atualizado." : "Lançamento salvo.")
+            if (!editing && createOverride) {
+                await createOverride.submit(values)
+            } else {
+                await save.mutateAsync({
+                    values,
+                    original: entry,
+                })
+            }
+
+            showToast(
+                editing
+                    ? "Lançamento atualizado."
+                    : createOverride?.successMessage ?? "Lançamento salvo.",
+            )
             onClose()
         } catch (error) {
             if (apiErrorStatus(error) === 401) {
@@ -140,7 +164,11 @@ export function FinancialEntryDialog({
                 return
             }
 
-            setSaveError(describeFinancialEntryError(error, editing ? "update" : "create"))
+            setSaveError(
+                !editing && createOverride
+                    ? createOverride.describeError(error)
+                    : describeFinancialEntryError(error, editing ? "update" : "create"),
+            )
         }
     }
 
@@ -165,9 +193,9 @@ export function FinancialEntryDialog({
         partners.isSuccess &&
         !partnerOptions.some((partner) => partner.id === form.partnerId)
 
-    const title = editing
+    const title = titleOverride ?? (editing
         ? "Editar lançamento"
-        : isIncome ? "Nova entrada" : "Nova saída"
+        : isIncome ? "Nova entrada" : "Nova saída")
 
     const fieldError = (name: keyof FinancialEntryForm) =>
         errors[name] ? <div className="err">{errors[name]}</div> : null
@@ -186,7 +214,7 @@ export function FinancialEntryDialog({
                 <button
                     type="button"
                     className={isIncome ? "e on" : "e"}
-                    disabled={editing}
+                    disabled={editing || fixedSource}
                     onClick={() => changeDirection("INCOME")}
                 >
                     Entrada
@@ -194,7 +222,7 @@ export function FinancialEntryDialog({
                 <button
                     type="button"
                     className={isIncome ? "s" : "s on"}
-                    disabled={editing}
+                    disabled={editing || fixedSource}
                     onClick={() => changeDirection("EXPENSE")}
                 >
                     Saída
@@ -252,6 +280,7 @@ export function FinancialEntryDialog({
                         inputMode="decimal"
                         placeholder="1.234,56"
                         value={form.amount}
+                        disabled={fixedSource}
                         onChange={(event) => update({ amount: event.target.value })}
                     />
                     {fieldError("amount")}
@@ -356,6 +385,7 @@ export function FinancialEntryDialog({
                     <select
                         id="lConta"
                         value={form.bankAccountId}
+                        disabled={fixedSource}
                         onChange={(event) => update({ bankAccountId: event.target.value })}
                     >
                         <option value="">Selecione…</option>
@@ -406,6 +436,7 @@ export function FinancialEntryDialog({
                                 <input
                                     type="checkbox"
                                     checked={form.paid}
+                                    disabled={fixedSource}
                                     onChange={(event) => update({ paid: event.target.checked })}
                                 />{" "}
                                 {isIncome ? "Já foi recebido" : "Já foi pago"}
@@ -419,6 +450,7 @@ export function FinancialEntryDialog({
                                     type="date"
                                     id="lPgto"
                                     value={form.paymentDate}
+                                    disabled={fixedSource}
                                     onChange={(event) => update({ paymentDate: event.target.value })}
                                 />
                                 {fieldError("paymentDate")}

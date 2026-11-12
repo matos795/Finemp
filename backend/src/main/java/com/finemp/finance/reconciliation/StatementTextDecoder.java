@@ -23,16 +23,21 @@ final class StatementTextDecoder {
                 if(encoding.find()) {
                     String label=encoding.group(2).toUpperCase(Locale.ROOT);
                     if(label.equals("UTF-8") || label.equals("UTF8"))explicitUtf8=true;
-                    else if(label.equals("WINDOWS-1252") || label.equals("ISO-8859-1") || label.equals("US-ASCII"))return new String(bytes,WINDOWS);
+                    else if(label.equals("WINDOWS-1252") || label.equals("ISO-8859-1") || label.equals("US-ASCII"))return decodeLegacyOrUtf8(bytes);
                     else throw new IllegalArgumentException("Codificação de extrato não suportada.");
                 }else explicitUtf8=true;
             }else {
                 int markup=header.indexOf('<');String declarations=markup<0?header:header.substring(0,markup);
-                if(Pattern.compile("(?im)^\\s*(?:CHARSET|ENCODING)\\s*:\\s*(?:1252|USASCII|ISO-8859-1|WINDOWS-1252)\\s*$").matcher(declarations).find())return new String(bytes,WINDOWS);
+                if(Pattern.compile("(?im)^\\s*(?:CHARSET|ENCODING)\\s*:\\s*(?:1252|USASCII|ISO-8859-1|WINDOWS-1252)\\s*$").matcher(declarations).find())return decodeLegacyOrUtf8(bytes);
                 explicitUtf8=Pattern.compile("(?im)^\\s*(?:CHARSET|ENCODING)\\s*:\\s*(?:65001|UTF-8|UTF8)\\s*$").matcher(declarations).find();
             }
         }
-        try{String text=StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();return text.startsWith("\uFEFF")?text.substring(1):text;}
+        try{return stripBom(StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString());}
         catch(CharacterCodingException invalid){if(explicitUtf8)throw new IllegalArgumentException("Codificação UTF-8 de extrato inválida.");return new String(bytes,WINDOWS);}
     }
+    private static String decodeLegacyOrUtf8(byte[] bytes) {
+        try{return stripBom(StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString());}
+        catch(CharacterCodingException invalid){return new String(bytes,WINDOWS);}
+    }
+    private static String stripBom(String text){return text.startsWith("\uFEFF")?text.substring(1):text;}
 }

@@ -57,6 +57,13 @@ public class AccessAuditRecorder {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public UUID recordStatementReconciled(UUID actor,UUID company,UUID item,UUID command,String before,String after,Set<? extends Enum<?>> permissions) {
+        if(before==null || after==null)throw new IllegalArgumentException("Estado de conciliação ausente.");
+        var event=new AccessAuditEvent(AccessAuditAction.FINANCIAL_STATEMENT_RECONCILED,actor,actor,null,company,clock.instant(),permissions);
+        event.resource("FINANCIAL_STATEMENT_ITEM",item,command,before,after,null);entityManager.persist(event);return event.getId();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public UUID recordHierarchyDeletion(
             AccessAuditAction action,
             UUID actorId,
