@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { ApiError } from "../../../lib/api/api-client"
 import {
     listAccountingFirms,
     listClients,
     listCompanies,
-    type AccountingFirm,
-    type Client,
-    type Company,
 } from "../api/platform-admin-api"
 
 function errorMessage(error: unknown) {
@@ -18,130 +16,145 @@ function errorMessage(error: unknown) {
 }
 
 export function PlatformClientsPage() {
-    const [firms, setFirms] = useState<AccountingFirm[]>([])
-    const [clients, setClients] = useState<Client[]>([])
-    const [companies, setCompanies] = useState<Company[]>([])
-    const [firmId, setFirmId] = useState("")
-    const [clientId, setClientId] = useState("")
-    const [busy, setBusy] = useState(true)
-    const [error, setError] = useState("")
+    const [selectedFirmId, setSelectedFirmId] =
+        useState("")
+    const [selectedClientId, setSelectedClientId] =
+        useState("")
 
-    useEffect(() => {
-        let active = true
+    const firmsQuery = useQuery({
+        queryKey: ["platform-accounting-firms"] as const,
+        queryFn: listAccountingFirms,
+        retry: false,
+    })
 
-        void listAccountingFirms()
-            .then((page) => {
-                if (!active) return
-                setFirms(page.items)
-                setFirmId(page.items[0]?.id ?? "")
-            })
-            .catch((caught) => {
-                if (active) setError(errorMessage(caught))
-            })
-            .finally(() => {
-                if (active) setBusy(false)
-            })
+    const firmId =
+        selectedFirmId ||
+        firmsQuery.data?.items[0]?.id ||
+        ""
 
-        return () => {
-            active = false
-        }
-    }, [])
+    const clientsQuery = useQuery({
+        queryKey: [
+            "platform-clients",
+            firmId,
+        ] as const,
+        queryFn: () => listClients(firmId),
+        enabled: Boolean(firmId),
+        retry: false,
+    })
 
-    useEffect(() => {
-        let active = true
-        setClients([])
-        setCompanies([])
-        setClientId("")
-        setError("")
+    const clientId =
+        selectedClientId &&
+        clientsQuery.data?.items.some(
+            (client) =>
+                client.id === selectedClientId,
+        )
+            ? selectedClientId
+            : clientsQuery.data?.items[0]?.id ?? ""
 
-        if (!firmId) return () => { active = false }
+    const companiesQuery = useQuery({
+        queryKey: [
+            "platform-client-companies",
+            firmId,
+            clientId,
+        ] as const,
+        queryFn: () =>
+            listCompanies(firmId, clientId),
+        enabled: Boolean(firmId && clientId),
+        retry: false,
+    })
 
-        setBusy(true)
-        void listClients(firmId)
-            .then((page) => {
-                if (!active) return
-                setClients(page.items)
-                setClientId(page.items[0]?.id ?? "")
-            })
-            .catch((caught) => {
-                if (active) setError(errorMessage(caught))
-            })
-            .finally(() => {
-                if (active) setBusy(false)
-            })
+    const error =
+        firmsQuery.error ||
+        clientsQuery.error ||
+        companiesQuery.error
 
-        return () => {
-            active = false
-        }
-    }, [firmId])
-
-    useEffect(() => {
-        let active = true
-        setCompanies([])
-        setError("")
-
-        if (!firmId || !clientId) return () => { active = false }
-
-        setBusy(true)
-        void listCompanies(firmId, clientId)
-            .then((page) => {
-                if (active) setCompanies(page.items)
-            })
-            .catch((caught) => {
-                if (active) setError(errorMessage(caught))
-            })
-            .finally(() => {
-                if (active) setBusy(false)
-            })
-
-        return () => {
-            active = false
-        }
-    }, [clientId, firmId])
+    const busy =
+        firmsQuery.isFetching ||
+        clientsQuery.isFetching ||
+        companiesQuery.isFetching
 
     return (
         <div>
             <section className="mbox">
                 <h1>Clientes FINEMP</h1>
                 <p className="help">
-                    Visão administrativa somente de consulta. Criação de
-                    escritório, cliente, Company e concessão de acesso continuam
-                    no Onboarding SaaS.
+                    Visão administrativa somente de consulta.
+                    Criação de escritório, cliente, Company e
+                    concessão de acesso continuam no Onboarding
+                    SaaS.
                 </p>
-                {error && <div className="alert e">{error}</div>}
+
+                {error && (
+                    <div className="alert e">
+                        {errorMessage(error)}
+                    </div>
+                )}
             </section>
 
             <section className="mbox">
                 <div className="fl">
-                    <label htmlFor="firm-filter">Escritório contábil</label>
+                    <label htmlFor="firm-filter">
+                        Escritório contábil
+                    </label>
                     <select
                         id="firm-filter"
                         value={firmId}
-                        onChange={(event) => setFirmId(event.target.value)}
+                        onChange={(event) => {
+                            setSelectedFirmId(
+                                event.target.value,
+                            )
+                            setSelectedClientId("")
+                        }}
                     >
-                        <option value="">Selecione</option>
-                        {firms.map((firm) => (
-                            <option value={firm.id} key={firm.id}>
-                                {firm.name}{firm.active ? "" : " (inativo)"}
-                            </option>
-                        ))}
+                        <option value="">
+                            Selecione
+                        </option>
+                        {firmsQuery.data?.items.map(
+                            (firm) => (
+                                <option
+                                    value={firm.id}
+                                    key={firm.id}
+                                >
+                                    {firm.name}
+                                    {firm.active
+                                        ? ""
+                                        : " (inativo)"}
+                                </option>
+                            ),
+                        )}
                     </select>
                 </div>
 
                 <div className="fl">
-                    <label htmlFor="client-filter">Cliente</label>
+                    <label htmlFor="client-filter">
+                        Cliente
+                    </label>
                     <select
                         id="client-filter"
                         value={clientId}
                         disabled={!firmId}
-                        onChange={(event) => setClientId(event.target.value)}
+                        onChange={(event) =>
+                            setSelectedClientId(
+                                event.target.value,
+                            )
+                        }
                     >
-                        <option value="">Selecione</option>
-                        {clients.map((client) => (
-                            <option value={client.id} key={client.id}>
-                                {client.name}{client.active ? "" : " (inativo)"}
-                            </option>
-                        ))}
+                        <option value="">
+                            Selecione
+                        </option>
+                        {clientsQuery.data?.items.map(
+                            (client) => (
+                                <option
+                                    value={client.id}
+                                    key={client.id}
+                                >
+                                    {client.name}
+                                    {client.active
+                                        ? ""
+                                        : " (inativo)"}
+                                </option>
+                            ),
+                        )}
                     </select>
                 </div>
 
@@ -150,16 +163,33 @@ export function PlatformClientsPage() {
 
             <section className="mbox">
                 <h2>Companies do cliente</h2>
-                {!busy && clientId && companies.length === 0 && (
-                    <p className="help">Nenhuma Company cadastrada para este cliente.</p>
-                )}
+
+                {!busy &&
+                    clientId &&
+                    companiesQuery.data?.items
+                        .length === 0 && (
+                        <p className="help">
+                            Nenhuma Company cadastrada para este
+                            cliente.
+                        </p>
+                    )}
+
                 <div style={{ display: "grid", gap: 8 }}>
-                    {companies.map((company) => (
-                        <div className="card" key={company.id}>
-                            <strong>{company.legalName}</strong>
-                            <small>ID interno: {company.id}</small>
-                        </div>
-                    ))}
+                    {companiesQuery.data?.items.map(
+                        (company) => (
+                            <div
+                                className="card"
+                                key={company.id}
+                            >
+                                <strong>
+                                    {company.legalName}
+                                </strong>
+                                <small>
+                                    ID interno: {company.id}
+                                </small>
+                            </div>
+                        ),
+                    )}
                 </div>
             </section>
         </div>
