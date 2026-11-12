@@ -295,7 +295,7 @@ export const navigationModules: NavigationModule[] = [
         label: "Cadastros",
         icon: "cad",
         items: [
-            { id: "empresas", label: "Empresas" },
+            { id: "empresas", label: "Empresas", path: "/companies" },
             { id: "cadEmp", label: "Dados da empresa" },
             {
                 id: "parc",
