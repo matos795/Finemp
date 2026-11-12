@@ -46,11 +46,16 @@ export function AppSidebar({
         location.pathname,
     )
 
-    // Só telas publicadas e liberadas; o roadmap sem rota fica fora do menu.
+    const showRoadmap =
+        (user.platformPermissions ?? []).includes("SYSTEM_ADMIN")
+
+    // Clientes continuam vendo só telas publicadas. SYSTEM_ADMIN também vê
+    // o roadmap homologado, mas itens sem rota permanecem indisponíveis.
     const modules = visibleNavigation(
         navigationModules,
         hasPermission,
         hasPlatformPermission,
+        showRoadmap,
     )
 
     function handleNavigate() {
@@ -77,16 +82,27 @@ export function AppSidebar({
                             key={module.id}
                             className="mod"
                         >
-                            <NavLink
-                                to={item.path}
-                                onClick={handleNavigate}
-                                className={({ isActive }) =>
-                                    cn("mod-h unico", isActive && "on")
-                                }
-                            >
-                                <MenuIcon name={module.icon} />
-                                {module.label}
-                            </NavLink>
+                            {item.available ? (
+                                <NavLink
+                                    to={item.path}
+                                    onClick={handleNavigate}
+                                    className={({ isActive }) =>
+                                        cn("mod-h unico", isActive && "on")
+                                    }
+                                >
+                                    <MenuIcon name={module.icon} />
+                                    {module.label}
+                                </NavLink>
+                            ) : (
+                                <div
+                                    className="mod-h unico roadmap-soon"
+                                    aria-disabled="true"
+                                >
+                                    <MenuIcon name={module.icon} />
+                                    <span className="mn">{module.label}</span>
+                                    <small className="roadmap-soon-badge">Em breve</small>
+                                </div>
+                            )}
                         </div>
                     )
                 }
@@ -122,18 +138,29 @@ export function AppSidebar({
                         </button>
 
                         {isOpen &&
-                            module.items.map((item) => (
-                                <NavLink
-                                    key={item.id}
-                                    to={item.path}
-                                    onClick={handleNavigate}
-                                    className={({ isActive }) =>
-                                        cn("mi", isActive && "on")
-                                    }
-                                >
-                                    {item.label}
-                                </NavLink>
-                            ))}
+                            module.items.map((item) =>
+                                item.available ? (
+                                    <NavLink
+                                        key={item.id}
+                                        to={item.path}
+                                        onClick={handleNavigate}
+                                        className={({ isActive }) =>
+                                            cn("mi", isActive && "on")
+                                        }
+                                    >
+                                        {item.label}
+                                    </NavLink>
+                                ) : (
+                                    <div
+                                        key={item.id}
+                                        className="mi roadmap-soon"
+                                        aria-disabled="true"
+                                    >
+                                        <span>{item.label}</span>
+                                        <small className="roadmap-soon-badge">Em breve</small>
+                                    </div>
+                                ),
+                            )}
                     </div>
                 )
             })}

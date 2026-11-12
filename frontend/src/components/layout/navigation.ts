@@ -18,8 +18,21 @@ export interface NavigationItem {
     platformPermissions?: PlatformPermission[]
 }
 
-/** Item com tela publicada (rota definida). */
-export type AvailableNavigationItem = NavigationItem & { path: string }
+/** Item publicado: existe rota real e ele pode ser navegado. */
+export type AvailableNavigationItem = NavigationItem & {
+    path: string
+    available: true
+}
+
+/** Item homologado ainda sem rota publicada. Nunca recebe destino de navegação. */
+export type RoadmapNavigationItem = NavigationItem & {
+    path?: undefined
+    available: false
+}
+
+export type VisibleNavigationItem =
+    | AvailableNavigationItem
+    | RoadmapNavigationItem
 
 export interface NavigationModule {
     id: string
@@ -28,8 +41,8 @@ export interface NavigationModule {
     items: NavigationItem[]
 }
 
-export interface AvailableNavigationModule extends Omit<NavigationModule, "items"> {
-    items: AvailableNavigationItem[]
+export interface VisibleNavigationModule extends Omit<NavigationModule, "items"> {
+    items: VisibleNavigationItem[]
     /**
      * Módulo de uma única tela no protótipo ("unico"): vira link direto com
      * o nome do módulo. Módulos com várias telas continuam em acordeão
@@ -59,6 +72,9 @@ export const navigationModules: NavigationModule[] = [
                     "PLATFORM_USER_MANAGE",
                 ],
             },
+            { id: "admUsers", label: "Usuários e acessos" },
+            { id: "admLog", label: "Registro de atividades" },
+            { id: "admClientes", label: "Clientes FINEMP" },
         ],
     },
     {
@@ -321,23 +337,42 @@ export function isItemVisible(
 }
 
 /**
- * Menu exibido: só itens com rota publicada e liberados pelas permissões
- * de Company/Platform; módulos que ficam sem itens desaparecem.
+ * Menu exibido.
+ *
+ * Usuários comuns recebem apenas itens publicados e autorizados.
+ * SYSTEM_ADMIN pode incluir também o roadmap homologado: item sem rota
+ * continua explicitamente indisponível e nunca ganha um destino sintético.
  */
 export function visibleNavigation(
     modules: NavigationModule[],
     hasPermission: (permission: CompanyPermission) => boolean,
     hasPlatformPermission: (permission: PlatformPermission) => boolean,
-): AvailableNavigationModule[] {
+    includeRoadmap = false,
+): VisibleNavigationModule[] {
     return modules
         .map((module) => ({
             ...module,
             standalone: module.items.length === 1,
-            items: module.items.filter(
-                (item): item is AvailableNavigationItem =>
+            items: module.items.flatMap((item): VisibleNavigationItem[] => {
+                if (
                     item.path !== undefined &&
-                    isItemVisible(item, hasPermission, hasPlatformPermission),
-            ),
+                    isItemVisible(item, hasPermission, hasPlatformPermission)
+                ) {
+                    return [{ ...item, path: item.path, available: true }]
+                }
+
+                if (includeRoadmap && item.path === undefined) {
+                    return [{
+                        id: item.id,
+                        label: item.label,
+                        permissions: item.permissions,
+                        platformPermissions: item.platformPermissions,
+                        available: false,
+                    }]
+                }
+
+                return []
+            }),
         }))
         .filter((module) => module.items.length > 0)
 }
