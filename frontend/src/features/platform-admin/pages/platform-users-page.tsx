@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import type { FormEvent } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { ApiError } from "../../../lib/api/api-client"
 import { useCurrentUser } from "../../auth/hooks/use-current-user"
 import {
     listPlatformUsersPage,
-    type PagedResponse,
     type PlatformUser,
 } from "../api/platform-admin-api"
 import { PlatformPermissionsEditor } from "../components/platform-permissions-editor"
@@ -30,54 +30,30 @@ export function PlatformUsersPage() {
     const [query, setQuery] = useState("")
     const [search, setSearch] = useState("")
     const [page, setPage] = useState(0)
-    const [result, setResult] = useState<PagedResponse<PlatformUser> | null>(null)
     const [selectedUserId, setSelectedUserId] = useState("")
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState("")
 
-    useEffect(() => {
-        let active = true
-        setLoading(true)
-        setError("")
-
-        void listPlatformUsersPage(search, page, PAGE_SIZE)
-            .then((next) => {
-                if (!active) return
-
-                setResult(next)
-                setSelectedUserId((current) => {
-                    if (next.items.some((user) => user.id === current)) {
-                        return current
-                    }
-
-                    return next.items[0]?.id ?? ""
-                })
-            })
-            .catch((caught) => {
-                if (active) {
-                    setError(describeError(caught))
-                    setResult(null)
-                    setSelectedUserId("")
-                }
-            })
-            .finally(() => {
-                if (active) setLoading(false)
-            })
-
-        return () => {
-            active = false
-        }
-    }, [page, search])
+    const usersQuery = useQuery({
+        queryKey: ["platform-users", search, page] as const,
+        queryFn: () => listPlatformUsersPage(search, page, PAGE_SIZE),
+        retry: false,
+    })
 
     function submitSearch(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
         setPage(0)
         setSearch(query.trim())
+        setSelectedUserId("")
     }
 
+    const result = usersQuery.data
     const selectedUser =
-        result?.items.find((user) => user.id === selectedUserId) ?? null
+        result?.items.find((user) => user.id === selectedUserId) ??
+        result?.items[0] ??
+        null
     const actorPermissions = currentUser?.platformPermissions ?? []
+    const error = usersQuery.error
+        ? describeError(usersQuery.error)
+        : ""
 
     return (
         <div>
@@ -109,7 +85,11 @@ export function PlatformUsersPage() {
                             placeholder="Nome ou e-mail"
                         />
                     </div>
-                    <button className="btn" type="submit" disabled={loading}>
+                    <button
+                        className="btn"
+                        type="submit"
+                        disabled={usersQuery.isFetching}
+                    >
                         Buscar
                     </button>
                 </form>
@@ -128,9 +108,9 @@ export function PlatformUsersPage() {
                 <section className="mbox">
                     <h2>Usuários</h2>
 
-                    {loading && <p>Carregando usuários...</p>}
+                    {usersQuery.isLoading && <p>Carregando usuários...</p>}
 
-                    {!loading && result?.items.length === 0 && (
+                    {!usersQuery.isLoading && result?.items.length === 0 && (
                         <p className="help">
                             Nenhum usuário encontrado para esta busca.
                         </p>
@@ -143,7 +123,7 @@ export function PlatformUsersPage() {
                                 type="button"
                                 className="card"
                                 onClick={() => setSelectedUserId(user.id)}
-                                aria-pressed={selectedUserId === user.id}
+                                aria-pressed={selectedUser?.id === user.id}
                                 style={{
                                     textAlign: "left",
                                     cursor: "pointer",
@@ -170,10 +150,11 @@ export function PlatformUsersPage() {
                             <button
                                 className="btn sec"
                                 type="button"
-                                disabled={loading || result.page === 0}
-                                onClick={() =>
+                                disabled={usersQuery.isFetching || result.page === 0}
+                                onClick={() => {
+                                    setSelectedUserId("")
                                     setPage((current) => Math.max(0, current - 1))
-                                }
+                                }}
                             >
                                 Anterior
                             </button>
@@ -184,12 +165,13 @@ export function PlatformUsersPage() {
                                 className="btn sec"
                                 type="button"
                                 disabled={
-                                    loading ||
+                                    usersQuery.isFetching ||
                                     result.page + 1 >= result.totalPages
                                 }
-                                onClick={() =>
+                                onClick={() => {
+                                    setSelectedUserId("")
                                     setPage((current) => current + 1)
-                                }
+                                }}
                             >
                                 Próxima
                             </button>
