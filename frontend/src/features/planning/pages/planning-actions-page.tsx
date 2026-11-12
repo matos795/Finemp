@@ -8,7 +8,7 @@ import {
     createActionPlan,
     deleteActionPlan,
     listActionPlans,
-    listGoals,
+    listAllActiveGoals,
     setActionCompleted,
     updateActionPlan,
     type ActionPlanItem,
@@ -94,7 +94,7 @@ function PlanningActionsCompanyPage() {
 
     const goalsQuery = useQuery({
         queryKey: ["planning-action-goals", companyId] as const,
-        queryFn: () => listGoals(companyId!, true, 0, 100),
+        queryFn: () => listAllActiveGoals(companyId!),
         enabled: Boolean(companyId && canRead),
         retry: false,
     })
@@ -102,7 +102,7 @@ function PlanningActionsCompanyPage() {
     const goalNames = useMemo(
         () =>
             new Map(
-                (goalsQuery.data?.items ?? []).map((goal) => [
+                (goalsQuery.data ?? []).map((goal) => [
                     goal.id,
                     goal.name,
                 ]),
@@ -686,7 +686,7 @@ function PlanningActionsCompanyPage() {
                                     <option value="">
                                         Sem vínculo
                                     </option>
-                                    {goalsQuery.data?.items.map(
+                                    {goalsQuery.data?.map(
                                         (goal) => (
                                             <option
                                                 key={goal.id}
