@@ -393,6 +393,7 @@ function StatementsCompanyPage() {
                     bankAccounts={accounts.data ?? []}
                     categories={categories.data ?? []}
                     resultCenters={resultCenters.data ?? []}
+                    onCreated={handleStatementResolved}
                     onClose={() => setCreateItem(null)}
                 />
             )}
