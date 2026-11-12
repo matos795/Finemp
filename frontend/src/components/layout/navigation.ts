@@ -74,7 +74,12 @@ export const navigationModules: NavigationModule[] = [
                     "PLATFORM_USER_MANAGE",
                 ],
             },
-            { id: "admUsers", label: "Usuários e acessos" },
+            {
+                id: "admUsers",
+                label: "Usuários e acessos",
+                path: "/admin/users",
+                platformPermissions: ["PLATFORM_USER_MANAGE"],
+            },
             { id: "admLog", label: "Registro de atividades" },
             { id: "admClientes", label: "Clientes FINEMP" },
         ],
