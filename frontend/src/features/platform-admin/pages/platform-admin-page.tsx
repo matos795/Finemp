@@ -674,7 +674,7 @@ export function PlatformAdminPage() {
                         <div className="card" key={platformUser.id}>
                             <b>{platformUser.name}</b>
                             <div>{platformUser.email}</div>
-                            {canManagePlatformUsers && <PlatformPermissionsEditor id={platformUser.id} globalActor={hasPlatformAccess(user, "SYSTEM_ADMIN")} />}
+                            {canManagePlatformUsers && <PlatformPermissionsEditor id={platformUser.id} actorPermissions={user.platformPermissions ?? []} />}
                             <small>
                                 {platformUser.invitationPending
                                     ? "Convite pendente"

@@ -60,7 +60,7 @@ test("Company and Platform permissions keep filtering the available items", () =
 
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, none, can("PLATFORM_USER_MANAGE"))),
-    ["admin:adminOnboarding"],
+    ["admin:adminOnboarding,admUsers"],
   )
 
   assert.deepEqual(
@@ -105,7 +105,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admUsers", "admLog", "admClientes"]) {
+  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admLog", "admClientes"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -115,6 +115,21 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   for (const item of all.filter((candidate) => candidate.path !== undefined)) {
     assert.equal(item.available, true, item.id)
   }
+})
+
+
+
+test("Usuários e acessos is published for platform user administrators", () => {
+  const item = navigationModules
+    .find((module) => module.id === "admin")
+    .items.find((candidate) => candidate.id === "admUsers")
+
+  assert.equal(item.path, "/admin/users")
+  assert.deepEqual(item.platformPermissions, ["PLATFORM_USER_MANAGE"])
+  assert.equal(
+    findNavigationByPath(navigationModules, "/admin/users").item.id,
+    "admUsers",
+  )
 })
 
 test("normal users still receive only published and authorized items", () => {

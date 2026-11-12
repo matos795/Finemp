@@ -158,6 +158,22 @@ export async function listPlatformUsers() {
     )
 }
 
+export async function listPlatformUsersPage(
+    search = "",
+    page = 0,
+    size = 20,
+) {
+    const params = new URLSearchParams({
+        search: search.trim(),
+        page: String(page),
+        size: String(size),
+    })
+
+    return apiRequest<PagedResponse<PlatformUser>>(
+        `/api/admin/users?${params.toString()}`,
+    )
+}
+
 export async function listFirmUsers(accountingFirmId: string) {
     return listAllPages<PlatformUser>(
         `/api/admin/accounting-firms/${accountingFirmId}/users`,
