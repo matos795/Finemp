@@ -314,7 +314,15 @@ export const navigationModules: NavigationModule[] = [
                     "FINANCIAL_CATEGORY_MANAGE",
                 ],
             },
-            { id: "cadCtb", label: "Plano de contas da contabilidade" },
+            {
+                id: "cadCtb",
+                label: "Plano de contas da contabilidade",
+                path: "/accounting-accounts",
+                permissions: [
+                    "ACCOUNT_CLASSIFICATION_VIEW",
+                    "ACCOUNT_CLASSIFICATION_MANAGE",
+                ],
+            },
             {
                 id: "cr",
                 label: "Centros de resultado",
@@ -337,7 +345,12 @@ export const navigationModules: NavigationModule[] = [
         label: "Demais",
         icon: "dem",
         items: [
-            { id: "ctb", label: "Contabilidade" },
+            {
+                id: "ctb",
+                label: "Contabilidade",
+                path: "/accounting-movements",
+                permissions: ["ACCOUNTING_MOVEMENT_VIEW"],
+            },
             {
                 id: "perFech",
                 label: "Fechamento de períodos",

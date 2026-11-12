@@ -23,14 +23,22 @@ test("the empty state applies the standard plan only on an explicit click", () =
 })
 
 // 13–14: navegação.
-test("cadPlano publishes /financial-categories for VIEW, STRUCTURE_MANAGE or MANAGE; cadCtb is unchanged", () => {
+test("cadPlano keeps financial-category permissions while cadCtb publishes the accounting plan separately", () => {
   const cad = navigationModules.find((module) => module.id === "cad")
   const plano = cad.items.find((item) => item.id === "cadPlano")
   assert.equal(plano.label, "Plano de contas")
   assert.equal(plano.path, "/financial-categories")
   assert.deepEqual([...plano.permissions].sort(),
     ["FINANCIAL_CATEGORY_MANAGE", "FINANCIAL_CATEGORY_STRUCTURE_MANAGE", "FINANCIAL_CATEGORY_VIEW"])
-  assert.deepEqual(cad.items.find((item) => item.id === "cadCtb"), { id: "cadCtb", label: "Plano de contas da contabilidade" })
+  assert.deepEqual(cad.items.find((item) => item.id === "cadCtb"), {
+    id: "cadCtb",
+    label: "Plano de contas da contabilidade",
+    path: "/accounting-accounts",
+    permissions: [
+      "ACCOUNT_CLASSIFICATION_VIEW",
+      "ACCOUNT_CLASSIFICATION_MANAGE",
+    ],
+  })
   assert.equal(findNavigationByPath(navigationModules, "/financial-categories").item.id, "cadPlano")
 
   for (const permission of FINANCIAL_CATEGORY_READ_PERMISSIONS) {
