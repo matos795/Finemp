@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../lib/api/api-client"
+import { apiRequest } from "../../../lib/api/api-client.ts"
 
 export type ResultCenterType = "GROUP" | "ANALYTICAL"
 
