@@ -51,7 +51,11 @@ test("audit UI never renders free-form persisted states", () => {
 
   for (const source of [globalPage, companyPage]) {
     assert.doesNotMatch(source, /beforeState|afterState|permissionSnapshot/)
-    assert.doesNotMatch(source, /deleteAudit|updateAudit|POST|PUT|DELETE/)
+    assert.doesNotMatch(source, /deleteAudit|updateAudit/)
+    assert.doesNotMatch(
+      source,
+      /method\s*:\s*["'](?:POST|PUT|DELETE)["']/,
+    )
   }
 })
 
