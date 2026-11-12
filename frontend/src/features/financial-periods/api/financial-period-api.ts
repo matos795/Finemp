@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../lib/api/api-client"
+import { apiRequest } from "../../../lib/api/api-client.ts"
 
 export interface FinancialPeriodState {
     id: string | null
