@@ -1,7 +1,7 @@
 package com.finemp.finance.reporting;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -24,6 +24,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import com.finemp.security.UserAccountPrincipal;
 
 @SpringBootTest(properties={
@@ -101,7 +102,7 @@ class BankAccountBalanceReadIntegrationTest {
         saveEntry(owner,bankA,incomeCategory,FinancialDirection.INCOME,"5.00",null,LocalDate.of(2026,7,1));
 
         mvc.perform(get("/api/companies/"+owner.getId()+"/financial-reports/account-balances")
-                        .with(user(new UserAccountPrincipal(allowed))))
+                        .with(authentication(new UsernamePasswordAuthenticationToken(new UserAccountPrincipal(allowed),null,List.of()))))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("no-store")))
                 .andExpect(jsonPath("$.accounts[0].id").value(bankA.toString()))
@@ -109,7 +110,7 @@ class BankAccountBalanceReadIntegrationTest {
                 .andExpect(jsonPath("$.accounts[0].currentBalance").value("105.00"));
 
         mvc.perform(get("/api/companies/"+owner.getId()+"/financial-reports/account-balances")
-                        .with(user(new UserAccountPrincipal(bankOnly))))
+                        .with(authentication(new UsernamePasswordAuthenticationToken(new UserAccountPrincipal(bankOnly),null,List.of()))))
                 .andExpect(status().isForbidden());
     }
 
