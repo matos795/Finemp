@@ -258,7 +258,16 @@ export const navigationModules: NavigationModule[] = [
                 path: "/bank-accounts",
                 permissions: ["BANK_ACCOUNT_VIEW", "BANK_ACCOUNT_MANAGE"],
             },
-            { id: "cadPlano", label: "Plano de contas" },
+            {
+                id: "cadPlano",
+                label: "Plano de contas",
+                path: "/financial-categories",
+                permissions: [
+                    "FINANCIAL_CATEGORY_VIEW",
+                    "FINANCIAL_CATEGORY_STRUCTURE_MANAGE",
+                    "FINANCIAL_CATEGORY_MANAGE",
+                ],
+            },
             { id: "cadCtb", label: "Plano de contas da contabilidade" },
             { id: "cr", label: "Centros de resultado" },
         ],

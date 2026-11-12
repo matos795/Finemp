@@ -6,7 +6,6 @@ import type {
     FinancialCategoryOption,
     ResultCenterOption,
     ResultCenterSettings,
-    StandardPlanResult,
 } from "../types/financial-catalog.types.ts"
 
 /** Maior página aceita pelos catálogos financeiros. */
@@ -93,15 +92,7 @@ export function getResultCenterSettings(
 }
 
 /**
- * `POST …/financial-categories/standard-plan`: cria o plano homologado
- * FINEMP numa Company sem nenhuma categoria. O backend recusa com 409
- * PLAN_NOT_EMPTY se já houver catálogo.
+ * Plano padrão: o comando mora no módulo do Plano de contas (#341); o
+ * onboarding (#317) reutiliza o mesmo caminho HTTP.
  */
-export function applyStandardFinancialCategoryPlan(
-    companyId: string,
-): Promise<StandardPlanResult> {
-    return apiRequest<StandardPlanResult>(
-        companyPath(companyId, "financial-categories/standard-plan"),
-        { method: "POST" },
-    )
-}
+export { applyStandardFinancialCategoryPlan } from "../../financial-categories/api/financial-categories-api.ts"

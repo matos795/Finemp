@@ -30,7 +30,7 @@ test("items without a published route are not shown", () => {
   }
 
   const all = modules.flatMap((module) => module.items.map((item) => item.id))
-  for (const placeholder of ["agenda", "bancos", "relApres", "crmFunil", "orc", "bens", "cadPlano"]) {
+  for (const placeholder of ["agenda", "bancos", "relApres", "crmFunil", "orc", "bens", "cadCtb"]) {
     assert.equal(all.includes(placeholder), false, placeholder)
   }
 })
@@ -50,7 +50,7 @@ test("a financial client sees the published financial screens it is allowed to o
   assert.deepEqual(ids(visibleNavigation(navigationModules, FINANCE_CLIENT, none)), [
     "fluxo:painel,lanc,ext,mensal,diario",
     "rel:relRec,relPag,dre",
-    "cad:cadContas",
+    "cad:cadContas,cadPlano",
   ])
 })
 
@@ -86,7 +86,7 @@ test("the roadmap stays declared and the current route is still identified", () 
 test("only single-screen modules of the prototype become direct links", () => {
   const modules = visibleNavigation(navigationModules, FINANCE_CLIENT, none)
   const cadastros = modules.find((module) => module.id === "cad")
-  assert.equal(cadastros.items.length, 1)
+  assert.equal(cadastros.items.length, 2)
   assert.equal(cadastros.standalone, false)
   assert.equal(modules.find((module) => module.id === "fluxo").standalone, false)
 })

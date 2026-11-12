@@ -17,6 +17,8 @@ import { DrePage } from "../../features/dre/pages/dre-page"
 import { BusinessPartnersPage } from "../../features/business-partners/pages/business-partners-page"
 import { BUSINESS_PARTNER_READ_PERMISSIONS } from "../../features/business-partners/lib/business-partner-access"
 import { BankAccountsPage } from "../../features/bank-accounts/pages/bank-accounts-page"
+import { FinancialCategoriesPage } from "../../features/financial-categories/pages/financial-categories-page"
+import { FINANCIAL_CATEGORY_READ_PERMISSIONS } from "../../features/financial-categories/lib/financial-category-access"
 import { StatementsPage } from "../../features/statements/pages/statements-page"
 import { OpenTitlesPage } from "../../features/reports/pages/open-titles-page"
 import { MonthlyCashFlowPage } from "../../features/reports/pages/monthly-cash-flow-page"
@@ -93,6 +95,17 @@ export function AppRouter() {
                                 permission={BUSINESS_PARTNER_READ_PERMISSIONS}
                             >
                                 <BusinessPartnersPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/financial-categories"
+                        element={
+                            <RequirePermission
+                                permission={FINANCIAL_CATEGORY_READ_PERMISSIONS}
+                            >
+                                <FinancialCategoriesPage />
                             </RequirePermission>
                         }
                     />
