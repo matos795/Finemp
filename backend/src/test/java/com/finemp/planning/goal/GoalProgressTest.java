@@ -1,6 +1,7 @@
 package com.finemp.planning.goal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,25 @@ class GoalProgressTest {
                 new BigDecimal("200"),
                 new BigDecimal("250")))
                 .isEqualByComparingTo("1.2000");
+    }
+
+    @Test
+    void rejectsTargetsThatContradictTheDirection() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> GoalProgress.calculate(
+                        GoalDirection.UP,
+                        new BigDecimal("100"),
+                        new BigDecimal("50"),
+                        new BigDecimal("75")));
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> GoalProgress.calculate(
+                        GoalDirection.DOWN,
+                        new BigDecimal("50"),
+                        new BigDecimal("100"),
+                        new BigDecimal("75")));
     }
 
     @Test
