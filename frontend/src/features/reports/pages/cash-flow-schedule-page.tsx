@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Pager } from "../../../components/finemp/pager"
 import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
@@ -65,6 +65,18 @@ export function CashFlowSchedulePage() {
         PAGE_SIZE,
         true,
     )
+
+    useEffect(() => {
+        if (!titles.data || titles.isPlaceholderData || page === 0) {
+            return
+        }
+
+        const lastPage = Math.max(0, titles.data.totalPages - 1)
+
+        if (page > lastPage) {
+            setPage(lastPage)
+        }
+    }, [page, setPage, titles.data, titles.isPlaceholderData])
 
     const settlingHere =
         settling &&
