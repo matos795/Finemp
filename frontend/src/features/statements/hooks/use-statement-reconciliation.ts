@@ -19,6 +19,7 @@ import type {
 export function useReconcileStatement(
     companyId: string | undefined,
     item: StatementItem,
+    onResolved: () => void,
 ) {
     const queryClient = useQueryClient()
     const lastAttempt = useRef<CommandAttempt | null>(null)
@@ -45,6 +46,7 @@ export function useReconcileStatement(
         },
         onSuccess: () => {
             lastAttempt.current = null
+            onResolved()
         },
         onSettled: () =>
             Promise.all([
