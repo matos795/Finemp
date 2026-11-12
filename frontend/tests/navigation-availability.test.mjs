@@ -31,7 +31,7 @@ test("items without a published route are not shown", () => {
   }
 
   const all = modules.flatMap((module) => module.items.map((item) => item.id))
-  for (const placeholder of ["bancos", "relApres", "crmFunil", "orc", "bens", "cadCtb"]) {
+  for (const placeholder of ["relApres", "crmFunil", "orc", "bens", "cadCtb"]) {
     assert.equal(all.includes(placeholder), false, placeholder)
   }
 })
@@ -49,7 +49,7 @@ test("modules left without available items disappear", () => {
 
 test("a financial client sees the published financial screens it is allowed to open", () => {
   assert.deepEqual(ids(visibleNavigation(navigationModules, FINANCE_CLIENT, none)), [
-    "fluxo:painel,lanc,agenda,ext,mensal,diario",
+    "fluxo:painel,lanc,agenda,ext,mensal,diario,bancos",
     "rel:relRec,relPag,dre",
     "cad:cadContas,cadPlano",
   ])
@@ -105,7 +105,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["bancos", "crmFunil", "orc", "bens", "cadCtb", "admUsers", "admLog", "admClientes"]) {
+  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admUsers", "admLog", "admClientes"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -183,4 +183,37 @@ test("roadmap styling lives in overrides, not the generated theme", () => {
   assert.match(overrides, /\.fin \.roadmap-soon/)
   assert.match(overrides, /\.fin \.roadmap-soon-badge/)
   assert.doesNotMatch(theme, /roadmap-soon/)
+})
+
+
+test("Contas e saldos requires a bank permission and a financial-entry permission", () => {
+  const item = navigationModules
+    .find((module) => module.id === "fluxo")
+    .items.find((candidate) => candidate.id === "bancos")
+
+  assert.equal(item.path, "/cash-flow/accounts")
+  assert.deepEqual(item.permissionGroups, [
+    ["BANK_ACCOUNT_VIEW", "BANK_ACCOUNT_MANAGE"],
+    ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+  ])
+
+  assert.equal(
+    visibleNavigation(navigationModules, can("BANK_ACCOUNT_VIEW"), none)
+      .flatMap((module) => module.items)
+      .some((candidate) => candidate.id === "bancos"),
+    false,
+  )
+
+  assert.equal(
+    visibleNavigation(
+      navigationModules,
+      can("BANK_ACCOUNT_VIEW", "FINANCIAL_ENTRY_VIEW"),
+      none,
+    )
+      .flatMap((module) => module.items)
+      .some((candidate) => candidate.id === "bancos"),
+    true,
+  )
+
+  assert.equal(findNavigationByPath(navigationModules, "/cash-flow/accounts").item.id, "bancos")
 })

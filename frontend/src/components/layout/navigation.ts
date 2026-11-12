@@ -14,6 +14,8 @@ export interface NavigationItem {
     path?: string
     /** Qualquer uma das permissões libera o item (só UX; o backend autoriza). */
     permissions?: CompanyPermission[]
+    /** Cada grupo exige ao menos uma permissão; todos os grupos devem passar. */
+    permissionGroups?: CompanyPermission[][]
     /** Permissões do plano SaaS, separadas das permissões de Company. */
     platformPermissions?: PlatformPermission[]
 }
@@ -118,7 +120,15 @@ export const navigationModules: NavigationModule[] = [
                 path: "/cash-flow/daily",
                 permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
             },
-            { id: "bancos", label: "Contas e saldos" },
+            {
+                id: "bancos",
+                label: "Contas e saldos",
+                path: "/cash-flow/accounts",
+                permissionGroups: [
+                    ["BANK_ACCOUNT_VIEW", "BANK_ACCOUNT_MANAGE"],
+                    ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+                ],
+            },
         ],
     },
     {
@@ -334,11 +344,15 @@ export function isItemVisible(
         !item.permissions ||
         item.permissions.some(hasPermission)
 
+    const groupedCompanyVisible =
+        !item.permissionGroups ||
+        item.permissionGroups.every((group) => group.some(hasPermission))
+
     const platformVisible =
         !item.platformPermissions ||
         item.platformPermissions.some(hasPlatformPermission)
 
-    return companyVisible && platformVisible
+    return companyVisible && groupedCompanyVisible && platformVisible
 }
 
 /**
@@ -371,6 +385,7 @@ export function visibleNavigation(
                         id: item.id,
                         label: item.label,
                         permissions: item.permissions,
+                        permissionGroups: item.permissionGroups,
                         platformPermissions: item.platformPermissions,
                         available: false,
                     }]

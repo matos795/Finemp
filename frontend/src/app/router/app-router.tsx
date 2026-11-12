@@ -12,6 +12,7 @@ import { ProtectedApp } from "../../features/auth/components/protected-app"
 import { AppLayout } from "../../components/layout/app-layout"
 import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
 import { RequirePermission } from "../../features/auth/components/require-permission"
+import { RequirePermissionGroups } from "../../features/auth/components/require-permission-groups"
 import { RequirePlatformPermission } from "../../features/auth/components/require-platform-permission"
 import { DrePage } from "../../features/dre/pages/dre-page"
 import { BusinessPartnersPage } from "../../features/business-partners/pages/business-partners-page"
@@ -24,6 +25,7 @@ import { OpenTitlesPage } from "../../features/reports/pages/open-titles-page"
 import { MonthlyCashFlowPage } from "../../features/reports/pages/monthly-cash-flow-page"
 import { DailyCashFlowPage } from "../../features/reports/pages/daily-cash-flow-page"
 import { CashFlowSchedulePage } from "../../features/reports/pages/cash-flow-schedule-page"
+import { AccountBalancesPage } from "../../features/reports/pages/account-balances-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
@@ -209,6 +211,20 @@ export function AppRouter() {
                             >
                                 <CashFlowSchedulePage />
                             </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/cash-flow/accounts"
+                        element={
+                            <RequirePermissionGroups
+                                groups={[
+                                    ["BANK_ACCOUNT_VIEW", "BANK_ACCOUNT_MANAGE"],
+                                    ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+                                ]}
+                            >
+                                <AccountBalancesPage />
+                            </RequirePermissionGroups>
                         }
                     />
 

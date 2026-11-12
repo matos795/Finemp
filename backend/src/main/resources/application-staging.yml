@@ -69,3 +69,5 @@ finemp:
       enabled: true
     operational-dre:
       enabled: true
+    account-balances:
+      enabled: true
