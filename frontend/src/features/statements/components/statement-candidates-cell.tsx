@@ -142,7 +142,7 @@ export function StatementCandidatesCells({
     const candidates =
         useStatementCandidates(companyId, item.id, true)
     const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
-    const reconcile = useReconcileStatement(companyId, item)
+    const reconcile = useReconcileStatement(companyId, item, onResolved)
     const queryClient = useQueryClient()
     const showToast = useToast()
 
@@ -161,7 +161,6 @@ export function StatementCandidatesCells({
         reconcile.mutate(selected, {
             onSuccess: () => {
                 showToast("Movimento conciliado.")
-                onResolved()
             },
             onError: (error) => {
                 if (apiErrorStatus(error) === 401) {
