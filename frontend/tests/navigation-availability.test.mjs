@@ -91,7 +91,7 @@ test("the roadmap stays declared and the current route is still identified", () 
 test("only single-screen modules of the prototype become direct links", () => {
   const modules = visibleNavigation(navigationModules, FINANCE_CLIENT, none)
   const cadastros = modules.find((module) => module.id === "cad")
-  assert.equal(cadastros.items.length, 2)
+  assert.equal(cadastros.items.length, 3)
   assert.equal(cadastros.standalone, false)
   assert.equal(modules.find((module) => module.id === "fluxo").standalone, false)
 })
