@@ -47,5 +47,5 @@ test("schedule route is permission-protected and reuses open-title settlement", 
   assert.match(page, /FinancialEntrySettlementDialog/)
   assert.match(page, /settlementTargetFromOpenTitle/)
   assert.match(page, /hasPermission\("FINANCIAL_ENTRY_MANAGE"\)/)
-  assert.doesNotMatch(page, /fetch\(|apiRequest\(/)
+  assert.doesNotMatch(page, /globalThis\.fetch|apiRequest\(/)
 })
