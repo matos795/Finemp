@@ -117,6 +117,17 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/audit-events")
                                                 .authenticated()
 
+                                                .requestMatchers(
+                                                                "/api/companies/{companyId}/planning/meetings",
+                                                                "/api/companies/{companyId}/planning/meetings/{meetingId}",
+                                                                "/api/companies/{companyId}/goals",
+                                                                "/api/companies/{companyId}/goals/{goalId}",
+                                                                "/api/companies/{companyId}/goals/{goalId}/measurements",
+                                                                "/api/companies/{companyId}/action-plans",
+                                                                "/api/companies/{companyId}/action-plans/{actionId}",
+                                                                "/api/companies/{companyId}/action-plans/{actionId}/completion")
+                                                .authenticated()
+
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/statement-items/{statementId}/candidates")
                                                 .authenticated()

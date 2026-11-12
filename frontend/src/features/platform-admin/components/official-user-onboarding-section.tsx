@@ -54,6 +54,8 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
     { value: "FINANCIAL_PERIOD_VIEW", label: "Períodos financeiros — visualizar" },
     { value: "FINANCIAL_PERIOD_CLOSE", label: "Fechar período financeiro" },
     { value: "FINANCIAL_PERIOD_REOPEN", label: "Reabrir período financeiro" },
+    { value: "PLANNING_VIEW", label: "Planejamento — visualizar" },
+    { value: "PLANNING_MANAGE", label: "Planejamento — gerenciar" },
 ]
 
 const READ_ONLY_PERMISSIONS = COMPANY_PERMISSION_OPTIONS

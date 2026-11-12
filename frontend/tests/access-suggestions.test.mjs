@@ -52,6 +52,21 @@ test("client finance suggestion does not add center, accounting, period or firm 
   assert.equal(ACCOUNTANT_SUGGESTION.includes("FINANCIAL_CATEGORY_MANAGE"), false)
 })
 
+test("planning permissions stay explicit instead of changing role suggestions", () => {
+  for (const permission of ["PLANNING_VIEW", "PLANNING_MANAGE"]) {
+    assert.equal(
+      ACCOUNTANT_SUGGESTION.includes(permission),
+      false,
+      `accountant/${permission}`,
+    )
+    assert.equal(
+      CLIENT_FINANCE_SUGGESTION.includes(permission),
+      false,
+      `client/${permission}`,
+    )
+  }
+})
+
 test("the CLIENT role grants nothing by itself: only the explicit list is sent", async () => {
   const bodies = []
   globalThis.fetch = async (path, options = {}) => {
