@@ -30,6 +30,7 @@ import { PresentationResultsPage } from "../../features/reports/pages/presentati
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
 import { PlatformUsersPage } from "../../features/platform-admin/pages/platform-users-page"
+import { CompanyAuditTrailPage, PlatformActivityLogPage } from "../../features/audit/pages/audit-pages"
 import { PlatformClientsPage } from "../../features/platform-admin/pages/platform-clients-page"
 import { ResultCentersPage } from "../../features/result-centers/pages/result-centers-page"
 import { FinancialPeriodsPage } from "../../features/financial-periods/pages/financial-periods-page"
@@ -97,6 +98,24 @@ export function AppRouter() {
                         element={
                             <RequirePlatformPermission permission="PLATFORM_USER_MANAGE">
                                 <PlatformUsersPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
+
+                    <Route
+                        path="/admin/activity-log"
+                        element={
+                            <RequirePlatformPermission permission="SYSTEM_ADMIN">
+                                <PlatformActivityLogPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
+
+                    <Route
+                        path="/audit"
+                        element={
+                            <RequirePlatformPermission permission="SYSTEM_ADMIN">
+                                <CompanyAuditTrailPage />
                             </RequirePlatformPermission>
                         }
                     />
