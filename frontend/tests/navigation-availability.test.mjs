@@ -31,7 +31,7 @@ test("items without a published route are not shown", () => {
   }
 
   const all = modules.flatMap((module) => module.items.map((item) => item.id))
-  for (const placeholder of ["crmFunil", "orc", "bens", "cadCtb"]) {
+  for (const placeholder of ["crmFunil", "orc", "bens"]) {
     assert.equal(all.includes(placeholder), false, placeholder)
   }
 })
@@ -115,7 +115,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["crmFunil", "orc", "bens", "cadCtb", "admLog"]) {
+  for (const id of ["crmFunil", "orc", "bens", "admLog"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -156,6 +156,35 @@ test("availability batch routes are published with their real permission boundar
   assert.deepEqual(
     ids(visibleNavigation(navigationModules, none, can("ACCOUNTING_FIRM_VIEW"))),
     ["admin:adminOnboarding,admClientes", "ajuda:faq,tutor"],
+  )
+})
+
+test("accounting read routes are published with distinct permissions", () => {
+  assert.equal(
+    findNavigationByPath(navigationModules, "/accounting-accounts").item.id,
+    "cadCtb",
+  )
+  assert.equal(
+    findNavigationByPath(navigationModules, "/accounting-movements").item.id,
+    "ctb",
+  )
+
+  assert.deepEqual(
+    ids(visibleNavigation(
+      navigationModules,
+      can("ACCOUNT_CLASSIFICATION_VIEW"),
+      none,
+    )),
+    ["cad:cadCtb", "ajuda:faq,tutor"],
+  )
+
+  assert.deepEqual(
+    ids(visibleNavigation(
+      navigationModules,
+      can("ACCOUNTING_MOVEMENT_VIEW"),
+      none,
+    )),
+    ["ajuda:faq,tutor", "dem:ctb"],
   )
 })
 
