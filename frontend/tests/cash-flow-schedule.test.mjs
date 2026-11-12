@@ -50,5 +50,7 @@ test("schedule route is permission-protected and reuses open-title settlement", 
   assert.match(page, /title\.paymentDate[\s\S]*?pago em[\s\S]*?onSettle/)
   assert.match(page, /!titles\.isPlaceholderData/)
   assert.match(page, /title\.direction === direction/)
+  assert.match(page, /Math\.max\(0, titles\.data\.totalPages - 1\)/)
+  assert.match(page, /if \(page > lastPage\)[\s\S]*?setPage\(lastPage\)/)
   assert.doesNotMatch(page, /globalThis\.fetch|apiRequest\(/)
 })
