@@ -54,3 +54,27 @@ test("audit UI never renders free-form persisted states", () => {
     assert.doesNotMatch(source, /deleteAudit|updateAudit|POST|PUT|DELETE/)
   }
 })
+
+
+test("audit routes and navigation are SYSTEM_ADMIN-only", () => {
+  const router = readFileSync(
+    new URL("../src/app/router/app-router.tsx", import.meta.url),
+    "utf8",
+  )
+  const navigation = readFileSync(
+    new URL("../src/components/layout/navigation.ts", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(router, /path="\/admin\/activity-log"[\s\S]*?permission="SYSTEM_ADMIN"/)
+  assert.match(router, /path="\/audit-trail"[\s\S]*?permission="SYSTEM_ADMIN"/)
+
+  assert.match(
+    navigation,
+    /id: "admLog"[\s\S]*?path: "\/admin\/activity-log"[\s\S]*?SYSTEM_ADMIN/,
+  )
+  assert.match(
+    navigation,
+    /id: "audit"[\s\S]*?path: "\/audit-trail"[\s\S]*?SYSTEM_ADMIN/,
+  )
+})
