@@ -1,6 +1,9 @@
 package com.finemp.finance.reporting;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.finemp.TestcontainersConfiguration;
 import com.finemp.access.*;
@@ -17,8 +20,11 @@ import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
+import com.finemp.security.UserAccountPrincipal;
 
 @SpringBootTest(properties={
         "finemp.finance.account-balances.enabled=true",
@@ -27,6 +33,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
         "finemp.finance.transfers.enabled=true"
 })
 @Import(TestcontainersConfiguration.class)
+@AutoConfigureMockMvc
 class BankAccountBalanceReadIntegrationTest {
     @Autowired BankAccountBalanceReadService reports;
     @Autowired BankAccountRepository banks;
@@ -39,6 +46,7 @@ class BankAccountBalanceReadIntegrationTest {
     @Autowired UserAccountRepository users;
     @Autowired CompanyAccessGrantRepository grants;
     @Autowired JdbcTemplate jdbc;
+    @Autowired MockMvc mvc;
 
     Company owner,other;
     UserAccount allowed,bankOnly,entryOnly,restricted;
@@ -86,6 +94,23 @@ class BankAccountBalanceReadIntegrationTest {
         for(var id:clientIds)jdbc.update("DELETE FROM clients WHERE id=?",id);
         for(var id:firmIds)jdbc.update("DELETE FROM accounting_firms WHERE id=?",id);
         for(var id:userIds)jdbc.update("DELETE FROM user_accounts WHERE id=?",id);
+    }
+
+    @Test
+    void shouldExposeTheAuthenticatedHttpRouteAndKeepServiceAuthorization() throws Exception {
+        saveEntry(owner,bankA,incomeCategory,FinancialDirection.INCOME,"5.00",null,LocalDate.of(2026,7,1));
+
+        mvc.perform(get("/api/companies/"+owner.getId()+"/financial-reports/account-balances")
+                        .with(user(new UserAccountPrincipal(allowed))))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("no-store")))
+                .andExpect(jsonPath("$.accounts[0].id").value(bankA.toString()))
+                .andExpect(jsonPath("$.accounts[0].openingBalance").value("100.00"))
+                .andExpect(jsonPath("$.accounts[0].currentBalance").value("105.00"));
+
+        mvc.perform(get("/api/companies/"+owner.getId()+"/financial-reports/account-balances")
+                        .with(user(new UserAccountPrincipal(bankOnly))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
