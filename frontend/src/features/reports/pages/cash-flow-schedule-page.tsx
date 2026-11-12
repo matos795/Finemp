@@ -3,12 +3,16 @@ import { Pager } from "../../../components/finemp/pager"
 import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useCompanyPage } from "../../../lib/api/use-company-page"
+import {
+    formatExactDecimalCell,
+    formatIsoDate,
+} from "../../../lib/formatters/decimal"
 import { todayIso } from "../../../lib/formatters/local-date"
 import { useAllBankAccounts } from "../../bank-accounts/hooks/use-bank-accounts"
 import { useCompanyAccess } from "../../companies/company-access-context"
 import { FinancialEntrySettlementDialog } from "../../financial-entries/components/financial-entry-settlement-dialog"
-import { OpenTitleRow } from "../components/open-title-row"
 import { useOpenTitlesList } from "../hooks/use-open-titles"
+import { formatCompetence } from "../lib/calendar-labels"
 import {
     canSettleOpenTitle,
     settlementTargetFromOpenTitle,
@@ -144,25 +148,41 @@ export function CashFlowSchedulePage() {
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>{isIncome ? "Cliente" : "Fornecedor"}</th>
                                         <th>Descrição</th>
                                         <th>Documento</th>
                                         <th>Comp.</th>
                                         <th>Vencimento</th>
                                         <th className="n">Dias atraso</th>
-                                        <th>Centro</th>
                                         <th className="n">Valor</th>
                                         <th />
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {titles.data?.items.map((title) => (
-                                        <OpenTitleRow
-                                            key={title.id}
-                                            title={title}
-                                            isIncome={isIncome}
-                                            onSettle={onSettle}
-                                        />
+                                        <tr key={title.id}>
+                                            <td style={{ fontSize: 13 }}>{title.description}</td>
+                                            <td style={{ fontSize: 13 }}>{title.documentNumber}</td>
+                                            <td>{formatCompetence(title.competence)}</td>
+                                            <td>{formatIsoDate(title.dueDate)}</td>
+                                            <td className={title.daysLate > 0 ? "n neg" : "n"}>
+                                                {title.daysLate > 0 ? title.daysLate : "–"}
+                                            </td>
+                                            <td className="n">
+                                                {formatExactDecimalCell(title.nominalAmount)}
+                                            </td>
+                                            <td style={{ whiteSpace: "nowrap" }}>
+                                                {onSettle ? (
+                                                    <button
+                                                        type="button"
+                                                        className={`btn ${isIncome ? "ent" : "sai"} sm`}
+                                                        aria-label={`${isIncome ? "Receber" : "Pagar"} ${title.description}`}
+                                                        onClick={() => onSettle(title)}
+                                                    >
+                                                        {isIncome ? "Receber" : "Pagar"}
+                                                    </button>
+                                                ) : null}
+                                            </td>
+                                        </tr>
                                     ))}
                                 </tbody>
                             </table>
