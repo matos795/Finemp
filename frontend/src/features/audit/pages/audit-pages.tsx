@@ -30,6 +30,12 @@ function labelAction(action: string) {
 function AuditEventRow({ event }: { event: AuditEvent }) {
     const [expanded, setExpanded] = useState(false)
     const hasState = Boolean(event.beforeState || event.afterState)
+    const hasTargetDetails = Boolean(
+        event.subjectUserAccountId ||
+        event.accountingFirmId ||
+        event.commandId ||
+        event.reason,
+    )
 
     return (
         <>
@@ -59,7 +65,7 @@ function AuditEventRow({ event }: { event: AuditEvent }) {
                     )}
                 </td>
                 <td>
-                    {hasState || event.reason ? (
+                    {hasState || hasTargetDetails ? (
                         <button
                             type="button"
                             className="btn sec sm"
