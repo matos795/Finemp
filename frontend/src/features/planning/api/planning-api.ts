@@ -138,6 +138,29 @@ export function listGoals(
     )
 }
 
+export async function listAllActiveGoals(
+    companyId: string,
+) {
+    const items: Goal[] = []
+    let page = 0
+    let totalPages = 1
+
+    while (page < totalPages) {
+        const response = await listGoals(
+            companyId,
+            true,
+            page,
+            100,
+        )
+
+        items.push(...response.items)
+        totalPages = response.totalPages
+        page += 1
+    }
+
+    return items
+}
+
 export function createGoal(
     companyId: string,
     input: {
