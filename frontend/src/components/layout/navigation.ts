@@ -425,18 +425,26 @@ export function findNavigationByPath(
     modules: NavigationModule[],
     pathname: string,
 ) {
-    for (const module of modules) {
-        const item = module.items.find(
-            (candidate) =>
-                candidate.path !== undefined &&
-                (pathname === candidate.path ||
-                    pathname.startsWith(`${candidate.path}/`)),
-        )
+    let bestMatch: { module: NavigationModule; item: NavigationItem } | null = null
 
-        if (item) {
-            return { module, item }
+    for (const module of modules) {
+        for (const item of module.items) {
+            if (
+                item.path === undefined ||
+                (pathname !== item.path &&
+                    !pathname.startsWith(`${item.path}/`))
+            ) {
+                continue
+            }
+
+            if (
+                bestMatch === null ||
+                item.path.length > (bestMatch.item.path?.length ?? 0)
+            ) {
+                bestMatch = { module, item }
+            }
         }
     }
 
-    return null
+    return bestMatch
 }
