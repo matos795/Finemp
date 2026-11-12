@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { reconcileStatementItem } from "../api/statements-api"
 import { statementItemsQueryKey } from "./use-statement-items"
+import { statementCandidatesQueryKey } from "./use-statement-candidates"
 import {
     nextCommandAttempt,
     type CommandAttempt,
@@ -49,6 +50,9 @@ export function useReconcileStatement(
             Promise.all([
                 queryClient.invalidateQueries({
                     queryKey: statementItemsQueryKey(companyId, item.bankAccountId),
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: statementCandidatesQueryKey(companyId),
                 }),
                 companyId
                     ? refreshCompanyFinancialData(queryClient, companyId)
