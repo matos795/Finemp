@@ -49,6 +49,15 @@ export function listFinancialPeriods(
     )
 }
 
+export function getFinancialPeriod(
+    companyId: string,
+    period: string,
+) {
+    return apiRequest<FinancialPeriodState>(
+        `/api/companies/${companyId}/financial-periods/${period}`,
+    )
+}
+
 export function listFinancialPeriodHistory(
     companyId: string,
     period: string,
