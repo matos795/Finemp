@@ -26,7 +26,9 @@ test("Companies route is protected only by authentication shell", () => {
   const at = router.indexOf('path="/companies"')
   assert.ok(at > router.indexOf("<Route element={<ProtectedApp />}>"))
 
-  const route = router.slice(at, at + 220)
+  const routeEnd = router.indexOf("/>", at) + 2
+  const route = router.slice(at, routeEnd)
+
   assert.match(route, /<CompaniesPage \/>/)
   assert.doesNotMatch(route, /RequirePermission|RequirePlatformPermission/)
 })
