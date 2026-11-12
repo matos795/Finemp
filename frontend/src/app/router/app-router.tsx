@@ -11,6 +11,7 @@ import { IDENTITY_PATHS } from "../../features/auth/lib/identity-flow"
 import { ProtectedApp } from "../../features/auth/components/protected-app"
 import { AppLayout } from "../../components/layout/app-layout"
 import { DashboardPage } from "../../features/dashboard/pages/dashboard-page"
+import { CompanyDetailsPage } from "../../features/companies/pages/company-details-page"
 import { RequirePermission } from "../../features/auth/components/require-permission"
 import { RequirePermissionGroups } from "../../features/auth/components/require-permission-groups"
 import { RequirePlatformPermission } from "../../features/auth/components/require-platform-permission"
@@ -76,6 +77,11 @@ export function AppRouter() {
                     <Route
                         path="/dashboard"
                         element={<DashboardPage />}
+                    />
+
+                    <Route
+                        path="/company-details"
+                        element={<CompanyDetailsPage />}
                     />
 
                     <Route

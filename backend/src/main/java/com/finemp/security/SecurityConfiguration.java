@@ -111,6 +111,9 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/profile")
+                                                .authenticated()
+                                                .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/audit-events")
                                                 .authenticated()
 

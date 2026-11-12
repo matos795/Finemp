@@ -45,7 +45,7 @@ test("cadPlano keeps financial-category permissions while cadCtb publishes the a
     const visible = visibleNavigation(navigationModules, can(permission), () => false)
     assert.deepEqual(
       visible.map((module) => `${module.id}:${module.items.map((item) => item.id).join(",")}`),
-      ["cad:empresas,cadPlano", "ajuda:faq,tutor"],
+      ["cad:empresas,cadEmp,cadPlano", "ajuda:faq,tutor"],
       permission,
     )
   }
