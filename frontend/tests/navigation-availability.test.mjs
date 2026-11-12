@@ -99,8 +99,14 @@ test("only single-screen modules of the prototype become direct links", () => {
 test("Clientes e fornecedores is published for BUSINESS_PARTNER_VIEW or MANAGE only", () => {
   const item = navigationModules.find((module) => module.id === "cad").items.find((candidate) => candidate.id === "parc")
   assert.equal(item.path, "/business-partners")
-  assert.deepEqual(ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_VIEW"), none)), ["cad:parc"])
-  assert.deepEqual(ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_MANAGE", "BANK_ACCOUNT_VIEW"), none)), ["cad:parc,cadContas"])
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_VIEW"), none)),
+    ["cad:parc", "ajuda:faq,tutor"],
+  )
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_MANAGE", "BANK_ACCOUNT_VIEW"), none)),
+    ["cad:parc,cadContas", "ajuda:faq,tutor"],
+  )
   assert.equal(findNavigationByPath(navigationModules, "/business-partners").item.id, "parc")
 })
 
