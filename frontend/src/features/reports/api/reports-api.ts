@@ -7,6 +7,7 @@ import type {
     OpenTitlesFilter,
     OpenTitlesPage,
 } from "../types/aging.types"
+import type { AccountBalancesReport } from "../types/account-balances.types"
 import type {
     DailyCashTotals,
     MonthlyCashCategoryTotalsPage,
@@ -176,6 +177,17 @@ export async function listMonthlyCashTitles(
 ): Promise<MonthlyCashTitlesPage> {
     return apiRequest<MonthlyCashTitlesPage>(
         `${reportsPath(companyId)}/monthly-cash-totals/titles?${monthlyDetailParams(filter, page, size)}`,
+        { cache: "no-store" },
+    )
+}
+
+
+/** GET …/financial-reports/account-balances. Saldos já vêm derivados do backend. */
+export async function getAccountBalances(
+    companyId: string,
+): Promise<AccountBalancesReport> {
+    return apiRequest<AccountBalancesReport>(
+        `${reportsPath(companyId)}/account-balances`,
         { cache: "no-store" },
     )
 }
