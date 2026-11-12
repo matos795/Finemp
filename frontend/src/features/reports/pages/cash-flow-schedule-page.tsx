@@ -176,7 +176,9 @@ export function CashFlowSchedulePage() {
                                                     <span className="badge b-neu">
                                                         pago em {formatIsoDate(title.paymentDate)}
                                                     </span>
-                                                ) : onSettle ? (
+                                                ) : onSettle &&
+                                                    !titles.isPlaceholderData &&
+                                                    title.direction === direction ? (
                                                     <button
                                                         type="button"
                                                         className={`btn ${isIncome ? "ent" : "sai"} sm`}
