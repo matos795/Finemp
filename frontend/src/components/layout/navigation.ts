@@ -81,7 +81,12 @@ export const navigationModules: NavigationModule[] = [
                 platformPermissions: ["PLATFORM_USER_MANAGE"],
             },
             { id: "admLog", label: "Registro de atividades" },
-            { id: "admClientes", label: "Clientes FINEMP" },
+            {
+                id: "admClientes",
+                label: "Clientes FINEMP",
+                path: "/admin/clients",
+                platformPermissions: ["ACCOUNTING_FIRM_VIEW"],
+            },
         ],
     },
     {
@@ -310,7 +315,12 @@ export const navigationModules: NavigationModule[] = [
                 ],
             },
             { id: "cadCtb", label: "Plano de contas da contabilidade" },
-            { id: "cr", label: "Centros de resultado" },
+            {
+                id: "cr",
+                label: "Centros de resultado",
+                path: "/result-centers",
+                permissions: ["RESULT_CENTER_VIEW", "RESULT_CENTER_MANAGE"],
+            },
         ],
     },
     {
@@ -318,8 +328,8 @@ export const navigationModules: NavigationModule[] = [
         label: "Ajuda",
         icon: "ajuda",
         items: [
-            { id: "faq", label: "Perguntas frequentes" },
-            { id: "tutor", label: "Tutoriais guiados" },
+            { id: "faq", label: "Perguntas frequentes", path: "/help/faq" },
+            { id: "tutor", label: "Tutoriais guiados", path: "/help/tutorials" },
         ],
     },
     {
@@ -328,7 +338,16 @@ export const navigationModules: NavigationModule[] = [
         icon: "dem",
         items: [
             { id: "ctb", label: "Contabilidade" },
-            { id: "perFech", label: "Fechamento de períodos" },
+            {
+                id: "perFech",
+                label: "Fechamento de períodos",
+                path: "/financial-periods",
+                permissions: [
+                    "FINANCIAL_PERIOD_VIEW",
+                    "FINANCIAL_PERIOD_CLOSE",
+                    "FINANCIAL_PERIOD_REOPEN",
+                ],
+            },
             { id: "audit", label: "Trilha de auditoria" },
             { id: "impexp", label: "Importação e exportação" },
             { id: "backup", label: "Backup" },
