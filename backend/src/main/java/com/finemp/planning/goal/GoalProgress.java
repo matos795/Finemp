@@ -25,8 +25,11 @@ public final class GoalProgress {
 
         var denominator = target.subtract(baseline);
 
-        if (denominator.signum() == 0) {
-            throw new IllegalArgumentException("Meta exige alvo diferente da linha de base.");
+        if (denominator.signum() == 0
+                || (direction == GoalDirection.UP && denominator.signum() < 0)
+                || (direction == GoalDirection.DOWN && denominator.signum() > 0)) {
+            throw new IllegalArgumentException(
+                    "Alvo incompatível com o sentido da meta.");
         }
 
         var raw = current.subtract(baseline)
