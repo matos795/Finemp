@@ -1,5 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import {
   findNavigationByPath,
   navigationModules,
@@ -97,4 +98,55 @@ test("Clientes e fornecedores is published for BUSINESS_PARTNER_VIEW or MANAGE o
   assert.deepEqual(ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_VIEW"), none)), ["cad:parc"])
   assert.deepEqual(ids(visibleNavigation(navigationModules, can("BUSINESS_PARTNER_MANAGE", "BANK_ACCOUNT_VIEW"), none)), ["cad:parc,cadContas"])
   assert.equal(findNavigationByPath(navigationModules, "/business-partners").item.id, "parc")
+})
+
+
+test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
+  const modules = visibleNavigation(navigationModules, () => true, () => true, true)
+  const all = modules.flatMap((module) => module.items)
+
+  for (const id of ["agenda", "bancos", "crmFunil", "orc", "bens", "cadCtb", "admUsers", "admLog", "admClientes"]) {
+    const item = all.find((candidate) => candidate.id === id)
+    assert.ok(item, id)
+    assert.equal(item.available, false, id)
+    assert.equal(item.path, undefined, id)
+  }
+
+  for (const item of all.filter((candidate) => candidate.path !== undefined)) {
+    assert.equal(item.available, true, item.id)
+  }
+})
+
+test("normal users still receive only published and authorized items", () => {
+  const normal = visibleNavigation(navigationModules, FINANCE_CLIENT, none)
+  const roadmap = normal.flatMap((module) => module.items).filter((item) => !item.available)
+  assert.deepEqual(roadmap, [])
+
+  const publishedIds = navigationModules
+    .flatMap((module) => module.items)
+    .filter((item) => item.path !== undefined)
+    .map((item) => item.id)
+
+  const privileged = visibleNavigation(navigationModules, () => true, () => true)
+    .flatMap((module) => module.items)
+    .map((item) => item.id)
+
+  for (const id of publishedIds) assert.ok(privileged.includes(id), id)
+})
+
+test("roadmap mode preserves module order and declares every reference screen", () => {
+  assert.deepEqual(navigationModules.map((module) => module.id), [
+    "admin", "fluxo", "rel", "grp", "div", "crm", "pes", "ctr",
+    "est", "pat", "pln", "orc", "cad", "ajuda", "dem",
+  ])
+
+  const reference = JSON.parse(readFileSync(
+    new URL("../../docs/reference/reference-navigation.json", import.meta.url),
+    "utf8",
+  ))
+  const declared = new Set(navigationModules.flatMap((module) => module.items.map((item) => item.id)))
+
+  for (const screen of reference.screens) {
+    assert.ok(declared.has(screen.id), `missing reference screen: ${screen.id}`)
+  }
 })
