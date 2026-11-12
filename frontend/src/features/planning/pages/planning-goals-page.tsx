@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
@@ -116,20 +116,6 @@ function PlanningGoalsCompanyPage() {
         enabled: Boolean(companyId && canRead),
         retry: false,
     })
-
-    useEffect(() => {
-        if (!query.data) return
-
-        const nextPage = reconcilePlanningPage(
-            page,
-            query.data.totalPages,
-            query.data.items.length,
-        )
-
-        if (nextPage !== page) {
-            setPage(nextPage)
-        }
-    }, [page, query.data])
 
     const historyQuery = useQuery({
         queryKey: [
@@ -288,9 +274,20 @@ function PlanningGoalsCompanyPage() {
 
         try {
             await deactivateGoal(companyId, goal.id, goal.version)
+            const refreshed = await query.refetch()
+            const nextPage = reconcilePlanningPage(
+                page,
+                refreshed.data?.totalPages ?? 0,
+                refreshed.data?.items.length ?? 0,
+            )
+
             await queryClient.invalidateQueries({
                 queryKey: ["planning-goals", companyId],
             })
+
+            if (nextPage !== page) {
+                setPage(nextPage)
+            }
         } catch (error) {
             setMutationError(describePlanningMutationError(error))
         } finally {
