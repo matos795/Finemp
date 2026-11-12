@@ -201,8 +201,9 @@ function StatementsCompanyPage() {
                         Aceita arquivo <b>OFX</b> (baixado no internet
                         banking, opção "Money/OFX") e planilhas <b>CSV</b> com
                         colunas de data, histórico e valor. Antes de gravar,
-                        o sistema mostra uma prévia para conferência. A
-                        importação não concilia nem baixa lançamentos.
+                        o sistema mostra uma prévia para conferência. Depois
+                        de importar, cada movimento pendente pode ser
+                        conciliado, virar um novo lançamento ou ser ignorado.
                     </>
                 }
             >
@@ -330,7 +331,7 @@ function StatementsCompanyPage() {
                                 type="button"
                                 className="btn sec sm"
                                 disabled
-                                title="Conciliar ainda não existe na API"
+                                title="Conciliação em lote ainda não está disponível"
                             >
                                 Aceitar todas as sugestões
                             </button>
