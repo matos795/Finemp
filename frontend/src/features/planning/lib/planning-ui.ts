@@ -29,3 +29,20 @@ export function describePlanningMutationError(error: unknown) {
 
     return "Não foi possível concluir a alteração."
 }
+
+
+export function reconcilePlanningPage(
+    currentPage: number,
+    totalPages: number,
+    itemCount: number,
+) {
+    if (
+        currentPage > 0 &&
+        itemCount === 0 &&
+        currentPage >= totalPages
+    ) {
+        return Math.max(0, totalPages - 1)
+    }
+
+    return currentPage
+}
