@@ -31,7 +31,7 @@ test("items without a published route are not shown", () => {
   }
 
   const all = modules.flatMap((module) => module.items.map((item) => item.id))
-  for (const placeholder of ["relApres", "crmFunil", "orc", "bens", "cadCtb"]) {
+  for (const placeholder of ["crmFunil", "orc", "bens", "cadCtb"]) {
     assert.equal(all.includes(placeholder), false, placeholder)
   }
 })
@@ -50,7 +50,7 @@ test("modules left without available items disappear", () => {
 test("a financial client sees the published financial screens it is allowed to open", () => {
   assert.deepEqual(ids(visibleNavigation(navigationModules, FINANCE_CLIENT, none)), [
     "fluxo:painel,lanc,agenda,ext,mensal,diario,bancos",
-    "rel:relRec,relPag,dre",
+    "rel:relRec,relPag,dre,relApres",
     "cad:cadContas,cadPlano",
   ])
 })

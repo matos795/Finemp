@@ -162,7 +162,12 @@ export const navigationModules: NavigationModule[] = [
             { id: "bal", label: "Balanço patrimonial" },
             { id: "indServ", label: "Indicadores de serviços" },
             { id: "consist", label: "Verificação de consistência" },
-            { id: "relApres", label: "Apresentação de resultados" },
+            {
+                id: "relApres",
+                label: "Apresentação de resultados",
+                path: "/reports/presentation",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
         ],
     },
     {
