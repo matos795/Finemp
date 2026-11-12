@@ -6,6 +6,7 @@ import {
 } from "../src/features/result-centers/api/result-center-api.ts"
 import {
   closeFinancialPeriod,
+  getFinancialPeriod,
   reopenFinancialPeriod,
 } from "../src/features/financial-periods/api/financial-period-api.ts"
 
@@ -116,5 +117,60 @@ test("period commands send idempotency key, version and reopen reason", async ()
   assert.deepEqual(JSON.parse(calls[3].options.body), {
     expectedVersion: 4,
     reason: "Correção controlada",
+  })
+})
+
+
+test("financial period lookup returns the exact version used by closure", async () => {
+  const calls = []
+
+  globalThis.fetch = async (path, options = {}) => {
+    calls.push({ path, options })
+
+    if (path === "/api/companies/company-1/financial-periods/2026-10") {
+      return Response.json({
+        id: "period-10",
+        companyId: "company-1",
+        period: "2026-10",
+        closed: false,
+        version: 7,
+        updatedBy: "user-1",
+        updatedAt: "2026-11-12T18:00:00Z",
+      })
+    }
+
+    if (path === "/api/auth/csrf") {
+      return Response.json({
+        headerName: "X-CSRF-TOKEN",
+        token: "csrf-token",
+      })
+    }
+
+    return Response.json({
+      companyId: "company-1",
+      commandId: "33333333-3333-4333-8333-333333333333",
+      periodId: "period-10",
+      period: "2026-10",
+      closed: true,
+      version: 8,
+      auditEventId: "audit-10",
+    })
+  }
+
+  const state = await getFinancialPeriod("company-1", "2026-10")
+  await closeFinancialPeriod(
+    "company-1",
+    "2026-10",
+    state.version,
+    "33333333-3333-4333-8333-333333333333",
+  )
+
+  assert.equal(state.version, 7)
+  assert.equal(
+    calls[0].path,
+    "/api/companies/company-1/financial-periods/2026-10",
+  )
+  assert.deepEqual(JSON.parse(calls[2].options.body), {
+    expectedVersion: 7,
   })
 })
