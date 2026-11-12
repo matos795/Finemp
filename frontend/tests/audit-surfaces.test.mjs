@@ -51,3 +51,16 @@ test("audit routes are real and guarded by SYSTEM_ADMIN", () => {
   assert.match(navigation, /id: "admLog"[\s\S]*?path: "\/admin\/activity-log"/)
   assert.match(navigation, /id: "audit"[\s\S]*?path: "\/audit"/)
 })
+
+
+test("Company audit resets local pagination when the selected Company changes", () => {
+  const page = readFileSync(
+    new URL("../src/features/audit/pages/audit-pages.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(
+    page,
+    /<AuditLogView[\s\S]*?key=\{selectedCompany\.id\}[\s\S]*?companyId=\{selectedCompany\.id\}/,
+  )
+})
