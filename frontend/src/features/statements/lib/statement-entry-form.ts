@@ -3,12 +3,12 @@ import {
     monthOf,
     newFinancialEntryForm,
     type FinancialEntryForm,
-} from "../../financial-entries/lib/financial-entry-form"
-import type { FinancialEntryCommandValues } from "../../financial-entries/types/financial-entry.types"
+} from "../../financial-entries/lib/financial-entry-form.ts"
+import type { FinancialEntryCommandValues } from "../../financial-entries/types/financial-entry.types.ts"
 import type {
     StatementCreateEntryValues,
     StatementItem,
-} from "../types/statement.types"
+} from "../types/statement.types.ts"
 
 function absoluteDecimal(value: string) {
     const trimmed = value.trim()
