@@ -7,6 +7,6 @@ import java.time.LocalDate;
 
 public record GoalMeasurementRequest(
         @NotNull LocalDate measuredOn,
-        @NotNull BigDecimal measuredValue,
+        @NotNull @Digits(integer = 15, fraction = 4) BigDecimal measuredValue,
         @Size(max = 5000) String notes) {
 }
