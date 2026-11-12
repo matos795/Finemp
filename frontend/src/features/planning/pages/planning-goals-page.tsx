@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
@@ -17,6 +17,7 @@ import {
     canManagePlanning,
     canReadPlanning,
     describePlanningMutationError,
+    reconcilePlanningPage,
 } from "../lib/planning-ui.ts"
 
 interface GoalForm {
@@ -115,6 +116,20 @@ function PlanningGoalsCompanyPage() {
         enabled: Boolean(companyId && canRead),
         retry: false,
     })
+
+    useEffect(() => {
+        if (!query.data) return
+
+        const nextPage = reconcilePlanningPage(
+            page,
+            query.data.totalPages,
+            query.data.items.length,
+        )
+
+        if (nextPage !== page) {
+            setPage(nextPage)
+        }
+    }, [page, query.data])
 
     const historyQuery = useQuery({
         queryKey: [
