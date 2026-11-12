@@ -52,11 +52,21 @@ export function PlatformPermissionsEditor({
 
         try {
             await replaceUserPlatformPermissions(id, draft)
-            const detail = await getUserPlatformPermissions(id)
-            setAssigned(detail.platformPermissions)
-            setDraft(detail.platformPermissions)
-            setMessage("Permissões salvas.")
             await cache.invalidateQueries({ queryKey: currentUserQueryKey })
+
+            try {
+                const detail = await getUserPlatformPermissions(id)
+                setAssigned(detail.platformPermissions)
+                setDraft(detail.platformPermissions)
+                setMessage("Permissões salvas.")
+            } catch (reloadError) {
+                if (reloadError instanceof ApiError && reloadError.status === 403) {
+                    setAssigned(null)
+                    setMessage("Permissões salvas. Seu acesso administrativo foi atualizado.")
+                } else {
+                    throw reloadError
+                }
+            }
         } catch (error) {
             if (error instanceof ApiError && error.status === 403) {
                 setMessage("Esta alteração exige autorização de outro administrador do sistema.")
