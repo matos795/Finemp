@@ -72,44 +72,14 @@ class ContractServiceTest {
         var companyId = UUID.randomUUID();
         var contractId = UUID.randomUUID();
         var partnerId = UUID.randomUUID();
-        var company = new Company("Empresa", "12345678000195");
-        var partner = new BusinessPartner(
-                company,
-                new BusinessPartnerProfile(
-                        PartnerPersonType.LEGAL_ENTITY,
-                        "12345678000195",
-                        "Cliente",
-                        "",
-                        PartnerRole.CUSTOMER,
-                        true,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        ""));
-        var contract = new Contract(
-                company,
-                partner,
-                new ContractValues(
-                        ContractDirection.INCOME,
-                        "Mensalidade",
-                        LocalDate.of(2026, 1, 1),
-                        null,
-                        10,
-                        new java.math.BigDecimal("100.00"),
-                        true));
+        var company = mock(Company.class);
+        var contract = mock(Contract.class);
 
         when(permissions.hasFreshPermission(actor, companyId, CompanyPermission.CONTRACT_MANAGE))
                 .thenReturn(true);
         when(companies.findLockedById(companyId)).thenReturn(Optional.of(company));
         when(contracts.findByIdAndCompanyId(contractId, companyId)).thenReturn(Optional.of(contract));
+        when(contract.getVersion()).thenReturn(0L);
 
         var service = service();
 
@@ -118,6 +88,7 @@ class ContractServiceTest {
                 () -> service.update(actor, companyId, contractId, request(partnerId, 1L)));
 
         verify(partners, never()).findByIdAndCompanyId(any(), any());
+        verify(contract, never()).replace(any(), any());
     }
 
     @Test
