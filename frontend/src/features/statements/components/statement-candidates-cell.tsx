@@ -54,7 +54,7 @@ function CandidatesContent({
     onSelect,
 }: {
     candidates: ReturnType<typeof useStatementCandidates>
-    selectedEntryId: string
+    selectedEntryId: string | null
     onSelect: (entryId: string) => void
 }) {
     if (candidates.isPending) {
@@ -77,9 +77,12 @@ function CandidatesContent({
         return <span className="mut">Sem lançamento correspondente</span>
     }
 
-    const value = items.some((candidate) => candidate.entryId === selectedEntryId)
-        ? selectedEntryId
-        : items[0].entryId
+    const value =
+        selectedEntryId === ""
+            ? ""
+            : items.some((candidate) => candidate.entryId === selectedEntryId)
+                ? selectedEntryId
+                : items[0].entryId
 
     return (
         <div
@@ -137,15 +140,17 @@ export function StatementCandidatesCells({
 }: StatementCandidatesCellsProps) {
     const candidates =
         useStatementCandidates(companyId, item.id, true)
-    const [selectedEntryId, setSelectedEntryId] = useState("")
+    const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
     const reconcile = useReconcileStatement(companyId, item)
     const queryClient = useQueryClient()
     const showToast = useToast()
 
     const items = loadedCandidateItems(candidates)
     const selected =
-        items.find((candidate) => candidate.entryId === selectedEntryId) ??
-        items[0]
+        selectedEntryId === ""
+            ? undefined
+            : items.find((candidate) => candidate.entryId === selectedEntryId) ??
+                items[0]
 
     function submit() {
         if (!selected) {
