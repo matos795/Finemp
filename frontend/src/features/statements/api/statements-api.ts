@@ -1,8 +1,8 @@
 import {
     apiFetch,
     apiRequest,
-} from "../../../lib/api/api-client"
-import type { PageRequest } from "../../../lib/api/pagination.types"
+} from "../../../lib/api/api-client.ts"
+import type { PageRequest } from "../../../lib/api/pagination.types.ts"
 import type {
     CsvSeparator,
     StatementCandidatePage,
@@ -14,8 +14,8 @@ import type {
     StatementReconciliationReceipt,
     StatementCreateEntryValues,
     StatementPreviewSession,
-} from "../types/statement.types"
-import { readFileAsBase64 } from "../lib/file-base64"
+} from "../types/statement.types.ts"
+import { readFileAsBase64 } from "../lib/file-base64.ts"
 
 export function bankAccountStatementPath(
     companyId: string,
