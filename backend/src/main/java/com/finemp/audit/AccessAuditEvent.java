@@ -78,5 +78,14 @@ public class AccessAuditEvent {
         this.commandId=Objects.requireNonNull(command);this.beforeState=before;this.afterState=after;this.reason=reason;
     }
     public UUID getId() { return id; }
+    public AccessAuditAction getAction() { return action; }
+    public UUID getActorUserAccountId() { return actorUserAccountId; }
+    public UUID getSubjectUserAccountId() { return subjectUserAccountId; }
+    public UUID getAccountingFirmId() { return accountingFirmId; }
+    public UUID getCompanyId() { return companyId; }
+    public Instant getOccurredAt() { return occurredAt; }
+    public String getResourceType() { return resourceType; }
+    public UUID getResourceId() { return resourceId; }
+    public UUID getCommandId() { return commandId; }
 }
 

@@ -80,7 +80,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/admin/users",
                 platformPermissions: ["PLATFORM_USER_MANAGE"],
             },
-            { id: "admLog", label: "Registro de atividades" },
+            {
+                id: "admLog",
+                label: "Registro de atividades",
+                path: "/admin/activity-log",
+                platformPermissions: ["SYSTEM_ADMIN"],
+            },
             {
                 id: "admClientes",
                 label: "Clientes FINEMP",
@@ -361,7 +366,12 @@ export const navigationModules: NavigationModule[] = [
                     "FINANCIAL_PERIOD_REOPEN",
                 ],
             },
-            { id: "audit", label: "Trilha de auditoria" },
+            {
+                id: "audit",
+                label: "Trilha de auditoria",
+                path: "/audit-trail",
+                platformPermissions: ["SYSTEM_ADMIN"],
+            },
             { id: "impexp", label: "Importação e exportação" },
             { id: "backup", label: "Backup" },
             {

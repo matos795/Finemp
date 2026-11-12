@@ -164,6 +164,10 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/financial-periods/{period}/history")
                                                 .authenticated()
 
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/audit-events")
+                                                .authenticated()
+
                                                 .requestMatchers(HttpMethod.POST,
                                                                 "/api/companies/{companyId}/financial-periods/{period}/closures")
                                                 .access(periodClose)

@@ -38,6 +38,8 @@ import { TutorialsPage } from "../../features/help/pages/tutorials-page"
 import { AccountingAccountsPage } from "../../features/accounting/pages/accounting-accounts-page"
 import { AccountingMovementsPage } from "../../features/accounting/pages/accounting-movements-page"
 import { CompaniesPage } from "../../features/companies/pages/companies-page"
+import { PlatformAuditPage } from "../../features/audit/pages/platform-audit-page"
+import { CompanyAuditPage } from "../../features/audit/pages/company-audit-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
 import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entries/lib/financial-entry-access"
 
@@ -166,6 +168,24 @@ export function AppRouter() {
                     />
 
                     <Route path="/companies" element={<CompaniesPage />} />
+
+                    <Route
+                        path="/admin/activity-log"
+                        element={
+                            <RequirePlatformPermission permission="SYSTEM_ADMIN">
+                                <PlatformAuditPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
+
+                    <Route
+                        path="/audit-trail"
+                        element={
+                            <RequirePlatformPermission permission="SYSTEM_ADMIN">
+                                <CompanyAuditPage />
+                            </RequirePlatformPermission>
+                        }
+                    />
 
                     <Route
                         path="/dre"
