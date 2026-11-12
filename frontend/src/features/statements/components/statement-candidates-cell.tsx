@@ -80,7 +80,8 @@ function CandidatesContent({
     const value =
         selectedEntryId === ""
             ? ""
-            : items.some((candidate) => candidate.entryId === selectedEntryId)
+            : selectedEntryId &&
+                items.some((candidate) => candidate.entryId === selectedEntryId)
                 ? selectedEntryId
                 : items[0].entryId
 
