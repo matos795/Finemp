@@ -115,7 +115,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["crmFunil", "orc", "bens", "admLog"]) {
+  for (const id of ["crmFunil", "orc", "bens"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -200,6 +200,22 @@ test("Empresas is published for every authenticated user without granting access
     findNavigationByPath(navigationModules, "/companies").item.id,
     "empresas",
   )
+})
+
+
+
+test("audit surfaces are published only for SYSTEM_ADMIN", () => {
+  const global = navigationModules
+    .find((module) => module.id === "admin")
+    .items.find((candidate) => candidate.id === "admLog")
+  const company = navigationModules
+    .find((module) => module.id === "dem")
+    .items.find((candidate) => candidate.id === "audit")
+
+  assert.equal(global.path, "/admin/activity-log")
+  assert.deepEqual(global.platformPermissions, ["SYSTEM_ADMIN"])
+  assert.equal(company.path, "/audit")
+  assert.deepEqual(company.platformPermissions, ["SYSTEM_ADMIN"])
 })
 
 test("normal users still receive only published and authorized items", () => {
