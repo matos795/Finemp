@@ -40,3 +40,28 @@ jobs:
 
       - name: Verify standalone Connector entry point without database or server startup
         run: java -jar target/finemp-api-0.0.1-SNAPSHOT-connector.jar --help
+
+      - name: Generate Connector SHA-256
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd target
+          sha256sum finemp-api-0.0.1-SNAPSHOT-connector.jar > finemp-api-0.0.1-SNAPSHOT-connector.jar.sha256
+
+      - name: Stage Connector homologation distribution
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p target/connector-distribution
+          cp target/finemp-api-0.0.1-SNAPSHOT-connector.jar target/connector-distribution/
+          cp target/finemp-api-0.0.1-SNAPSHOT-connector.jar.sha256 target/connector-distribution/
+          cp ../docs/operations/connector.properties.example target/connector-distribution/
+          cp ../docs/operations/connector-runtime.md target/connector-distribution/
+          cp ../docs/operations/connector-production-rollout.md target/connector-distribution/
+
+      - name: Publish Connector homologation artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: finemp-connector-${{ github.sha }}
+          path: backend/target/connector-distribution/
+          if-no-files-found: error
+          retention-days: 30
