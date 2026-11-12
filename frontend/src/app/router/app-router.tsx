@@ -26,6 +26,7 @@ import { MonthlyCashFlowPage } from "../../features/reports/pages/monthly-cash-f
 import { DailyCashFlowPage } from "../../features/reports/pages/daily-cash-flow-page"
 import { CashFlowSchedulePage } from "../../features/reports/pages/cash-flow-schedule-page"
 import { AccountBalancesPage } from "../../features/reports/pages/account-balances-page"
+import { PresentationResultsPage } from "../../features/reports/pages/presentation-results-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
 import { FinancialEntriesPage } from "../../features/financial-entries/pages/financial-entries-page"
@@ -162,6 +163,20 @@ export function AppRouter() {
                                 ]}
                             >
                                 <OperationalDrePage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/reports/presentation"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <PresentationResultsPage />
                             </RequirePermission>
                         }
                     />
