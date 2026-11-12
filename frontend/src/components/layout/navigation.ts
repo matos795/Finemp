@@ -362,7 +362,13 @@ export function visibleNavigation(
                 }
 
                 if (includeRoadmap && item.path === undefined) {
-                    return [{ ...item, available: false }]
+                    return [{
+                        id: item.id,
+                        label: item.label,
+                        permissions: item.permissions,
+                        platformPermissions: item.platformPermissions,
+                        available: false,
+                    }]
                 }
 
                 return []
