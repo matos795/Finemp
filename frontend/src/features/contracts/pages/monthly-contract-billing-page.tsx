@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Pager } from "../../../components/finemp/pager"
 import { Panel } from "../../../components/finemp/panel"
@@ -38,6 +38,13 @@ function MonthlyContractBillingCompanyPage() {
 
     const data = preview.isError ? undefined : preview.data
     const items = data?.contracts.items ?? []
+
+    useEffect(() => {
+        const totalPages = data?.contracts.totalPages
+        if (totalPages !== undefined && page > 0 && page >= totalPages) {
+            setPage(Math.max(0, totalPages - 1))
+        }
+    }, [data?.contracts.totalPages, page, setPage])
 
     return (
         <>
