@@ -76,7 +76,7 @@ public final class WorkingCapitalCycleCalculator {
                 .filter(row -> row.paymentDate() != null && inside(row.paymentDate(), from, to))
                 .toList();
         List<Row> open = matching.stream()
-                .filter(row -> row.paymentDate() == null)
+                .filter(row -> row.paymentDate() == null || row.paymentDate().isAfter(today))
                 .toList();
         List<Row> overdue = open.stream()
                 .filter(row -> row.dueDate().isBefore(today))
