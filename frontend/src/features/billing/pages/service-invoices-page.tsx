@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Modal } from "../../../components/finemp/modal"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -421,8 +422,7 @@ function InvoiceDraftDialog({
     })
 
     return (
-        <div className="modal">
-            <div className="mbox">
+        <Modal onClose={onClose}>
                 <div className="mh">
                     <h2>{invoice ? "Editar nota fiscal" : "Preparar nota fiscal"}</h2>
                     <button type="button" className="x" onClick={onClose}>×</button>
@@ -525,8 +525,7 @@ function InvoiceDraftDialog({
                         {save.isPending ? "Salvando…" : "Salvar rascunho"}
                     </button>
                 </div>
-            </div>
-        </div>
+        </Modal>
     )
 }
 
@@ -578,8 +577,7 @@ function IssueInvoiceDialog({
     })
 
     return (
-        <div className="modal">
-            <div className="mbox">
+        <Modal onClose={onClose}>
                 <div className="mh">
                     <h2>Registrar emissão externa</h2>
                     <button type="button" className="x" onClick={onClose}>×</button>
@@ -615,8 +613,7 @@ function IssueInvoiceDialog({
                         {save.isPending ? "Registrando…" : "Marcar como emitida"}
                     </button>
                 </div>
-            </div>
-        </div>
+        </Modal>
     )
 }
 
@@ -646,8 +643,7 @@ function CancelInvoiceDialog({
     })
 
     return (
-        <div className="modal">
-            <div className="mbox">
+        <Modal onClose={onClose}>
                 <div className="mh">
                     <h2>Cancelar registro</h2>
                     <button type="button" className="x" onClick={onClose}>×</button>
@@ -675,7 +671,6 @@ function CancelInvoiceDialog({
                         {save.isPending ? "Cancelando…" : "Confirmar cancelamento"}
                     </button>
                 </div>
-            </div>
-        </div>
+        </Modal>
     )
 }
