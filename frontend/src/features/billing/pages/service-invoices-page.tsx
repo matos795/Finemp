@@ -422,7 +422,7 @@ function InvoiceDraftDialog({
     })
 
     return (
-        <Modal onClose={onClose}>
+        <Modal onClose={save.isPending ? undefined : onClose}>
                 <div className="mh">
                     <h2>{invoice ? "Editar nota fiscal" : "Preparar nota fiscal"}</h2>
                     <button type="button" className="x" onClick={onClose}>×</button>
@@ -577,7 +577,7 @@ function IssueInvoiceDialog({
     })
 
     return (
-        <Modal onClose={onClose}>
+        <Modal onClose={save.isPending ? undefined : onClose}>
                 <div className="mh">
                     <h2>Registrar emissão externa</h2>
                     <button type="button" className="x" onClick={onClose}>×</button>
@@ -643,7 +643,7 @@ function CancelInvoiceDialog({
     })
 
     return (
-        <Modal onClose={onClose}>
+        <Modal onClose={save.isPending ? undefined : onClose}>
                 <div className="mh">
                     <h2>Cancelar registro</h2>
                     <button type="button" className="x" onClick={onClose}>×</button>
