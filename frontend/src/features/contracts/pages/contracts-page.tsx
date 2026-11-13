@@ -345,7 +345,7 @@ function ContractDialog({
         !partnerItems.some((partner) => partner.id === selectedPartner.id)
 
     return (
-        <Modal onClose={onClose} labelledBy="contractDialogTitle">
+        <Modal onClose={save.isPending ? undefined : onClose} labelledBy="contractDialogTitle">
                 <h2 id="contractDialogTitle">
                     {contract ? "Editar contrato" : "Novo contrato"}
                 </h2>
