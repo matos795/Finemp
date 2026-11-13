@@ -45,6 +45,20 @@ test("Notas fiscais is published with dedicated billing permissions", () => {
     /grossAmount\s*[+\-*/]|issAmount\s*[+\-*/]|totalWithheld\s*[+\-*/]|parseFloat|Number\(\s*invoice\.(?:grossAmount|totalWithheld|netAmount)/,
   )
   assert.match(page, /não emite NFS-e/i)
+
+  const onboarding = readFileSync(
+    new URL("../src/features/platform-admin/components/official-user-onboarding-section.tsx", import.meta.url),
+    "utf8",
+  )
+  const selfAccess = readFileSync(
+    new URL("../src/features/platform-admin/pages/platform-admin-page.tsx", import.meta.url),
+    "utf8",
+  )
+
+  for (const source of [onboarding, selfAccess]) {
+    assert.match(source, /BILLING_VIEW/)
+    assert.match(source, /BILLING_MANAGE/)
+  }
 })
 
 test("invoice API keeps month, status and optimistic version explicit", async () => {
