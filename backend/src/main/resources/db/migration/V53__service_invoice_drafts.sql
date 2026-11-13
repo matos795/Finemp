@@ -35,8 +35,13 @@ CREATE TABLE service_invoice_drafts (
         CHECK (status IN ('DRAFT','ISSUED','CANCELED')),
     CONSTRAINT ck_service_invoice_number_by_status
         CHECK (
-            (status = 'ISSUED' AND invoice_number IS NOT NULL AND length(trim(invoice_number)) > 0)
-            OR (status <> 'ISSUED' AND invoice_number IS NULL)
+            (status = 'DRAFT' AND invoice_number IS NULL)
+            OR (
+                status = 'ISSUED'
+                AND invoice_number IS NOT NULL
+                AND length(trim(invoice_number)) > 0
+            )
+            OR status = 'CANCELED'
         )
 );
 
@@ -48,3 +53,8 @@ CREATE INDEX idx_service_invoice_company_partner
 
 CREATE INDEX idx_service_invoice_company_contract
     ON service_invoice_drafts(company_id, contract_id);
+
+
+CREATE UNIQUE INDEX uq_service_invoice_company_number
+    ON service_invoice_drafts(company_id, invoice_number)
+    WHERE invoice_number IS NOT NULL;
