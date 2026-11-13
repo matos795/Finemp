@@ -63,7 +63,7 @@ public final class WorkingCapitalCycleCalculator {
                 normalizedInventory,
                 operating,
                 financial,
-                dailyRevenue,
+                dailyRevenue.setScale(2, RoundingMode.HALF_UP),
                 cycleWorkingCapital);
     }
 
