@@ -31,7 +31,7 @@ test("items without a published route are not shown", () => {
   }
 
   const all = modules.flatMap((module) => module.items.map((item) => item.id))
-  for (const placeholder of ["crmFunil", "orc", "bens"]) {
+  for (const placeholder of ["orc", "bens"]) {
     assert.equal(all.includes(placeholder), false, placeholder)
   }
 })
@@ -39,10 +39,10 @@ test("items without a published route are not shown", () => {
 test("modules left without available items disappear", () => {
   const moduleIds = visibleNavigation(navigationModules, () => true, () => true).map((module) => module.id)
 
-  for (const empty of ["grp", "div", "crm", "pes", "est", "pat", "orc"]) {
+  for (const empty of ["grp", "div", "pes", "est", "pat", "orc"]) {
     assert.equal(moduleIds.includes(empty), false, empty)
   }
-  for (const published of ["fluxo", "rel", "ctr", "cad", "ajuda", "dem"]) {
+  for (const published of ["fluxo", "rel", "crm", "ctr", "cad", "ajuda", "dem"]) {
     assert.equal(moduleIds.includes(published), true, published)
   }
 })
@@ -356,4 +356,24 @@ test("Contas e saldos requires a bank permission and a financial-entry permissio
   )
 
   assert.equal(findNavigationByPath(navigationModules, "/cash-flow/accounts").item.id, "bancos")
+})
+
+test("CRM is published as four screens for VIEW or MANAGE", () => {
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("CRM_VIEW"), none)),
+    [
+      "crm:crmFunil,crmAtiv,crmCli,crmInd",
+      "cad:empresas,cadEmp",
+      "ajuda:faq,tutor",
+    ],
+  )
+
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("CRM_MANAGE"), none)),
+    [
+      "crm:crmFunil,crmAtiv,crmCli,crmInd",
+      "cad:empresas,cadEmp",
+      "ajuda:faq,tutor",
+    ],
+  )
 })
