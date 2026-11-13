@@ -86,22 +86,27 @@ test("opportunity money remains exact text and partner lookup is CRM-scoped", as
     notes: null,
   })
   await listSalesPartnerOptions("company-1", "cliente")
+  await listSalesPartnerOptions("company-1", "cliente", undefined, true)
 
   const createCall = calls.find((call) =>
     String(call.path) === "/api/companies/company-1/opportunities"
   )
-  const partnerCall = calls.find((call) =>
+  const partnerCalls = calls.filter((call) =>
     String(call.path).includes("/sales/partners?")
   )
   assert.ok(createCall)
-  assert.ok(partnerCall)
+  assert.equal(partnerCalls.length, 2)
 
   const body = JSON.parse(createCall.options.body)
   assert.equal(body.monthlyAmount, "1234.56")
   assert.equal(typeof body.monthlyAmount, "string")
   assert.equal(
-    partnerCall.path,
+    partnerCalls[0].path,
     "/api/companies/company-1/sales/partners?page=0&size=50&search=cliente",
+  )
+  assert.equal(
+    partnerCalls[1].path,
+    "/api/companies/company-1/sales/partners?page=0&size=50&search=cliente&includeInactive=true",
   )
 })
 
