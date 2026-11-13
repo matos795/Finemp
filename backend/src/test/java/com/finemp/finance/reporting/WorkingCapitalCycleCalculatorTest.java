@@ -98,18 +98,27 @@ class WorkingCapitalCycleCalculatorTest {
                 LocalDate.of(2026, 8, 1),
                 LocalDate.of(2026, 10, 1),
                 null);
+        var futureSettlement = new WorkingCapitalCycleCalculator.Row(
+                WorkingCapitalCycleCalculator.Side.RECEIVABLE,
+                "customer-future",
+                "Cliente Futuro",
+                new BigDecimal("50.00"),
+                new BigDecimal("55.00"),
+                LocalDate.of(2026, 8, 1),
+                LocalDate.of(2026, 10, 15),
+                LocalDate.of(2026, 12, 10));
         var current = row(
                 WorkingCapitalCycleCalculator.Side.RECEIVABLE,
                 "customer-a", "Cliente A",
                 "300.00", null, 1, 16, null);
 
         var report = WorkingCapitalCycleCalculator.calculate(
-                FROM, TO, TO, 0, List.of(oldOpen, current));
+                FROM, TO, TO, 0, List.of(oldOpen, futureSettlement, current));
 
         assertThat(report.receivables().volume()).isEqualByComparingTo("300.00");
-        assertThat(report.receivables().openAmount()).isEqualByComparingTo("390.00");
-        assertThat(report.receivables().overdueAmount()).isEqualByComparingTo("390.00");
-        assertThat(report.receivables().balanceDays()).isEqualByComparingTo("39.00");
+        assertThat(report.receivables().openAmount()).isEqualByComparingTo("440.00");
+        assertThat(report.receivables().overdueAmount()).isEqualByComparingTo("440.00");
+        assertThat(report.receivables().balanceDays()).isEqualByComparingTo("44.00");
     }
 
     private static WorkingCapitalCycleCalculator.Row row(
