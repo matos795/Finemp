@@ -134,3 +134,14 @@ test("sales indicators are read from the backend without frontend financial reco
   assert.doesNotMatch(page, /monthlyAmount\s*[*]\s*probability/)
   assert.doesNotMatch(page, /wonCount\s*[/]\s*/)
 })
+
+
+test("follow-up agenda keeps saved observations visible", () => {
+  const page = readFileSync(
+    new URL("../src/features/sales/pages/sales-activities-page.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(page, /activity\.notes/)
+  assert.match(page, /className="help"/)
+})
