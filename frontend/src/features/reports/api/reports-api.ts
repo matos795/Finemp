@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../lib/api/api-client"
+import { apiRequest } from "../../../lib/api/api-client.ts"
 import type {
     AgingDirection,
     AgingScope,
@@ -6,15 +6,16 @@ import type {
     OpenTitlesAging,
     OpenTitlesFilter,
     OpenTitlesPage,
-} from "../types/aging.types"
-import type { AccountBalancesReport } from "../types/account-balances.types"
+} from "../types/aging.types.ts"
+import type { AccountBalancesReport } from "../types/account-balances.types.ts"
+import type { ReceivedPaymentsByMethodReport } from "../types/received-payments.types.ts"
 import type {
     DailyCashTotals,
     MonthlyCashCategoryTotalsPage,
     MonthlyCashDetailFilter,
     MonthlyCashTitlesPage,
     MonthlyCashTotals,
-} from "../types/cash-totals.types"
+} from "../types/cash-totals.types.ts"
 
 function reportsPath(companyId: string) {
     return `/api/companies/${encodeURIComponent(companyId)}/financial-reports`
@@ -188,6 +189,20 @@ export async function getAccountBalances(
 ): Promise<AccountBalancesReport> {
     return apiRequest<AccountBalancesReport>(
         `${reportsPath(companyId)}/account-balances`,
+        { cache: "no-store" },
+    )
+}
+
+/** Receitas efetivamente baixadas, agrupadas pela forma persistida no lançamento. */
+export async function getReceivedPaymentsByMethod(
+    companyId: string,
+    from: string,
+    to: string,
+): Promise<ReceivedPaymentsByMethodReport> {
+    const params = new URLSearchParams({ from, to })
+
+    return apiRequest<ReceivedPaymentsByMethodReport>(
+        `${reportsPath(companyId)}/received-by-method?${params}`,
         { cache: "no-store" },
     )
 }

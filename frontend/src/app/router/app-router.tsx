@@ -28,6 +28,7 @@ import { DailyCashFlowPage } from "../../features/reports/pages/daily-cash-flow-
 import { CashFlowSchedulePage } from "../../features/reports/pages/cash-flow-schedule-page"
 import { AccountBalancesPage } from "../../features/reports/pages/account-balances-page"
 import { PresentationResultsPage } from "../../features/reports/pages/presentation-results-page"
+import { ReceivedPaymentsByMethodPage } from "../../features/reports/pages/received-payments-by-method-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
 import { PlatformUsersPage } from "../../features/platform-admin/pages/platform-users-page"
@@ -306,6 +307,34 @@ export function AppRouter() {
                                 ]}
                             >
                                 <StatementsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/clients/delinquency"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <OpenTitlesPage direction="INCOME" />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/clients/receipts-by-method"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <ReceivedPaymentsByMethodPage />
                             </RequirePermission>
                         }
                     />
