@@ -42,7 +42,7 @@ class BusinessPartnerIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;
     @Autowired PlatformTransactionManager transactions;
-    @MockitoBean BusinessPartnerReferenceGuard usage;
+    @MockitoBean(name="contractPartnerReferenceGuard") BusinessPartnerReferenceGuard usage;
     private UserAccount actor,viewer,admin,restricted;
     private Company owner,other;
     private UUID partnerId,foreignId;

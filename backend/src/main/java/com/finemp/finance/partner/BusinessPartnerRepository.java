@@ -21,6 +21,16 @@ public interface BusinessPartnerRepository extends JpaRepository<BusinessPartner
             @Param("search") String search,
             Pageable pageable);
     @Query("""
+            select partner from BusinessPartner partner
+             where partner.company.id=:companyId
+               and (:search='' or lower(partner.profile.name) like lower(concat('%',:search,'%'))
+                    or lower(partner.profile.tradeName) like lower(concat('%',:search,'%')))
+            """)
+    Page<BusinessPartner> searchLookup(
+            @Param("companyId") UUID companyId,
+            @Param("search") String search,
+            Pageable pageable);
+    @Query("""
             select partner from BusinessPartner partner where partner.company.id=:companyId
               and (:search='' or locate(:search,partner.searchText)>0
                 or (:documentSearch<>'' and locate(:documentSearch,partner.profile.document)>0))

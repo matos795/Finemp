@@ -217,10 +217,30 @@ export const navigationModules: NavigationModule[] = [
         label: "Comercial",
         icon: "crm",
         items: [
-            { id: "crmFunil", label: "Funil de vendas" },
-            { id: "crmAtiv", label: "Agenda de follow-ups" },
-            { id: "crmCli", label: "Carteira e ficha do cliente" },
-            { id: "crmInd", label: "Indicadores comerciais" },
+            {
+                id: "crmFunil",
+                label: "Funil de vendas",
+                path: "/sales/pipeline",
+                permissions: ["CRM_VIEW", "CRM_MANAGE"],
+            },
+            {
+                id: "crmAtiv",
+                label: "Agenda de follow-ups",
+                path: "/sales/activities",
+                permissions: ["CRM_VIEW", "CRM_MANAGE"],
+            },
+            {
+                id: "crmCli",
+                label: "Carteira e ficha do cliente",
+                path: "/sales/portfolio",
+                permissions: ["CRM_VIEW", "CRM_MANAGE"],
+            },
+            {
+                id: "crmInd",
+                label: "Indicadores comerciais",
+                path: "/sales/indicators",
+                permissions: ["CRM_VIEW", "CRM_MANAGE"],
+            },
         ],
     },
     {
