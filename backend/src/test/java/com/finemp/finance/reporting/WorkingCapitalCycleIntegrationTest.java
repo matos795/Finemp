@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.*;
 import com.finemp.TestcontainersConfiguration;
 import com.finemp.access.*;
 import com.finemp.company.*;
+import com.finemp.finance.bank.*;
 import com.finemp.finance.category.*;
 import com.finemp.finance.entry.*;
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ class WorkingCapitalCycleIntegrationTest {
     @Autowired private UserAccountRepository users;
     @Autowired private CompanyRepository companies;
     @Autowired private CompanyAccessGrantRepository grants;
+    @Autowired private BankAccountRepository banks;
     @Autowired private FinancialCategoryRepository categories;
     @Autowired private FinancialEntryRepository entries;
 
@@ -49,6 +51,8 @@ class WorkingCapitalCycleIntegrationTest {
                 CostCenterScope.ALL,
                 Set.of(CompanyPermission.FINANCIAL_ENTRY_VIEW)));
 
+        UUID ownerBank = bank(owner, "Synthetic Cycle Owner Bank");
+        UUID otherBank = bank(other, "Synthetic Cycle Other Bank");
         UUID ownerCategory = incomeCategory(owner, 1);
         UUID otherCategory = incomeCategory(other, 1);
         LocalDate today = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
@@ -57,6 +61,7 @@ class WorkingCapitalCycleIntegrationTest {
         saveOpenReceivable(
                 owner,
                 actor,
+                ownerBank,
                 ownerCategory,
                 "100.00",
                 documentDate,
@@ -64,6 +69,7 @@ class WorkingCapitalCycleIntegrationTest {
         saveOpenReceivable(
                 other,
                 actor,
+                otherBank,
                 otherCategory,
                 "999.00",
                 documentDate,
@@ -76,6 +82,16 @@ class WorkingCapitalCycleIntegrationTest {
         assertThat(report.receivables().grantedDays()).isEqualByComparingTo("10.00");
     }
 
+    private UUID bank(Company company, String name) {
+        return banks.saveAndFlush(new BankAccount(
+                company,
+                name,
+                BankAccountType.CASH,
+                BigDecimal.ZERO,
+                LocalDate.of(2026, 1, 1),
+                true)).getId();
+    }
+
     private UUID incomeCategory(Company company, long sequence) {
         var group = categories.saveAndFlush(
                 FinancialCategory.group(company, FinancialDirection.INCOME, sequence, "Synthetic Revenue"));
@@ -86,6 +102,7 @@ class WorkingCapitalCycleIntegrationTest {
     private void saveOpenReceivable(
             Company company,
             UserAccount actor,
+            UUID bankAccountId,
             UUID categoryId,
             String nominal,
             LocalDate documentDate,
@@ -100,7 +117,7 @@ class WorkingCapitalCycleIntegrationTest {
                 dueDate,
                 null,
                 null,
-                null,
+                bankAccountId,
                 categoryId,
                 null,
                 null,
