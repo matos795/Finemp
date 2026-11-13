@@ -177,7 +177,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/reports/cash-vs-dre",
                 permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
             },
-            { id: "ciclo", label: "Ciclo financeiro e prazos" },
+            {
+                id: "ciclo",
+                label: "Ciclo financeiro e prazos",
+                path: "/reports/working-capital-cycle",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
             { id: "ncg", label: "Capital de giro (NCG)" },
             { id: "bal", label: "Balanço patrimonial" },
             { id: "indServ", label: "Indicadores de serviços" },
