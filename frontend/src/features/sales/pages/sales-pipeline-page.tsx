@@ -468,7 +468,7 @@ function OpportunityDialog({
     }
 
     return (
-        <Modal onClose={onClose} labelledBy="opportunityDialogTitle">
+        <Modal onClose={save.isPending ? undefined : onClose} labelledBy="opportunityDialogTitle">
                 <h2 id="opportunityDialogTitle">
                     {opportunity ? "Editar oportunidade" : "Nova oportunidade"}
                 </h2>
