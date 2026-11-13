@@ -458,7 +458,7 @@ function DebtDialog({
     })
 
     return (
-        <Modal onClose={onClose} labelledBy="debtDialogTitle">
+        <Modal onClose={save.isPending ? undefined : onClose} labelledBy="debtDialogTitle">
                 <div className="mh">
                     <h2 id="debtDialogTitle">
                         {debt ? "Editar" : "Nova"} {config.itemName}
