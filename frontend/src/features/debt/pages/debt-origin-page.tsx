@@ -93,7 +93,7 @@ function DebtOriginCompanyPage({ origin }: { origin: DebtOrigin }) {
     const config = originConfig[origin]
     const { selectedCompany, hasPermission } = useCompanyAccess()
     const companyId = selectedCompany?.id
-    const canManage = hasPermission("DEBT_MANAGE")
+    const canManage = Boolean(companyId) && hasPermission("DEBT_MANAGE")
     const queryClient = useQueryClient()
     const showToast = useToast()
 
