@@ -49,6 +49,13 @@ public class DebtInstallment {
             throw new IllegalArgumentException("Parcela da dívida inválida.");
         }
         this.agreement = agreement;
+        replace(source);
+    }
+
+    void replace(DebtScheduleCalculator.Installment source) {
+        if (source == null) {
+            throw new IllegalArgumentException("Parcela da dívida inválida.");
+        }
         this.installmentNumber = source.number();
         this.dueDate = source.dueDate();
         this.amortizationAmount = source.amortization();
