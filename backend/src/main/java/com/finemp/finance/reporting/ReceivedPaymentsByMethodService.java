@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -68,10 +69,11 @@ public class ReceivedPaymentsByMethodService {
         params.addValue("unspecified", UNSPECIFIED_METHOD);
 
         var methods = new ArrayList<MethodTotal>();
-        jdbc.query(sql, params, rs -> methods.add(new MethodTotal(
+        RowCallbackHandler collect = rs -> methods.add(new MethodTotal(
                 rs.getString("payment_method"),
                 rs.getLong("payment_count"),
-                money(rs.getBigDecimal("total_amount")))));
+                money(rs.getBigDecimal("total_amount"))));
+        jdbc.query(sql, params, collect);
 
         BigDecimal totalAmount = methods.stream()
                 .map(MethodTotal::totalAmount)
