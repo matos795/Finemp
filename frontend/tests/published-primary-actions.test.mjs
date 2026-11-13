@@ -101,3 +101,24 @@ test("mutation dialogs keep Escape disabled while a save is pending", () => {
     assert.match(source, /onClose=\{busy \? undefined :/)
   }
 })
+
+
+test("visible close controls stay disabled while a save is pending", () => {
+  const invoices = readFileSync(
+    new URL("../src/features/billing/pages/service-invoices-page.tsx", import.meta.url),
+    "utf8",
+  )
+  const debt = readFileSync(
+    new URL("../src/features/debt/pages/debt-origin-page.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(
+    invoices,
+    /className="x" disabled=\{save\.isPending\} onClick=\{onClose\}/,
+  )
+  assert.match(
+    debt,
+    /className="x" disabled=\{save\.isPending\} onClick=\{onClose\}/,
+  )
+})
