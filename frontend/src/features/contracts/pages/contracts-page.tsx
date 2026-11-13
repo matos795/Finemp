@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
@@ -7,13 +7,8 @@ import { formatExactCurrency, formatIsoDate } from "../../../lib/formatters/deci
 import { useCompanyPage } from "../../../lib/api/use-company-page"
 import { useCompanyAccess } from "../../companies/company-access-context"
 import {
-    listBusinessPartnersPage,
-} from "../../business-partners/api/business-partners-api"
-import {
-    defaultBusinessPartnerFilter,
-} from "../../business-partners/types/business-partner.types"
-import {
     createContract,
+    listContractPartnerOptions,
     listContracts,
     updateContract,
 } from "../api/contracts-api"
@@ -252,9 +247,15 @@ function ContractDialog({
     onSaved: () => Promise<void>
     onClose: () => void
 }) {
+    const queryClient = useQueryClient()
     const [partnerSearch, setPartnerSearch] = useState("")
     const [businessPartnerId, setBusinessPartnerId] =
         useState(contract?.businessPartnerId ?? "")
+    const [selectedPartner, setSelectedPartner] = useState(
+        contract
+            ? { id: contract.businessPartnerId, name: contract.businessPartnerName }
+            : null,
+    )
     const [direction, setDirection] =
         useState<ContractDirection>(contract?.direction ?? "INCOME")
     const [description, setDescription] = useState(contract?.description ?? "")
@@ -265,18 +266,10 @@ function ContractDialog({
     const [active, setActive] = useState(contract?.active ?? true)
     const [error, setError] = useState("")
 
-    const partnerFilter = useMemo(
-        () => ({
-            ...defaultBusinessPartnerFilter,
-            search: partnerSearch,
-        }),
-        [partnerSearch],
-    )
-
     const partners = useQuery({
-        queryKey: ["contract-partners", companyId, partnerFilter] as const,
+        queryKey: ["contract-partners", companyId, partnerSearch] as const,
         queryFn: ({ signal }) =>
-            listBusinessPartnersPage(companyId, partnerFilter, 0, signal),
+            listContractPartnerOptions(companyId, partnerSearch, signal),
         retry: false,
     })
 
@@ -314,7 +307,7 @@ function ContractDialog({
                 : createContract(companyId, values)
         },
         onSuccess: () => onSaved(),
-        onError: (caught) => {
+        onError: async (caught) => {
             const status =
                 typeof caught === "object" &&
                 caught !== null &&
@@ -325,7 +318,10 @@ function ContractDialog({
             if (caught instanceof Error && caught.message === "VALIDATION") {
                 setError("Confira parceiro, vigência, dia de cobrança e valor mensal.")
             } else if (status === 409) {
-                setError("O contrato foi alterado por outro usuário. Feche e abra novamente.")
+                await queryClient.invalidateQueries({
+                    queryKey: ["contracts", companyId],
+                })
+                setError("O contrato foi alterado por outro usuário. A lista foi atualizada; feche e abra novamente.")
             } else if (status === 403) {
                 setError("Seu acesso não permite alterar contratos.")
             } else {
@@ -335,9 +331,9 @@ function ContractDialog({
     })
 
     const partnerItems = partners.data?.items ?? []
-    const currentPartnerMissing =
-        contract &&
-        !partnerItems.some((partner) => partner.id === contract.businessPartnerId)
+    const selectedPartnerMissing =
+        selectedPartner &&
+        !partnerItems.some((partner) => partner.id === selectedPartner.id)
 
     return (
         <div className="modal" role="presentation">
@@ -363,17 +359,33 @@ function ContractDialog({
                         <select
                             id="contractPartner"
                             value={businessPartnerId}
-                            onChange={(event) => setBusinessPartnerId(event.target.value)}
+                            onChange={(event) => {
+                                const id = event.target.value
+                                setBusinessPartnerId(id)
+
+                                if (!id) {
+                                    setSelectedPartner(null)
+                                    return
+                                }
+
+                                const partner = partnerItems.find(
+                                    (candidate) => candidate.id === id,
+                                )
+
+                                if (partner) {
+                                    setSelectedPartner(partner)
+                                }
+                            }}
                         >
                             <option value="">Selecione</option>
-                            {currentPartnerMissing && contract ? (
-                                <option value={contract.businessPartnerId}>
-                                    {contract.businessPartnerName}
+                            {selectedPartnerMissing ? (
+                                <option value={selectedPartner.id}>
+                                    {selectedPartner.name}
                                 </option>
                             ) : null}
                             {partnerItems.map((partner) => (
                                 <option value={partner.id} key={partner.id}>
-                                    {partner.profile.name}
+                                    {partner.name}
                                 </option>
                             ))}
                         </select>
