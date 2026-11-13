@@ -10,6 +10,7 @@ import type {
 import type { AccountBalancesReport } from "../types/account-balances.types.ts"
 import type { CashVsDreReport } from "../types/cash-vs-dre.types.ts"
 import type { ReceivedPaymentsByMethodReport } from "../types/received-payments.types.ts"
+import type { WorkingCapitalCycleReport } from "../types/working-capital-cycle.types.ts"
 import type {
     DailyCashTotals,
     MonthlyCashCategoryTotalsPage,
@@ -217,6 +218,25 @@ export async function getCashVsOperationalDre(
 
     return apiRequest<CashVsDreReport>(
         `${reportsPath(companyId)}/cash-vs-dre?${params}`,
+        { cache: "no-store" },
+    )
+}
+
+
+/** PMR/PMP ponderados no backend; PME é parâmetro explícito e não persiste nesta entrega. */
+export async function getWorkingCapitalCycle(
+    companyId: string,
+    from: string,
+    to: string,
+    inventoryDays?: string,
+): Promise<WorkingCapitalCycleReport> {
+    const params = new URLSearchParams({ from, to })
+    if (inventoryDays?.trim()) {
+        params.set("inventoryDays", inventoryDays.trim().replace(",", "."))
+    }
+
+    return apiRequest<WorkingCapitalCycleReport>(
+        `${reportsPath(companyId)}/working-capital-cycle?${params}`,
         { cache: "no-store" },
     )
 }
