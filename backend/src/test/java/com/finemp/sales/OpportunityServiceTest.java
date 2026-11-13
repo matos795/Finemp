@@ -35,6 +35,7 @@ class OpportunityServiceTest {
         when(opportunity.getVersion()).thenReturn(3L);
         when(partners.findByIdAndCompanyId(nextPartnerId, companyId))
                 .thenReturn(Optional.of(nextPartner));
+        when(nextPartner.getId()).thenReturn(nextPartnerId);
         when(activities.existsByCompanyIdAndOpportunityIdAndBusinessPartnerIdNot(
                 companyId, opportunityId, nextPartnerId))
                 .thenReturn(true);
