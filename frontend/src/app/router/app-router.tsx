@@ -49,6 +49,8 @@ import { PlanningMeetingsPage } from "../../features/planning/pages/planning-mee
 import { PlanningGoalsPage } from "../../features/planning/pages/planning-goals-page"
 import { PlanningActionsPage } from "../../features/planning/pages/planning-actions-page"
 import { ContractsPage } from "../../features/contracts/pages/contracts-page"
+import { MonthlyContractBillingPage } from "../../features/contracts/pages/monthly-contract-billing-page"
+import { ServiceInvoicesPage } from "../../features/billing/pages/service-invoices-page"
 import { SalesPipelinePage } from "../../features/sales/pages/sales-pipeline-page"
 import { SalesActivitiesPage } from "../../features/sales/pages/sales-activities-page"
 import { SalesPortfolioPage } from "../../features/sales/pages/sales-portfolio-page"
@@ -279,6 +281,28 @@ export function AppRouter() {
                                 permission={["CONTRACT_VIEW", "CONTRACT_MANAGE"]}
                             >
                                 <ContractsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/clients/monthly-billing"
+                        element={
+                            <RequirePermission
+                                permission={["CONTRACT_VIEW", "CONTRACT_MANAGE"]}
+                            >
+                                <MonthlyContractBillingPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/clients/service-invoices"
+                        element={
+                            <RequirePermission
+                                permission={["BILLING_VIEW", "BILLING_MANAGE"]}
+                            >
+                                <ServiceInvoicesPage />
                             </RequirePermission>
                         }
                     />
