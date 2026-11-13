@@ -40,6 +40,9 @@ public enum CompanyPermission {
     BILLING_VIEW,
     BILLING_MANAGE,
 
+    DEBT_VIEW,
+    DEBT_MANAGE,
+
     CRM_VIEW,
     CRM_MANAGE
 }
