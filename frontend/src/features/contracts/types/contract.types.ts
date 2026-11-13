@@ -48,3 +48,22 @@ export const defaultContractFilter: ContractFilter = {
     search: "",
     active: "true",
 }
+
+
+export interface MonthlyContractBillingLine {
+    contractId: string
+    businessPartnerId: string
+    businessPartnerName: string
+    direction: ContractDirection
+    description: string
+    billingDate: string
+    amount: string
+}
+
+export interface MonthlyContractBillingPreview {
+    month: string
+    incomeTotal: string
+    expenseTotal: string
+    netTotal: string
+    contracts: PageResponse<MonthlyContractBillingLine>
+}
