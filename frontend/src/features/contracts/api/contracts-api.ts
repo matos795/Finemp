@@ -3,6 +3,7 @@ import type {
     Contract,
     ContractFilter,
     ContractPage,
+    ContractPartnerOptionPage,
     ContractValues,
 } from "../types/contract.types.ts"
 
@@ -29,6 +30,25 @@ export function listContracts(
 
     return apiRequest<ContractPage>(
         `${contractsPath(companyId)}?${params}`,
+        { signal },
+    )
+}
+
+export function listContractPartnerOptions(
+    companyId: string,
+    search: string,
+    signal?: AbortSignal,
+): Promise<ContractPartnerOptionPage> {
+    const params = new URLSearchParams({
+        page: "0",
+        size: String(CONTRACTS_PAGE_SIZE),
+    })
+
+    const text = search.trim()
+    if (text) params.set("search", text)
+
+    return apiRequest<ContractPartnerOptionPage>(
+        `${contractsPath(companyId)}/partners?${params}`,
         { signal },
     )
 }
