@@ -25,12 +25,14 @@ public class SalesInsightsController {
             @AuthenticationPrincipal UserAccountPrincipal actor,
             @PathVariable UUID companyId,
             @RequestParam(defaultValue = "") String search,
+            @RequestParam(defaultValue = "false") boolean includeInactive,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         return opportunities.partnerOptions(
                 actor.getUserAccountId(),
                 companyId,
                 search,
+                includeInactive,
                 page,
                 size);
     }
