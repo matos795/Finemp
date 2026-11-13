@@ -67,6 +67,9 @@ public record ServiceInvoiceDraftValues(
     private static BigDecimal rate(BigDecimal value) {
         if (value == null) throw invalid();
         var normalized = value.signum() == 0 ? BigDecimal.ZERO : value.stripTrailingZeros();
+        if (normalized.scale() < 0) {
+            normalized = normalized.setScale(0);
+        }
         if (normalized.signum() < 0 || normalized.compareTo(new BigDecimal("100")) > 0 || normalized.scale() > 4) {
             throw invalid();
         }
