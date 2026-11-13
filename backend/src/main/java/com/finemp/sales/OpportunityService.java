@@ -74,17 +74,21 @@ public class OpportunityService {
             UUID actor,
             UUID companyId,
             String search,
+            boolean includeInactive,
             int page,
             int size) {
         authorization.requireRead(actor, companyId);
         if (page < 0 || size < 1 || size > 100 || tooLong(search, 100)) throw invalid();
 
-        return PagedResponse.from(
-                partners.searchActiveLookup(
-                        companyId,
-                        normalized(search),
-                        PageRequest.of(page, size, Sort.by("displayNameKey").ascending().and(Sort.by("id")))),
-                SalesPartnerOptionResponse::from);
+        var pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("displayNameKey").ascending().and(Sort.by("id")));
+        var result = includeInactive
+                ? partners.searchLookup(companyId, normalized(search), pageable)
+                : partners.searchActiveLookup(companyId, normalized(search), pageable);
+
+        return PagedResponse.from(result, SalesPartnerOptionResponse::from);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
