@@ -51,7 +51,7 @@ export function ServiceInvoicesPage() {
 function ServiceInvoicesCompanyPage() {
     const { selectedCompany, hasPermission } = useCompanyAccess()
     const companyId = selectedCompany?.id
-    const canManage = hasPermission("BILLING_MANAGE")
+    const canManage = Boolean(companyId) && hasPermission("BILLING_MANAGE")
     const cache = useQueryClient()
     const toast = useToast()
 

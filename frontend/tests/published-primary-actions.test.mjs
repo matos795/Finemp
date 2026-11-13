@@ -122,3 +122,19 @@ test("visible close controls stay disabled while a save is pending", () => {
     /className="x" disabled=\{save\.isPending\} onClick=\{onClose\}/,
   )
 })
+
+
+test("company-scoped mutation actions require an active company independently of SYSTEM_ADMIN visibility", () => {
+  const guardedPages = [
+    ["../src/features/billing/pages/service-invoices-page.tsx", 'Boolean(companyId) && hasPermission("BILLING_MANAGE")'],
+    ["../src/features/contracts/pages/contracts-page.tsx", "Boolean(companyId) && canManageContract(hasPermission)"],
+    ["../src/features/debt/pages/debt-origin-page.tsx", 'Boolean(companyId) && hasPermission("DEBT_MANAGE")'],
+    ["../src/features/sales/pages/sales-activities-page.tsx", 'Boolean(companyId) && hasPermission("CRM_MANAGE")'],
+    ["../src/features/sales/pages/sales-pipeline-page.tsx", 'Boolean(companyId) && hasPermission("CRM_MANAGE")'],
+  ]
+
+  for (const [path, guard] of guardedPages) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8")
+    assert.ok(source.includes(guard), path)
+  }
+})

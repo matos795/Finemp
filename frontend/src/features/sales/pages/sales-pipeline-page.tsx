@@ -52,7 +52,7 @@ export function SalesPipelinePage() {
 function CompanyPipeline() {
     const { selectedCompany, hasPermission } = useCompanyAccess()
     const companyId = selectedCompany?.id
-    const canManage = hasPermission("CRM_MANAGE")
+    const canManage = Boolean(companyId) && hasPermission("CRM_MANAGE")
     const queryClient = useQueryClient()
     const toast = useToast()
 

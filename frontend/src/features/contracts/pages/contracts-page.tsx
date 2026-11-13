@@ -51,7 +51,7 @@ export function ContractsPage() {
 function ContractsCompanyPage() {
     const { selectedCompany, hasPermission } = useCompanyAccess()
     const companyId = selectedCompany?.id
-    const canManage = canManageContract(hasPermission)
+    const canManage = Boolean(companyId) && canManageContract(hasPermission)
     const queryClient = useQueryClient()
     const showToast = useToast()
 
