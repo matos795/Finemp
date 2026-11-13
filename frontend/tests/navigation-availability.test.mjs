@@ -39,10 +39,10 @@ test("items without a published route are not shown", () => {
 test("modules left without available items disappear", () => {
   const moduleIds = visibleNavigation(navigationModules, () => true, () => true).map((module) => module.id)
 
-  for (const empty of ["grp", "div", "crm", "pes", "ctr", "est", "pat", "orc"]) {
+  for (const empty of ["grp", "div", "crm", "pes", "est", "pat", "orc"]) {
     assert.equal(moduleIds.includes(empty), false, empty)
   }
-  for (const published of ["fluxo", "rel", "cad", "ajuda", "dem"]) {
+  for (const published of ["fluxo", "rel", "ctr", "cad", "ajuda", "dem"]) {
     assert.equal(moduleIds.includes(published), true, published)
   }
 })
@@ -51,6 +51,7 @@ test("a financial client sees the published financial screens it is allowed to o
   assert.deepEqual(ids(visibleNavigation(navigationModules, FINANCE_CLIENT, none)), [
     "fluxo:painel,lanc,agenda,ext,mensal,diario,bancos",
     "rel:relRec,relPag,dre,relApres",
+    "ctr:ctrInad,ctrFormas",
     "cad:empresas,cadEmp,cadContas,cadPlano",
     "ajuda:faq,tutor",
   ])
