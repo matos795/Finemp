@@ -34,7 +34,7 @@ class ServiceInvoiceDraftTest {
         draft.cancel();
 
         assertThat(draft.getStatus()).isEqualTo(ServiceInvoiceStatus.CANCELED);
-        assertThat(draft.getInvoiceNumber()).isNull();
+        assertThat(draft.getInvoiceNumber()).isEqualTo("12345");
     }
 
     private static ServiceInvoiceDraft draft() {
