@@ -566,8 +566,10 @@ function OpportunityDialog({
                             }}
                         >
                             <option value="">Sem cliente vinculado</option>
-                            {selectedMissing ? (
-                                <option value={effectiveSelectedPartner.id}>{effectiveSelectedPartner.name}</option>
+                            {effectiveSelectedPartner && selectedMissing ? (
+                                <option value={effectiveSelectedPartner.id}>
+                                    {effectiveSelectedPartner.name}
+                                </option>
                             ) : null}
                             {partnerItems.map((partner) => (
                                 <option key={partner.id} value={partner.id}>
