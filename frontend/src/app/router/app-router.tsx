@@ -29,6 +29,7 @@ import { CashFlowSchedulePage } from "../../features/reports/pages/cash-flow-sch
 import { AccountBalancesPage } from "../../features/reports/pages/account-balances-page"
 import { PresentationResultsPage } from "../../features/reports/pages/presentation-results-page"
 import { CashVsOperationalDrePage } from "../../features/reports/pages/cash-vs-operational-dre-page"
+import { WorkingCapitalCyclePage } from "../../features/reports/pages/working-capital-cycle-page"
 import { ReceivedPaymentsByMethodPage } from "../../features/reports/pages/received-payments-by-method-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
@@ -390,6 +391,20 @@ export function AppRouter() {
                                 ]}
                             >
                                 <CashVsOperationalDrePage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/reports/working-capital-cycle"
+                        element={
+                            <RequirePermission
+                                permission={[
+                                    "FINANCIAL_ENTRY_VIEW",
+                                    "FINANCIAL_ENTRY_MANAGE",
+                                ]}
+                            >
+                                <WorkingCapitalCyclePage />
                             </RequirePermission>
                         }
                     />
