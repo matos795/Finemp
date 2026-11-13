@@ -85,6 +85,42 @@ class DebtScheduleCalculatorTest {
     }
 
     @Test
+    void fixedInstallmentsUseImpliedRateAndLastPaymentClosesResidual() {
+        var payment = new BigDecimal("88.84878867834170733999");
+
+        var schedule = DebtScheduleCalculator.fixed(
+                new BigDecimal("1000.00"),
+                12,
+                payment,
+                LocalDate.of(2026, 1, 31));
+
+        assertThat(schedule).hasSize(12);
+        assertThat(schedule.getFirst().interest()).isEqualByComparingTo("10.00");
+        assertThat(schedule.getFirst().payment()).isEqualByComparingTo("88.85");
+        assertThat(schedule.get(1).dueDate()).isEqualTo(LocalDate.of(2026, 2, 28));
+        assertThat(schedule.getLast().balance()).isEqualByComparingTo("0.00");
+        assertThat(schedule.stream()
+                .map(DebtScheduleCalculator.Installment::amortization)
+                .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("1000.00");
+    }
+
+    @Test
+    void fixedInstallmentsFallBackToZeroRateWhenThereIsNoPositiveImpliedRate() {
+        var schedule = DebtScheduleCalculator.fixed(
+                new BigDecimal("1000.00"),
+                10,
+                new BigDecimal("100.00"),
+                LocalDate.of(2026, 1, 15));
+
+        assertThat(schedule)
+                .extracting(DebtScheduleCalculator.Installment::interest)
+                .containsOnly(new BigDecimal("0.00"));
+        assertThat(schedule.getLast().payment()).isEqualByComparingTo("100.00");
+        assertThat(schedule.getLast().balance()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
     void impliedRateReturnsZeroWhenPaymentsCannotExceedPrincipal() {
         var rate = DebtScheduleCalculator.impliedMonthlyPercent(
                 new BigDecimal("1000.00"),
