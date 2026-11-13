@@ -86,7 +86,7 @@ class DebtScheduleCalculatorTest {
 
     @Test
     void fixedInstallmentsUseImpliedRateAndLastPaymentClosesResidual() {
-        var payment = new BigDecimal("88.84878867834170733999");
+        var payment = new BigDecimal("88.85");
 
         var schedule = DebtScheduleCalculator.fixed(
                 new BigDecimal("1000.00"),
