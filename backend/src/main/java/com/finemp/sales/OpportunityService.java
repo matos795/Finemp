@@ -17,6 +17,7 @@ public class OpportunityService {
     private final OpportunityRepository opportunities;
     private final CompanyRepository companies;
     private final BusinessPartnerRepository partners;
+    private final SalesActivityRepository activities;
     private final SalesAuthorization authorization;
     private final Clock clock;
 
@@ -24,11 +25,13 @@ public class OpportunityService {
             OpportunityRepository opportunities,
             CompanyRepository companies,
             BusinessPartnerRepository partners,
+            SalesActivityRepository activities,
             SalesAuthorization authorization,
             Clock clock) {
         this.opportunities = opportunities;
         this.companies = companies;
         this.partners = partners;
+        this.activities = activities;
         this.authorization = authorization;
         this.clock = clock;
     }
@@ -118,8 +121,14 @@ public class OpportunityService {
 
         Opportunity opportunity = owned(companyId, opportunityId);
         requireVersion(opportunity, request.expectedVersion());
+        BusinessPartner nextPartner = partner(companyId, request.businessPartnerId());
+        if (nextPartner != null
+                && activities.existsByCompanyIdAndOpportunityIdAndBusinessPartnerIdNot(
+                        companyId, opportunityId, nextPartner.getId())) {
+            throw new SalesRelationshipConflictException();
+        }
         opportunity.replace(
-                partner(companyId, request.businessPartnerId()),
+                nextPartner,
                 values(request),
                 clock.instant());
         opportunities.flush();
