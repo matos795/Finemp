@@ -139,6 +139,22 @@ class DebtScheduleCalculatorTest {
     }
 
     @Test
+    void fixedScheduleKeepsUnroundedImpliedRateInternallyForLargeValues() {
+        var schedule = DebtScheduleCalculator.fixed(
+                new BigDecimal("10000000000000000.00"),
+                1200,
+                new BigDecimal("300000000000060.00"),
+                LocalDate.of(2026, 1, 31));
+
+        assertThat(schedule.getFirst().amortization()).isGreaterThan(BigDecimal.ZERO);
+        assertThat(schedule.getLast().balance()).isEqualByComparingTo("0.00");
+        assertThat(schedule.stream()
+                .map(DebtScheduleCalculator.Installment::amortization)
+                .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("10000000000000000.00");
+    }
+
+    @Test
     void impliedRateReturnsZeroWhenPaymentsCannotExceedPrincipal() {
         var rate = DebtScheduleCalculator.impliedMonthlyPercent(
                 new BigDecimal("1000.00"),
