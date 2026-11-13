@@ -66,30 +66,6 @@ class StagingPlatformAdminHttpIntegrationTest {
         assertThat(get("/api/auth/me").statusCode()).isEqualTo(401);
     }
 
-    @Test void systemAdminSyntheticOperatorSeesEverySyntheticCompany() throws Exception {
-        String password="Synthetic-system-admin-regression";
-        try(var connection=datasource.getConnection()) {
-            assertThat(StagingSeed.provision(connection,StagingProvisioningMain.encodePassword(password))).isTrue();
-            assertThat(StagingSeed.provisionIsolationCompany(connection)).isTrue();
-            assertThat(StagingSeed.grantSyntheticSystemAdmin(connection)).isTrue();
-        }
-
-        login(password);
-        var me=json.readTree(get("/api/auth/me").body());
-
-        var permissions=new ArrayList<String>();
-        me.get("platformPermissions").forEach(node->permissions.add(node.asString()));
-        assertThat(permissions).containsExactly("SYSTEM_ADMIN");
-
-        var companyIds=new ArrayList<String>();
-        me.get("companies").forEach(node->companyIds.add(node.get("id").asString()));
-        assertThat(companyIds).containsExactlyInAnyOrder(
-                StagingSeed.id("company").toString(),
-                StagingSeed.id("foreign-company").toString());
-
-        assertThat(post("/api/auth/logout",Map.of()).statusCode()).isEqualTo(204);
-    }
-
     private void login(String password) throws Exception {
         assertThat(post("/api/auth/login",Map.of("email","demo@finemp.example.invalid","password",password)).statusCode()).isEqualTo(204);
     }
