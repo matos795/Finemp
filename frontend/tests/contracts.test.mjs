@@ -96,8 +96,9 @@ test("contract writes preserve exact money as text and optimistic version", asyn
     values,
   )
 
-  const createBody = JSON.parse(calls[0].options.body)
-  const updateBody = JSON.parse(calls[1].options.body)
+  const writeCalls = calls.filter((call) => call.path !== "/api/auth/csrf")
+  const createBody = JSON.parse(writeCalls[0].options.body)
+  const updateBody = JSON.parse(writeCalls[1].options.body)
 
   assert.equal(typeof createBody.monthlyAmount, "string")
   assert.equal(createBody.monthlyAmount, "1234.56")
