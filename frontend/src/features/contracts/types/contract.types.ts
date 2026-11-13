@@ -21,6 +21,13 @@ export interface Contract {
 
 export type ContractPage = PageResponse<Contract>
 
+export interface ContractPartnerOption {
+    id: string
+    name: string
+}
+
+export type ContractPartnerOptionPage = PageResponse<ContractPartnerOption>
+
 export interface ContractFilter {
     search: string
     active: "true" | "false" | ""
