@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.UUID;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,14 @@ public class WorkingCapitalCycleService {
                 .addValue("to", to);
 
         var entries = new ArrayList<WorkingCapitalCycleCalculator.Entry>();
+        RowCallbackHandler collect = rs -> entries.add(
+                new WorkingCapitalCycleCalculator.Entry(
+                        FinancialDirection.valueOf(rs.getString("direction")),
+                        rs.getBigDecimal("nominal_amount"),
+                        rs.getObject("document_date", LocalDate.class),
+                        rs.getObject("due_date", LocalDate.class),
+                        rs.getObject("payment_date", LocalDate.class)));
+
         jdbc.query("""
                 SELECT direction, nominal_amount, document_date, due_date, payment_date
                 FROM financial_entries
@@ -53,12 +62,7 @@ public class WorkingCapitalCycleService {
                 ORDER BY document_date ASC, id ASC
                 """,
                 params,
-                rs -> entries.add(new WorkingCapitalCycleCalculator.Entry(
-                        FinancialDirection.valueOf(rs.getString("direction")),
-                        rs.getBigDecimal("nominal_amount"),
-                        rs.getObject("document_date", LocalDate.class),
-                        rs.getObject("due_date", LocalDate.class),
-                        rs.getObject("payment_date", LocalDate.class))));
+                collect);
 
         int periodDays = Math.toIntExact(ChronoUnit.DAYS.between(from, to) + 1);
         var calculated = WorkingCapitalCycleCalculator.calculate(
