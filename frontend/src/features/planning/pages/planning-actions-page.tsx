@@ -569,7 +569,7 @@ function PlanningActionsCompanyPage() {
             ) : null}
 
             {formOpen ? (
-                <Modal onClose={() => setFormOpen(false)} labelledBy="actionDialogTitle">
+                <Modal onClose={busy ? undefined : () => setFormOpen(false)} labelledBy="actionDialogTitle">
                         <h2 id="actionDialogTitle">
                             {editing ? "Editar ação" : "Nova ação"}
                         </h2>
