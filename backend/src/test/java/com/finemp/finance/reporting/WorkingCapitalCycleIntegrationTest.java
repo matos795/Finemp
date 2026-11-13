@@ -10,6 +10,7 @@ import com.finemp.finance.entry.*;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
