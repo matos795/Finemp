@@ -133,7 +133,7 @@ class ConsistencyDiagnosticsIntegrationTest {
                 fixture.allowed().getId(),
                 fixture.owner().getId());
 
-        assertThat(report.issueCount()).isEqualTo(4);
+        assertThat(report.issueCount()).isEqualTo(5);
         assertCheck(
                 report,
                 "CONTRACT_PARTNER_COMPANY",
