@@ -145,3 +145,14 @@ test("follow-up agenda keeps saved observations visible", () => {
   assert.match(page, /activity\.notes/)
   assert.match(page, /className="help"/)
 })
+
+
+test("company access selector exposes CRM permissions", () => {
+  const page = readFileSync(
+    new URL("../src/features/platform-admin/pages/platform-admin-page.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(page, /CRM_VIEW/)
+  assert.match(page, /CRM_MANAGE/)
+})
