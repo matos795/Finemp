@@ -9,6 +9,7 @@ import { useCompanyAccess } from "../../companies/company-access-context"
 import {
     changeOpportunityStatus,
     createOpportunity,
+    getOpportunity,
     listOpportunities,
     listSalesPartnerOptions,
     updateOpportunity,
@@ -350,6 +351,17 @@ function OpportunityDialog({
     const [notes, setNotes] = useState("")
     const [error, setError] = useState("")
 
+    const detail = useQuery({
+        queryKey: ["sales-opportunity", companyId, opportunity?.id] as const,
+        queryFn: () => getOpportunity(companyId, opportunity!.id),
+        enabled: Boolean(opportunity),
+        retry: false,
+    })
+
+    useEffect(() => {
+        if (detail.data) setNotes(detail.data.notes ?? "")
+    }, [detail.data])
+
     const partners = useQuery({
         queryKey: ["sales-partners", companyId, partnerSearch] as const,
         queryFn: ({ signal }) =>
@@ -384,8 +396,12 @@ function OpportunityDialog({
                 notes: notes.trim() || null,
             }
 
+            if (opportunity && !detail.data) {
+                throw new Error("DETAIL_NOT_READY")
+            }
+
             return opportunity
-                ? updateOpportunity(companyId, opportunity, values)
+                ? updateOpportunity(companyId, detail.data!, values)
                 : createOpportunity(companyId, values)
         },
         onSuccess: () => onSaved(),
@@ -396,6 +412,8 @@ function OpportunityDialog({
                     : null
             if (caught instanceof Error && caught.message === "VALIDATION") {
                 setError("Confira título, etapa, valor, probabilidade e responsável.")
+            } else if (caught instanceof Error && caught.message === "DETAIL_NOT_READY") {
+                setError("Carregue os dados atuais da oportunidade antes de salvar.")
             } else if (status === 409) {
                 setError("A oportunidade foi alterada por outro usuário. Feche e abra novamente.")
             } else if (status === 403) {
@@ -545,7 +563,7 @@ function OpportunityDialog({
                     <button
                         type="button"
                         className="btn"
-                        disabled={save.isPending}
+                        disabled={save.isPending || Boolean(opportunity && detail.isPending)}
                         onClick={() => save.mutate()}
                     >
                         {save.isPending ? "Salvando…" : "Salvar"}
