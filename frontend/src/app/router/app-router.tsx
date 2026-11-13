@@ -51,6 +51,7 @@ import { PlanningActionsPage } from "../../features/planning/pages/planning-acti
 import { ContractsPage } from "../../features/contracts/pages/contracts-page"
 import { MonthlyContractBillingPage } from "../../features/contracts/pages/monthly-contract-billing-page"
 import { ServiceInvoicesPage } from "../../features/billing/pages/service-invoices-page"
+import { DebtOriginPage } from "../../features/debt/pages/debt-origin-page"
 import { SalesPipelinePage } from "../../features/sales/pages/sales-pipeline-page"
 import { SalesActivitiesPage } from "../../features/sales/pages/sales-activities-page"
 import { SalesPortfolioPage } from "../../features/sales/pages/sales-portfolio-page"
@@ -270,6 +271,42 @@ export function AppRouter() {
                         element={
                             <RequirePermission permission={["CRM_VIEW", "CRM_MANAGE"]}>
                                 <SalesIndicatorsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/debts/banks"
+                        element={
+                            <RequirePermission permission={["DEBT_VIEW", "DEBT_MANAGE"]}>
+                                <DebtOriginPage origin="BANK" />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/debts/suppliers"
+                        element={
+                            <RequirePermission permission={["DEBT_VIEW", "DEBT_MANAGE"]}>
+                                <DebtOriginPage origin="SUPPLIER" />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/debts/taxes"
+                        element={
+                            <RequirePermission permission={["DEBT_VIEW", "DEBT_MANAGE"]}>
+                                <DebtOriginPage origin="TAX" />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/debts/third-parties"
+                        element={
+                            <RequirePermission permission={["DEBT_VIEW", "DEBT_MANAGE"]}>
+                                <DebtOriginPage origin="THIRD_PARTY" />
                             </RequirePermission>
                         }
                     />
