@@ -82,7 +82,7 @@ export function DebtOriginPage({ origin }: { origin: DebtOrigin }) {
     const { selectedCompany } = useCompanyAccess()
     return (
         <DebtOriginCompanyPage
-            key={selectedCompany?.id ?? "no-company"}
+            key={`${selectedCompany?.id ?? "no-company"}:${origin}`}
             origin={origin}
         />
     )
