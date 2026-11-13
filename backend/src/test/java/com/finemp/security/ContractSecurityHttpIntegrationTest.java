@@ -82,6 +82,31 @@ class ContractSecurityHttpIntegrationTest {
     }
 
     @Test
+    void invalidMonthlyBillingCompetenceReturnsBadRequest() throws Exception {
+        var actor = users.saveAndFlush(new UserAccount(
+                "Synthetic Billing Invalid",
+                "billing-invalid@example.invalid",
+                "hash"));
+        var company = companies.saveAndFlush(new Company(
+                "Synthetic Billing Invalid Company",
+                "55555555000181"));
+
+        grants.saveAndFlush(new CompanyAccessGrant(
+                actor,
+                company,
+                CompanyAccessRole.VIEWER,
+                CostCenterScope.ALL,
+                Set.of(CompanyPermission.CONTRACT_VIEW)));
+
+        mvc.perform(get(
+                        "/api/companies/{companyId}/contracts/billing-preview",
+                        company.getId())
+                        .with(user(new UserAccountPrincipal(actor)))
+                        .param("month", "2026-13"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void contractPartnerLookupReachesControllerForContractManager() throws Exception {
         var actor = users.saveAndFlush(new UserAccount(
                 "Synthetic Contract Manager",
