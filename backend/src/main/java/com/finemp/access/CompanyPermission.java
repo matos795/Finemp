@@ -32,5 +32,8 @@ public enum CompanyPermission {
     FINANCIAL_PERIOD_REOPEN,
 
     PLANNING_VIEW,
-    PLANNING_MANAGE
+    PLANNING_MANAGE,
+
+    CONTRACT_VIEW,
+    CONTRACT_MANAGE
 }

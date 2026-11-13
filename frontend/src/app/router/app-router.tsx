@@ -46,6 +46,7 @@ import { FINANCIAL_ENTRY_READ_PERMISSIONS } from "../../features/financial-entri
 import { PlanningMeetingsPage } from "../../features/planning/pages/planning-meetings-page"
 import { PlanningGoalsPage } from "../../features/planning/pages/planning-goals-page"
 import { PlanningActionsPage } from "../../features/planning/pages/planning-actions-page"
+import { ContractsPage } from "../../features/contracts/pages/contracts-page"
 
 export function AppRouter() {
     return (
@@ -225,6 +226,17 @@ export function AppRouter() {
                                 permission={["PLANNING_VIEW", "PLANNING_MANAGE"]}
                             >
                                 <PlanningActionsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/contracts"
+                        element={
+                            <RequirePermission
+                                permission={["CONTRACT_VIEW", "CONTRACT_MANAGE"]}
+                            >
+                                <ContractsPage />
                             </RequirePermission>
                         }
                     />

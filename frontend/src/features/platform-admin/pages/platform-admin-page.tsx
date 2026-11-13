@@ -69,6 +69,8 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
     { value: "FINANCIAL_PERIOD_REOPEN", label: "Reabrir período financeiro" },
     { value: "PLANNING_VIEW", label: "Planejamento — visualizar" },
     { value: "PLANNING_MANAGE", label: "Planejamento — gerenciar" },
+    { value: "CONTRACT_VIEW", label: "Contratos — visualizar" },
+    { value: "CONTRACT_MANAGE", label: "Contratos — gerenciar" },
 ]
 
 const READ_ONLY_PERMISSIONS = COMPANY_PERMISSION_OPTIONS

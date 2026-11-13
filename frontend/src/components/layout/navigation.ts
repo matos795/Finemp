@@ -236,7 +236,12 @@ export const navigationModules: NavigationModule[] = [
         label: "Clientes",
         icon: "ctr",
         items: [
-            { id: "ctr", label: "Contratos e reajustes" },
+            {
+                id: "ctr",
+                label: "Contratos e reajustes",
+                path: "/contracts",
+                permissions: ["CONTRACT_VIEW", "CONTRACT_MANAGE"],
+            },
             {
                 id: "ctrInad",
                 label: "Inadimplência e cobrança",
