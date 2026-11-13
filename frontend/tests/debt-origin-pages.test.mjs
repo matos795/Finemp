@@ -2,8 +2,10 @@ import { test, afterEach } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
+  createDebt,
   getDebtSchedule,
   listDebts,
+  updateDebt,
 } from "../src/features/debt/api/debts-api.ts"
 import {
   findNavigationByPath,
@@ -91,4 +93,76 @@ test("debt queries keep origin, paging and schedule on the server", async () => 
     calls[1].path,
     "/api/companies/company-1/debts/debt-1/schedule",
   )
+})
+
+
+test("debt writes preserve exact decimal text and optimistic version", async () => {
+  const calls = []
+
+  globalThis.fetch = async (path, options) => {
+    calls.push({ path, options })
+
+    if (String(path) === "/api/auth/csrf") {
+      return Response.json({
+        headerName: "X-CSRF-TOKEN",
+        token: "test-token",
+      })
+    }
+
+    return Response.json({
+      id: "debt-1",
+      companyId: "company-1",
+      businessPartnerId: "partner-1",
+      businessPartnerName: "Banco Sintético",
+      origin: "BANK",
+      description: "Capital de giro",
+      amortizationSystem: "SAC",
+      principalAmount: "1000.00",
+      installmentCount: 3,
+      inputRate: "3",
+      inputRatePeriod: "MONTHLY",
+      fixedInstallmentAmount: null,
+      effectiveMonthlyRate: "3.000000000000",
+      firstDueDate: "2026-01-31",
+      version: 7,
+      createdAt: "",
+      updatedAt: "",
+    })
+  }
+
+  const values = {
+    businessPartnerId: "partner-1",
+    origin: "BANK",
+    description: "Capital de giro",
+    amortizationSystem: "SAC",
+    principalAmount: "1000.00",
+    installmentCount: 3,
+    inputRate: "3.000000000000",
+    inputRatePeriod: "MONTHLY",
+    fixedInstallmentAmount: null,
+    firstDueDate: "2026-01-31",
+  }
+
+  await createDebt("company-1", values)
+  await updateDebt(
+    "company-1",
+    { id: "debt-1", version: 7 },
+    values,
+  )
+
+  const writes = calls.filter(
+    (call) => String(call.path) !== "/api/auth/csrf",
+  )
+
+  const createBody = JSON.parse(writes[0].options.body)
+  const updateBody = JSON.parse(writes[1].options.body)
+
+  assert.equal(typeof createBody.principalAmount, "string")
+  assert.equal(createBody.principalAmount, "1000.00")
+  assert.equal(typeof createBody.inputRate, "string")
+  assert.equal(createBody.inputRate, "3.000000000000")
+  assert.equal(createBody.expectedVersion, null)
+
+  assert.equal(typeof updateBody.principalAmount, "string")
+  assert.equal(updateBody.expectedVersion, 7)
 })
