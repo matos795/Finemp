@@ -159,6 +159,19 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/contracts/{contractId}")
                                                 .authenticated()
 
+                                                .requestMatchers(
+                                                                "/api/companies/{companyId}/opportunities",
+                                                                "/api/companies/{companyId}/opportunities/{opportunityId}",
+                                                                "/api/companies/{companyId}/opportunities/{opportunityId}/stage",
+                                                                "/api/companies/{companyId}/opportunities/{opportunityId}/status",
+                                                                "/api/companies/{companyId}/sales-activities",
+                                                                "/api/companies/{companyId}/sales-activities/{activityId}",
+                                                                "/api/companies/{companyId}/sales-activities/{activityId}/completion",
+                                                                "/api/companies/{companyId}/sales/partners",
+                                                                "/api/companies/{companyId}/sales/partners/{partnerId}/profile",
+                                                                "/api/companies/{companyId}/sales/indicators")
+                                                .authenticated()
+
 
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/result-centers",
