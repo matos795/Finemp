@@ -1,5 +1,7 @@
 package com.finemp.contracts;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,7 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
 
     boolean existsByCompanyIdAndBusinessPartnerId(UUID companyId, UUID businessPartnerId);
 
+    @EntityGraph(attributePaths = "businessPartner")
     @Query("""
             select contract
               from Contract contract
@@ -31,4 +34,34 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
             @Param("search") String search,
             @Param("active") Boolean active,
             Pageable pageable);
+
+    @EntityGraph(attributePaths = "businessPartner")
+    @Query("""
+            select contract
+              from Contract contract
+             where contract.company.id = :companyId
+               and contract.values.active = true
+               and contract.values.startDate <= :monthEnd
+               and (contract.values.endDate is null or contract.values.endDate >= :monthStart)
+            """)
+    Page<Contract> monthlyPreview(
+            @Param("companyId") UUID companyId,
+            @Param("monthStart") LocalDate monthStart,
+            @Param("monthEnd") LocalDate monthEnd,
+            Pageable pageable);
+
+    @Query("""
+            select coalesce(sum(contract.values.monthlyAmount), 0)
+              from Contract contract
+             where contract.company.id = :companyId
+               and contract.values.active = true
+               and contract.values.direction = :direction
+               and contract.values.startDate <= :monthEnd
+               and (contract.values.endDate is null or contract.values.endDate >= :monthStart)
+            """)
+    BigDecimal monthlyPreviewTotal(
+            @Param("companyId") UUID companyId,
+            @Param("direction") ContractDirection direction,
+            @Param("monthStart") LocalDate monthStart,
+            @Param("monthEnd") LocalDate monthEnd);
 }
