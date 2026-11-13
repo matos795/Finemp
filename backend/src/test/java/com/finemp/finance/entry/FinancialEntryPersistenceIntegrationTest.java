@@ -46,7 +46,7 @@ class FinancialEntryPersistenceIntegrationTest {
     @Autowired FinancialCategoryService categoryService;
     @Autowired ResultCenterService centerService;
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialEntryBankReferences") BankAccountReferenceGuard bankUsage;
-    @Autowired BusinessPartnerReferenceGuard partnerUsage;
+    @Autowired @org.springframework.beans.factory.annotation.Qualifier("financialEntryPartnerReferences") BusinessPartnerReferenceGuard partnerUsage;
     @Autowired FinancialCategoryUsageGuard categoryUsage;
     @Autowired ResultCenterUsageGuard centerUsage;
     @Autowired JdbcTemplate jdbc;
