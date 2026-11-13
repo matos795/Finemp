@@ -23,7 +23,6 @@ import type {
     DebtAmortizationSystem,
     DebtOrigin,
     DebtPartnerOption,
-    DebtRateInputPeriod,
 } from "../types/debt.types"
 
 const moneyPattern = /^\d+(?:[.,]\d{1,2})?$/
