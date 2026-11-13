@@ -51,10 +51,17 @@ public class ContractController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
 
+        YearMonth competence;
+        try {
+            competence = YearMonth.parse(month);
+        } catch (java.time.format.DateTimeParseException exception) {
+            throw new IllegalArgumentException("Competência de faturamento inválida.", exception);
+        }
+
         var report = billingPreviewService.report(
                 actor.getUserAccountId(),
                 companyId,
-                YearMonth.parse(month),
+                competence,
                 page,
                 size);
 
