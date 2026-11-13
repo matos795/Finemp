@@ -161,6 +161,14 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(
+                                                                "/api/companies/{companyId}/service-invoices",
+                                                                "/api/companies/{companyId}/service-invoices/partners",
+                                                                "/api/companies/{companyId}/service-invoices/{invoiceId}",
+                                                                "/api/companies/{companyId}/service-invoices/{invoiceId}/issuance",
+                                                                "/api/companies/{companyId}/service-invoices/{invoiceId}/cancellation")
+                                                .authenticated()
+
+                                                .requestMatchers(
                                                                 "/api/companies/{companyId}/opportunities",
                                                                 "/api/companies/{companyId}/opportunities/{opportunityId}",
                                                                 "/api/companies/{companyId}/opportunities/{opportunityId}/stage",

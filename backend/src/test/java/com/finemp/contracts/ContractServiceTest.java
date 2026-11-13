@@ -19,6 +19,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.springframework.beans.factory.ObjectProvider;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +29,7 @@ class ContractServiceTest {
     @Mock CompanyRepository companies;
     @Mock BusinessPartnerRepository partners;
     @Mock CompanyPermissionAuthorizationService permissions;
+    @Mock ObjectProvider<ContractPartnerChangeGuard> partnerChangeGuards;
 
     @Test
     void managePermissionIsRequiredForCreate() {
@@ -116,6 +118,46 @@ class ContractServiceTest {
     }
 
     @Test
+    void referencedContractCannotChangeBusinessPartner() {
+        var actor = UUID.randomUUID();
+        var companyId = UUID.randomUUID();
+        var contractId = UUID.randomUUID();
+        var currentPartnerId = UUID.randomUUID();
+        var requestedPartnerId = UUID.randomUUID();
+        var company = mock(Company.class);
+        var contract = mock(Contract.class);
+        var currentPartner = mock(BusinessPartner.class);
+        var requestedPartner = mock(BusinessPartner.class);
+        var guard = mock(ContractPartnerChangeGuard.class);
+
+        when(permissions.hasFreshPermission(actor, companyId, CompanyPermission.CONTRACT_MANAGE))
+                .thenReturn(true);
+        when(companies.findLockedById(companyId)).thenReturn(Optional.of(company));
+        when(contracts.findByIdAndCompanyId(contractId, companyId)).thenReturn(Optional.of(contract));
+        when(contract.getVersion()).thenReturn(0L);
+        when(contract.getBusinessPartner()).thenReturn(currentPartner);
+        when(currentPartner.getId()).thenReturn(currentPartnerId);
+        when(partners.findByIdAndCompanyId(requestedPartnerId, companyId))
+                .thenReturn(Optional.of(requestedPartner));
+        when(requestedPartner.getId()).thenReturn(requestedPartnerId);
+        when(partnerChangeGuards.orderedStream()).thenReturn(java.util.stream.Stream.of(guard));
+        when(guard.blocksPartnerChange(companyId, contractId)).thenReturn(true);
+
+        var error = assertThrows(
+                ContractConflictException.class,
+                () -> service().update(
+                        actor,
+                        companyId,
+                        contractId,
+                        request(requestedPartnerId, 0L)));
+
+        assertEquals(
+                ContractConflictException.Reason.REFERENCED_PARTNER_CHANGE,
+                error.reason());
+        verify(contract, never()).replace(any(), any());
+    }
+
+    @Test
     void moneyRejectsFractionsOfCent() {
         assertThrows(
                 IllegalArgumentException.class,
@@ -130,7 +172,12 @@ class ContractServiceTest {
     }
 
     private ContractService service() {
-        return new ContractService(contracts, companies, partners, permissions);
+        return new ContractService(
+                contracts,
+                companies,
+                partners,
+                permissions,
+                partnerChangeGuards);
     }
 
     private ContractRequest request(UUID partnerId, Long version) {

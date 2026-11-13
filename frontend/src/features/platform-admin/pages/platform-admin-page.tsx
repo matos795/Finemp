@@ -71,6 +71,8 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
     { value: "PLANNING_MANAGE", label: "Planejamento — gerenciar" },
     { value: "CONTRACT_VIEW", label: "Contratos — visualizar" },
     { value: "CONTRACT_MANAGE", label: "Contratos — gerenciar" },
+    { value: "BILLING_VIEW", label: "Faturamento fiscal — visualizar" },
+    { value: "BILLING_MANAGE", label: "Faturamento fiscal — gerenciar" },
     { value: "CRM_VIEW", label: "Comercial — visualizar" },
     { value: "CRM_MANAGE", label: "Comercial — gerenciar" },
 ]

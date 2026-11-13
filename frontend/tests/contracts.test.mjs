@@ -161,5 +161,7 @@ test("Contratos e reajustes is a real permission-guarded route", () => {
   assert.doesNotMatch(page, /Number\(monthlyAmount\)/)
   assert.match(page, /listContractPartnerOptions/)
   assert.match(page, /selectedPartnerMissing/)
+  assert.match(page, /CONTRACT_REFERENCED_PARTNER_CHANGE/)
+  assert.match(page, /nota fiscal vinculada/i)
   assert.match(page, /invalidateQueries\(\{[\s\S]*?queryKey: \["contracts", companyId\]/)
 })

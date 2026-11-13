@@ -5,6 +5,7 @@ import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
 import { formatExactCurrency, formatIsoDate } from "../../../lib/formatters/decimal"
 import { useCompanyPage } from "../../../lib/api/use-company-page"
+import { ApiError } from "../../../lib/api/api-client"
 import { useCompanyAccess } from "../../companies/company-access-context"
 import {
     createContract,
@@ -317,6 +318,13 @@ function ContractDialog({
 
             if (caught instanceof Error && caught.message === "VALIDATION") {
                 setError("Confira parceiro, vigência, dia de cobrança e valor mensal.")
+            } else if (
+                caught instanceof ApiError &&
+                caught.code === "CONTRACT_REFERENCED_PARTNER_CHANGE"
+            ) {
+                setError(
+                    "Este contrato possui nota fiscal vinculada. O parceiro não pode ser trocado enquanto esse vínculo existir.",
+                )
             } else if (status === 409) {
                 await queryClient.invalidateQueries({
                     queryKey: ["contracts", companyId],
