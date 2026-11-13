@@ -31,6 +31,7 @@ import { PresentationResultsPage } from "../../features/reports/pages/presentati
 import { CashVsOperationalDrePage } from "../../features/reports/pages/cash-vs-operational-dre-page"
 import { ReceivedPaymentsByMethodPage } from "../../features/reports/pages/received-payments-by-method-page"
 import { WorkingCapitalCyclePage } from "../../features/reports/pages/working-capital-cycle-page"
+import { ConsistencyDiagnosticsPage } from "../../features/reports/pages/consistency-diagnostics-page"
 import { OperationalDrePage } from "../../features/operational-dre/pages/operational-dre-page"
 import { PlatformAdminPage } from "../../features/platform-admin/pages/platform-admin-page"
 import { PlatformUsersPage } from "../../features/platform-admin/pages/platform-users-page"
@@ -467,6 +468,20 @@ export function AppRouter() {
                             >
                                 <WorkingCapitalCyclePage />
                             </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/reports/consistency"
+                        element={
+                            <RequirePermissionGroups
+                                groups={[
+                                    ["CONTRACT_VIEW", "CONTRACT_MANAGE"],
+                                    ["BILLING_VIEW", "BILLING_MANAGE"],
+                                ]}
+                            >
+                                <ConsistencyDiagnosticsPage />
+                            </RequirePermissionGroups>
                         }
                     />
 
