@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ServiceInvoiceRepository extends JpaRepository<ServiceInvoiceDraft, UUID> {
 
+    boolean existsByCompanyIdAndBusinessPartnerId(UUID companyId, UUID businessPartnerId);
+
     @EntityGraph(attributePaths = {"businessPartner", "contract"})
     Optional<ServiceInvoiceDraft> findByIdAndCompanyId(UUID id, UUID companyId);
 
