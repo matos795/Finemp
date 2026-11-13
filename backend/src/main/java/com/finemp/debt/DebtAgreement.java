@@ -64,9 +64,19 @@ public class DebtAgreement {
         this.businessPartner = businessPartner;
         this.values = values;
 
-        installments.clear();
-        for (var row : values.schedule()) {
-            installments.add(new DebtInstallment(this, row));
+        var schedule = values.schedule();
+        int common = Math.min(installments.size(), schedule.size());
+
+        for (int index = 0; index < common; index++) {
+            installments.get(index).replace(schedule.get(index));
+        }
+
+        while (installments.size() > schedule.size()) {
+            installments.remove(installments.size() - 1);
+        }
+
+        for (int index = common; index < schedule.size(); index++) {
+            installments.add(new DebtInstallment(this, schedule.get(index)));
         }
     }
 
