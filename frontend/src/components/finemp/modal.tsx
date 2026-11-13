@@ -2,6 +2,7 @@ import {
     useEffect,
     type ReactNode,
 } from "react"
+import { createPortal } from "react-dom"
 
 interface ModalProps {
     /** Largura máxima da caixa, como o genAbrir(html, largura) do protótipo. */
@@ -37,7 +38,7 @@ export function Modal({
         return () => document.removeEventListener("keydown", closeOnEscape)
     }, [onClose])
 
-    return (
+    const modal = (
         <div
             className="modal"
             role="dialog"
@@ -52,4 +53,7 @@ export function Modal({
             </div>
         </div>
     )
+
+    const shell = document.querySelector<HTMLElement>(".fin")
+    return shell ? createPortal(modal, shell) : modal
 }
