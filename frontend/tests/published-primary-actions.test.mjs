@@ -32,13 +32,13 @@ test("published invoice and opportunity buttons still open real dialog state", (
 
   assert.match(
     invoices,
-    /\+ Preparar nota[\s\S]*?setEdit|"new"/,
+    /onClick=\{\(\) => setEdit\("new"\)\}[\s\S]*?\+ Preparar nota/,
   )
   assert.match(invoices, /edit && companyId[\s\S]*?<InvoiceDraftDialog/)
 
   assert.match(
     sales,
-    /\+ Oportunidade[\s\S]*?setDialog/,
+    /onClick=\{\(\) => setDialog\(\{\}\)\}[\s\S]*?\+ Oportunidade/,
   )
   assert.match(sales, /dialog && companyId[\s\S]*?<OpportunityDialog/)
 })
