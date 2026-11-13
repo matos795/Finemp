@@ -51,6 +51,14 @@ test("invoice API keeps month, status and optimistic version explicit", async ()
   const calls = []
   globalThis.fetch = async (path, options) => {
     calls.push({ path, options })
+
+    if (String(path) === "/api/auth/csrf") {
+      return Response.json({
+        headerName: "X-CSRF-TOKEN",
+        token: "test-token",
+      })
+    }
+
     return Response.json({
       items: [],
       page: 0,
