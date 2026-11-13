@@ -348,7 +348,7 @@ function OpportunityDialog({
     const [responsible, setResponsible] = useState(opportunity?.responsible ?? "")
     const [expectedCloseOn, setExpectedCloseOn] =
         useState(opportunity?.expectedCloseOn ?? "")
-    const [notes, setNotes] = useState("")
+    const [notes, setNotes] = useState<string | null>(null)
     const [error, setError] = useState("")
 
     const detail = useQuery({
@@ -358,9 +358,6 @@ function OpportunityDialog({
         retry: false,
     })
 
-    useEffect(() => {
-        if (detail.data) setNotes(detail.data.notes ?? "")
-    }, [detail.data])
 
     const partners = useQuery({
         queryKey: ["sales-partners", companyId, partnerSearch] as const,
@@ -393,7 +390,7 @@ function OpportunityDialog({
                 probability: probabilityNumber,
                 responsible: responsible.trim(),
                 expectedCloseOn: expectedCloseOn || null,
-                notes: notes.trim() || null,
+                notes: (notes ?? detail.data?.notes ?? "").trim() || null,
             }
 
             if (opportunity && !detail.data) {
@@ -543,7 +540,7 @@ function OpportunityDialog({
                         <textarea
                             id="opportunityNotes"
                             maxLength={4000}
-                            value={notes}
+                            value={notes ?? detail.data?.notes ?? ""}
                             onChange={(event) => setNotes(event.target.value)}
                         />
                     </div>
