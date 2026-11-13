@@ -10,6 +10,7 @@ import type {
 import type { AccountBalancesReport } from "../types/account-balances.types.ts"
 import type { CashVsDreReport } from "../types/cash-vs-dre.types.ts"
 import type { ReceivedPaymentsByMethodReport } from "../types/received-payments.types.ts"
+import type { WorkingCapitalCycleReport } from "../types/working-capital-cycle.types.ts"
 import type {
     DailyCashTotals,
     MonthlyCashCategoryTotalsPage,
@@ -217,6 +218,24 @@ export async function getCashVsOperationalDre(
 
     return apiRequest<CashVsDreReport>(
         `${reportsPath(companyId)}/cash-vs-dre?${params}`,
+        { cache: "no-store" },
+    )
+}
+
+
+/** Ciclo financeiro homologado; todos os cálculos e agregados vêm do backend. */
+export async function getWorkingCapitalCycle(
+    companyId: string,
+    months: 1 | 3 | 6 | 12,
+    pmeDays: number,
+): Promise<WorkingCapitalCycleReport> {
+    const params = new URLSearchParams({
+        months: String(months),
+        pmeDays: String(pmeDays),
+    })
+
+    return apiRequest<WorkingCapitalCycleReport>(
+        `${reportsPath(companyId)}/working-capital-cycle?${params}`,
         { cache: "no-store" },
     )
 }
