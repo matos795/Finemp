@@ -27,7 +27,7 @@ class WorkingCapitalCycleCalculatorTest {
         assertThat(result.inventoryDays()).isEqualByComparingTo("5.00");
         assertThat(result.operatingCycleDays()).isEqualByComparingTo("22.50");
         assertThat(result.financialCycleDays()).isEqualByComparingTo("10.50");
-        assertThat(result.dailyRevenue()).isEqualByComparingTo("13.3333333333");
+        assertThat(result.dailyRevenue()).isEqualByComparingTo("13.33");
         assertThat(result.cycleWorkingCapital()).isEqualByComparingTo("140.00");
     }
 
@@ -46,7 +46,7 @@ class WorkingCapitalCycleCalculatorTest {
         assertThat(result.operatingCycleDays()).isNull();
         assertThat(result.financialCycleDays()).isNull();
         assertThat(result.cycleWorkingCapital()).isNull();
-        assertThat(result.dailyRevenue()).isEqualByComparingTo("0.0000000000");
+        assertThat(result.dailyRevenue()).isEqualByComparingTo("0.00");
     }
 
     @Test
