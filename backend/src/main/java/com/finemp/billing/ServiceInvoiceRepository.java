@@ -12,6 +12,8 @@ public interface ServiceInvoiceRepository extends JpaRepository<ServiceInvoiceDr
 
     boolean existsByCompanyIdAndBusinessPartnerId(UUID companyId, UUID businessPartnerId);
 
+    boolean existsByCompanyIdAndContractId(UUID companyId, UUID contractId);
+
     @EntityGraph(attributePaths = {"businessPartner", "contract"})
     Optional<ServiceInvoiceDraft> findByIdAndCompanyId(UUID id, UUID companyId);
 
