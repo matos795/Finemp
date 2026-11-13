@@ -97,7 +97,7 @@
 .fin .seg button{background:transparent;border:0;color:#fff;padding:7px 16px;font:700 14px Barlow,sans-serif;cursor:pointer}
 .fin .seg button.on.e{background:var(--ok);color:#00142e}
 .fin .seg button.on.s{background:var(--bad)}
-.fin #toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:90}
+.fin #toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:220}
 .fin .toast{background:var(--pn);border:1px solid var(--gold);border-radius:10px;padding:10px 14px;max-width:340px;font-size:14px}
 .fin .toast.e{border-color:var(--bad)}
 .fin .lst{list-style:none;padding:0;margin:0}
