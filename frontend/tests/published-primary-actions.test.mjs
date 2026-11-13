@@ -74,3 +74,30 @@ test("shared modal portals into the FINEMP shell", () => {
   assert.match(modal, /querySelector<HTMLElement>\("\.fin"\)/)
   assert.match(modal, /createPortal\(modal, shell\)/)
 })
+
+
+test("mutation dialogs keep Escape disabled while a save is pending", () => {
+  const mutationPages = [
+    "../src/features/billing/pages/service-invoices-page.tsx",
+    "../src/features/contracts/pages/contracts-page.tsx",
+    "../src/features/debt/pages/debt-origin-page.tsx",
+    "../src/features/sales/pages/sales-activities-page.tsx",
+    "../src/features/sales/pages/sales-pipeline-page.tsx",
+  ]
+
+  for (const path of mutationPages) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8")
+    assert.match(source, /onClose=\{save\.isPending \? undefined : onClose\}/)
+  }
+
+  const planningPages = [
+    "../src/features/planning/pages/planning-actions-page.tsx",
+    "../src/features/planning/pages/planning-goals-page.tsx",
+    "../src/features/planning/pages/planning-meetings-page.tsx",
+  ]
+
+  for (const path of planningPages) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8")
+    assert.match(source, /onClose=\{busy \? undefined :/)
+  }
+})
