@@ -46,6 +46,30 @@ class ContractServiceTest {
     }
 
     @Test
+    void contractManagerCanUseTheNarrowPartnerLookupWithoutPartnerPermissions() {
+        var actor = UUID.randomUUID();
+        var companyId = UUID.randomUUID();
+
+        when(permissions.hasFreshPermission(actor, companyId, CompanyPermission.CONTRACT_MANAGE))
+                .thenReturn(true);
+        when(partners.searchActiveLookup(eq(companyId), eq("cliente"), any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        var result = service().listPartnerOptions(actor, companyId, " cliente ", 0, 50);
+
+        assertTrue(result.items().isEmpty());
+        verify(partners).searchActiveLookup(eq(companyId), eq("cliente"), any());
+        verify(permissions, never()).hasFreshPermission(
+                actor,
+                companyId,
+                CompanyPermission.BUSINESS_PARTNER_VIEW);
+        verify(permissions, never()).hasFreshPermission(
+                actor,
+                companyId,
+                CompanyPermission.BUSINESS_PARTNER_MANAGE);
+    }
+
+    @Test
     void partnerMustBelongToSameCompany() {
         var actor = UUID.randomUUID();
         var companyId = UUID.randomUUID();
