@@ -41,6 +41,9 @@ test("opportunity money remains exact text and partner lookup is CRM-scoped", as
   const calls = []
   globalThis.fetch = async (path, options) => {
     calls.push({ path, options })
+    if (String(path) === "/api/auth/csrf") {
+      return Response.json({ headerName: "X-CSRF-TOKEN", token: "test-token" })
+    }
     if (String(path).includes("/sales/partners")) {
       return Response.json({
         items: [],
@@ -84,11 +87,20 @@ test("opportunity money remains exact text and partner lookup is CRM-scoped", as
   })
   await listSalesPartnerOptions("company-1", "cliente")
 
-  const body = JSON.parse(calls[0].options.body)
+  const createCall = calls.find((call) =>
+    String(call.path) === "/api/companies/company-1/opportunities"
+  )
+  const partnerCall = calls.find((call) =>
+    String(call.path).includes("/sales/partners?")
+  )
+  assert.ok(createCall)
+  assert.ok(partnerCall)
+
+  const body = JSON.parse(createCall.options.body)
   assert.equal(body.monthlyAmount, "1234.56")
   assert.equal(typeof body.monthlyAmount, "string")
   assert.equal(
-    calls[1].path,
+    partnerCall.path,
     "/api/companies/company-1/sales/partners?page=0&size=50&search=cliente",
   )
 })
