@@ -284,6 +284,7 @@ function ServiceInvoicesCompanyPage() {
                         await invalidate()
                         toast("Nota fiscal salva.")
                     }}
+                    onConflict={invalidate}
                 />
             ) : null}
 
@@ -322,12 +323,14 @@ function InvoiceDraftDialog({
     defaultMonth,
     onClose,
     onSaved,
+    onConflict,
 }: {
     companyId: string
     invoice?: ServiceInvoice
     defaultMonth: string
     onClose: () => void
     onSaved: () => Promise<void>
+    onConflict: () => Promise<void>
 }) {
     const [partnerSearch, setPartnerSearch] = useState("")
     const [businessPartnerId, setBusinessPartnerId] =
@@ -407,9 +410,10 @@ function InvoiceDraftDialog({
                 : createServiceInvoice(companyId, values)
         },
         onSuccess: () => onSaved(),
-        onError: (caught) => {
+        onError: async (caught) => {
             if (caught instanceof ApiError && caught.status === 409) {
-                setError("Este rascunho foi alterado. Feche e abra novamente.")
+                await onConflict()
+                setError("Este rascunho foi alterado. A lista foi atualizada; feche e abra novamente.")
                 return
             }
             setError(caught instanceof Error ? caught.message : "Não foi possível salvar.")
