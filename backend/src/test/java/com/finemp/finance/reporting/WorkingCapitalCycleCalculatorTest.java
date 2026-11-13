@@ -41,6 +41,7 @@ class WorkingCapitalCycleCalculatorTest {
         assertThat(report.receivables().interest()).isEqualByComparingTo("10.00");
         assertThat(report.receivables().openAmount()).isEqualByComparingTo("300.00");
         assertThat(report.receivables().overdueAmount()).isEqualByComparingTo("300.00");
+        assertThat(report.receivables().overduePercent()).isEqualByComparingTo("100.00");
 
         assertThat(report.payables().grantedDays()).isEqualByComparingTo("15.00");
         assertThat(report.payables().realDays()).isEqualByComparingTo("16.88");
