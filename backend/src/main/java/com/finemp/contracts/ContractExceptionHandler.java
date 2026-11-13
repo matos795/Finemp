@@ -34,8 +34,14 @@ public class ContractExceptionHandler {
 
     @ExceptionHandler(ContractConflictException.class)
     ProblemDetail conflict(ContractConflictException exception) {
-        return ProblemDetail.forStatusAndDetail(
+        var detail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
                 exception.getMessage());
+        detail.setProperty(
+                "code",
+                exception.reason() == ContractConflictException.Reason.REFERENCED_PARTNER_CHANGE
+                        ? "CONTRACT_REFERENCED_PARTNER_CHANGE"
+                        : "CONTRACT_STALE_VERSION");
+        return detail;
     }
 }

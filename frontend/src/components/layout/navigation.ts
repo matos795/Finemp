@@ -290,7 +290,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/clients/monthly-billing",
                 permissions: ["CONTRACT_VIEW", "CONTRACT_MANAGE"],
             },
-            { id: "nf", label: "Notas fiscais" },
+            {
+                id: "nf",
+                label: "Notas fiscais",
+                path: "/clients/service-invoices",
+                permissions: ["BILLING_VIEW", "BILLING_MANAGE"],
+            },
         ],
     },
     {
