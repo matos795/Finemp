@@ -110,7 +110,8 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/financial-reports/account-balances",
                                                                 "/api/companies/{companyId}/financial-reports/received-by-method",
                                                                 "/api/companies/{companyId}/financial-reports/cash-vs-dre",
-                                                                "/api/companies/{companyId}/financial-reports/working-capital-cycle")
+                                                                "/api/companies/{companyId}/financial-reports/working-capital-cycle",
+                                                                "/api/companies/{companyId}/financial-reports/diagnostics")
                                                 .authenticated()
 
                                                 .requestMatchers(HttpMethod.GET,
