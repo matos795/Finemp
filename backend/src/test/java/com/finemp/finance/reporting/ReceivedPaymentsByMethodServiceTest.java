@@ -74,7 +74,7 @@ class ReceivedPaymentsByMethodServiceTest {
                                 && sql.contains("direction='INCOME'")
                                 && sql.contains("payment_date BETWEEN :from AND :to")
                                 && sql.contains("payment_date IS NOT NULL")),
-                argThat(params ->
+                argThat((org.springframework.jdbc.core.namedparam.SqlParameterSource params) ->
                         company.equals(params.getValue("company"))
                                 && LocalDate.of(2026, 11, 1).equals(params.getValue("from"))
                                 && LocalDate.of(2026, 11, 30).equals(params.getValue("to"))),
