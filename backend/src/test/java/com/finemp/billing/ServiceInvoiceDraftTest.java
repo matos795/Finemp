@@ -11,6 +11,24 @@ import org.junit.jupiter.api.Test;
 class ServiceInvoiceDraftTest {
 
     @Test
+    void rateMultiplesOfTenKeepPlainDecimalScale() {
+        var values = new ServiceInvoiceDraftValues(
+                LocalDate.of(2026, 11, 1),
+                "Prestação de serviços",
+                new BigDecimal("1000.00"),
+                new BigDecimal("10.0000"),
+                true,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO);
+
+        assertThat(values.issRate().toPlainString()).isEqualTo("10");
+        assertThat(values.issRate().scale()).isZero();
+    }
+
+    @Test
     void issuedDraftBecomesImmutableAndKeepsInvoiceNumber() {
         var draft = draft();
 
