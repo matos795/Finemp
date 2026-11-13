@@ -29,8 +29,8 @@ public class SalesExceptionHandler {
                 exception.getMessage());
     }
 
-    @ExceptionHandler(SalesConflictException.class)
-    ProblemDetail conflict(SalesConflictException exception) {
+    @ExceptionHandler({SalesConflictException.class, SalesRelationshipConflictException.class})
+    ProblemDetail conflict(RuntimeException exception) {
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
                 exception.getMessage());
