@@ -57,6 +57,31 @@ class ContractSecurityHttpIntegrationTest {
     }
 
     @Test
+    void contractViewerReachesMonthlyBillingPreview() throws Exception {
+        var actor = users.saveAndFlush(new UserAccount(
+                "Synthetic Billing Viewer",
+                "billing-viewer@example.invalid",
+                "hash"));
+        var company = companies.saveAndFlush(new Company(
+                "Synthetic Billing Company",
+                "55555555000180"));
+
+        grants.saveAndFlush(new CompanyAccessGrant(
+                actor,
+                company,
+                CompanyAccessRole.VIEWER,
+                CostCenterScope.ALL,
+                Set.of(CompanyPermission.CONTRACT_VIEW)));
+
+        mvc.perform(get(
+                        "/api/companies/{companyId}/contracts/billing-preview",
+                        company.getId())
+                        .with(user(new UserAccountPrincipal(actor)))
+                        .param("month", "2026-11"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void contractPartnerLookupReachesControllerForContractManager() throws Exception {
         var actor = users.saveAndFlush(new UserAccount(
                 "Synthetic Contract Manager",
