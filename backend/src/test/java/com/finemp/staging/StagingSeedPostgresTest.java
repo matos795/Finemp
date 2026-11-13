@@ -246,6 +246,44 @@ class StagingSeedPostgresTest {
         }
         try(var c=connect()){assertThat(platform(c)).containsExactlyElementsOf(PLATFORM);}
     }
+    @Test void systemAdminGrantsOnlySystemAdminFromEmptyStateAndRetryIsNoop() throws Exception {
+        try(var c=connect()) {
+            StagingSeed.provision(c,HASH);
+            String credentials=credentials(c),access=accessSnapshot(c);
+            assertThat(StagingSeed.grantSyntheticSystemAdmin(c)).isTrue();
+            assertThat(platform(c)).containsExactly("SYSTEM_ADMIN");
+            assertThat(StagingSeed.grantSyntheticSystemAdmin(c)).isFalse();
+            assertThat(platform(c)).containsExactly("SYSTEM_ADMIN");
+            assertThat(credentials(c)).isEqualTo(credentials);
+            assertThat(accessSnapshot(c)).isEqualTo(access);
+        }
+    }
+
+    @Test void systemAdminCanExtendTheExactLimitedPlatformAdminState() throws Exception {
+        try(var c=connect()) {
+            StagingSeed.provision(c,HASH);
+            assertThat(StagingSeed.grantSyntheticPlatformAdmin(c)).isTrue();
+            assertThat(StagingSeed.grantSyntheticSystemAdmin(c)).isTrue();
+            assertThat(platform(c)).containsExactly(
+                    "ACCOUNTING_FIRM_CREATE",
+                    "ACCOUNTING_FIRM_VIEW",
+                    "PLATFORM_USER_MANAGE",
+                    "SYSTEM_ADMIN",
+                    "UNASSIGNED_COMPANY_ASSIGN");
+            assertThat(StagingSeed.grantSyntheticSystemAdmin(c)).isFalse();
+        }
+    }
+
+    @Test void systemAdminRefusesDivergentPlatformPermissionsWithoutRepair() throws Exception {
+        try(var c=connect()) {
+            StagingSeed.provision(c,HASH);
+            addPlatform(c,"ACCOUNTING_FIRM_VIEW");
+            var before=platform(c);
+            assertThatThrownBy(()->StagingSeed.grantSyntheticSystemAdmin(c)).isInstanceOf(SQLException.class);
+            assertThat(platform(c)).isEqualTo(before);
+        }
+    }
+
     @Test void platformAdminRefusesAnOpenCallerTransaction() throws Exception {
         try(var c=connect()) {
             StagingSeed.provision(c,HASH);c.setAutoCommit(false);

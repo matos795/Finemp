@@ -103,6 +103,55 @@ final class StagingSeed {
         finally {connection.setAutoCommit(true);}
     }
 
+
+
+    /**
+     * Grants SYSTEM_ADMIN only to the deterministic synthetic staging operator.
+     * Existing platform state must be either empty, the exact limited
+     * PLATFORM_ADMIN set, or one of those states plus SYSTEM_ADMIN on retry.
+     * Divergent permission sets are refused instead of repaired.
+     */
+    static boolean grantSyntheticSystemAdmin(Connection connection) throws SQLException {
+        if(!connection.getAutoCommit()) throw new IllegalArgumentException("Invalid staging seed context");
+        connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        connection.setAutoCommit(false);
+        try {
+            execute(connection,"SET LOCAL lock_timeout='10s'");
+            execute(connection,"SET LOCAL statement_timeout='30s'");
+            execute(connection,"SELECT pg_advisory_xact_lock(534826201)");
+            execute(connection,"LOCK TABLE user_accounts,user_account_platform_permissions,staging_seed_receipts IN SHARE ROW EXCLUSIVE MODE");
+            require(connection,"SELECT count(*) FROM staging_seed_receipts WHERE seed_key=? AND company_id=? AND user_id=?",1,KEY,id("company"),id("user"));
+            require(connection,"SELECT count(*) FROM user_accounts WHERE id=? AND email='demo@finemp.example.invalid' AND active=true AND invitation_pending=false",1,id("user"));
+
+            var current=new java.util.TreeSet<String>();
+            try(var query=connection.prepareStatement("SELECT permission FROM user_account_platform_permissions WHERE user_account_id=?")) {
+                query.setObject(1,id("user"));
+                try(var rows=query.executeQuery()){while(rows.next())current.add(rows.getString(1));}
+            }
+
+            var limited=new java.util.TreeSet<>(PLATFORM_ADMIN);
+            var systemOnly=new java.util.TreeSet<>(java.util.List.of("SYSTEM_ADMIN"));
+            var limitedPlusSystem=new java.util.TreeSet<>(PLATFORM_ADMIN);
+            limitedPlusSystem.add("SYSTEM_ADMIN");
+
+            if(current.equals(systemOnly) || current.equals(limitedPlusSystem)) {
+                connection.commit();
+                return false;
+            }
+            if(!current.isEmpty() && !current.equals(limited))
+                throw new SQLException("Synthetic platform permissions diverge; refusing to repair");
+
+            execute(connection,"INSERT INTO user_account_platform_permissions(user_account_id,permission) VALUES(?,'SYSTEM_ADMIN')",id("user"));
+            connection.commit();
+            return true;
+        } catch(SQLException|RuntimeException ex) {
+            connection.rollback();
+            throw ex;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
     /** Explicit negative-access fixture; never changes the existing operator or its grants. */
     static boolean provisionIsolationCompany(Connection connection) throws SQLException {
         if(!connection.getAutoCommit()) throw new IllegalArgumentException("Invalid staging seed context");
