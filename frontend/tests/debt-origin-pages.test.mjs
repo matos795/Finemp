@@ -42,6 +42,7 @@ test("four debt origins are real permission-guarded routes", () => {
     assert.match(router, new RegExp(`path="${path}"[\\s\\S]*?origin="${origin}"`))
   }
 
+  assert.ok(page.includes('key={\`\${selectedCompany?.id ?? "no-company"}:\${origin}\`}'))
   assert.match(page, /getDebtSchedule/)
   assert.match(page, /installment\.interestAmount/)
   assert.match(page, /installment\.amortizationAmount/)
