@@ -16,7 +16,7 @@ export function SalesPortfolioPage() {
     const partners = useQuery({
         queryKey: ["sales-portfolio-partners", companyId, search] as const,
         queryFn: ({ signal }) =>
-            listSalesPartnerOptions(companyId!, search, signal),
+            listSalesPartnerOptions(companyId!, search, signal, true),
         enabled: Boolean(companyId),
         retry: false,
     })
