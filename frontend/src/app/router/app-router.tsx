@@ -48,6 +48,10 @@ import { PlanningMeetingsPage } from "../../features/planning/pages/planning-mee
 import { PlanningGoalsPage } from "../../features/planning/pages/planning-goals-page"
 import { PlanningActionsPage } from "../../features/planning/pages/planning-actions-page"
 import { ContractsPage } from "../../features/contracts/pages/contracts-page"
+import { SalesPipelinePage } from "../../features/sales/pages/sales-pipeline-page"
+import { SalesActivitiesPage } from "../../features/sales/pages/sales-activities-page"
+import { SalesPortfolioPage } from "../../features/sales/pages/sales-portfolio-page"
+import { SalesIndicatorsPage } from "../../features/sales/pages/sales-indicators-page"
 
 export function AppRouter() {
     return (
@@ -227,6 +231,42 @@ export function AppRouter() {
                                 permission={["PLANNING_VIEW", "PLANNING_MANAGE"]}
                             >
                                 <PlanningActionsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/sales/pipeline"
+                        element={
+                            <RequirePermission permission={["CRM_VIEW", "CRM_MANAGE"]}>
+                                <SalesPipelinePage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/sales/activities"
+                        element={
+                            <RequirePermission permission={["CRM_VIEW", "CRM_MANAGE"]}>
+                                <SalesActivitiesPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/sales/portfolio"
+                        element={
+                            <RequirePermission permission={["CRM_VIEW", "CRM_MANAGE"]}>
+                                <SalesPortfolioPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/sales/indicators"
+                        element={
+                            <RequirePermission permission={["CRM_VIEW", "CRM_MANAGE"]}>
+                                <SalesIndicatorsPage />
                             </RequirePermission>
                         }
                     />
