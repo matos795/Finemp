@@ -169,7 +169,12 @@ function CompanyActivities() {
                                 {items.map((activity) => (
                                     <tr key={activity.id}>
                                         <td>{formatIsoDate(activity.dueOn)}</td>
-                                        <td><b>{activity.subject}</b></td>
+                                        <td>
+                                            <b>{activity.subject}</b>
+                                            {activity.notes ? (
+                                                <div className="help">{activity.notes}</div>
+                                            ) : null}
+                                        </td>
                                         <td>{activity.businessPartnerName ?? "—"}</td>
                                         <td>{activity.opportunityTitle ?? "—"}</td>
                                         <td>{activity.responsible}</td>
