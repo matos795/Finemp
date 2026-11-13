@@ -148,3 +148,51 @@ rollback tardio, concorrência e preservação de senha, credenciais, grants
 financeiros e Companies. O teste HTTP faz login normal do mesmo operador antes
 (sem Administração, 403) e depois da elevação (as quatro permissões em
 `/api/auth/me` e `/api/admin/**` 200), sem grant de escritório.
+
+
+## Elevação explícita do operador sintético a SYSTEM_ADMIN
+
+Para homologar a navegação completa e as superfícies Company-scoped recém-publicadas,
+o provisionador também oferece um modo separado do `--platform-admin`:
+
+```text
+java -jar /app/staging-provisioner.jar --system-admin
+```
+
+Esse modo existe porque `--platform-admin` continua deliberadamente restrito às
+quatro permissões administrativas usadas nos testes de identidade. Não ampliar esse
+modo por conveniência preserva o contrato da #334.
+
+### Confirmação própria
+
+O modo exige:
+
+- `FINEMP_STAGING_SYSTEM_ADMIN_CONFIRM=GRANT_SYNTHETIC_STAGING_SYSTEM_ADMIN`;
+- os mesmos guards de projeto, ambiente, profiles e datasource privado;
+- o marker `finemp-synthetic-v1` e a identidade determinística do operador.
+
+A confirmação de `--system-admin` não autoriza fixture, reset de senha ou
+`--platform-admin`, e as confirmações desses modos não autorizam SYSTEM_ADMIN.
+
+### Efeito
+
+O comando adiciona somente `SYSTEM_ADMIN` ao operador sintético. Ele aceita como
+estado inicial apenas:
+
+1. nenhuma permissão de plataforma; ou
+2. exatamente as quatro permissões do modo `--platform-admin`.
+
+Depois da elevação, retry com `SYSTEM_ADMIN` sozinho ou com as quatro permissões
+anteriores + `SYSTEM_ADMIN` é no-op. Qualquer conjunto divergente é recusado sem
+reparo automático.
+
+Senha, `credentials_version`, Companies, grants financeiros, escritório e dados
+de negócio não são modificados.
+
+Com `SYSTEM_ADMIN`, o `/api/auth/me` retorna todas as Companies existentes no
+staging e o frontend pode homologar a navegação completa. Esse modo é exclusivo
+para o operador sintético de staging e nunca deve ser usado em production.
+
+Após a execução, remover
+`FINEMP_STAGING_SYSTEM_ADMIN_CONFIRM` do ambiente e reiniciar o serviço para
+retirar a confirmação do processo.
