@@ -44,6 +44,8 @@ export type CompanyPermission =
     | "CONTRACT_MANAGE"
     | "BILLING_VIEW"
     | "BILLING_MANAGE"
+    | "DEBT_VIEW"
+    | "DEBT_MANAGE"
     | "CRM_VIEW"
     | "CRM_MANAGE"
 

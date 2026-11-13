@@ -60,6 +60,8 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
     { value: "CONTRACT_MANAGE", label: "Contratos — gerenciar" },
     { value: "BILLING_VIEW", label: "Faturamento fiscal — visualizar" },
     { value: "BILLING_MANAGE", label: "Faturamento fiscal — gerenciar" },
+    { value: "DEBT_VIEW", label: "Endividamento — visualizar" },
+    { value: "DEBT_MANAGE", label: "Endividamento — gerenciar" },
     { value: "CRM_VIEW", label: "Comercial / CRM — visualizar" },
     { value: "CRM_MANAGE", label: "Comercial / CRM — gerenciar" },
 ]
