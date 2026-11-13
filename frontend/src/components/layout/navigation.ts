@@ -284,7 +284,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/clients/receipts-by-method",
                 permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
             },
-            { id: "fatMes", label: "Faturamento do mês" },
+            {
+                id: "fatMes",
+                label: "Faturamento do mês",
+                path: "/clients/monthly-billing",
+                permissions: ["CONTRACT_VIEW", "CONTRACT_MANAGE"],
+            },
             { id: "nf", label: "Notas fiscais" },
         ],
     },
