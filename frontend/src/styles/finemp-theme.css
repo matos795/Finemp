@@ -85,7 +85,7 @@
 .fin .alert.w{background:rgba(240,179,35,.12);border-color:rgba(240,179,35,.5)}
 .fin .alert.e{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.5)}
 .fin .alert.i{background:rgba(93,173,236,.12);border-color:rgba(93,173,236,.5)}
-.fin .modal{position:fixed;inset:0;background:rgba(0,5,30,.78);display:flex;align-items:flex-start;justify-content:center;z-index:50;padding:24px var(--g);overflow:auto}
+.fin .modal{position:fixed;inset:0;background:rgba(0,5,30,.78);display:flex;align-items:flex-start;justify-content:center;z-index:200;padding:24px var(--g);overflow:auto}
 .fin .mbox{background:var(--pn);border:1px solid var(--gold);border-radius:14px;padding:18px;width:min(760px,100%)}
 .fin .mbox h2{color:var(--gold);margin-bottom:12px;font-size:22px}
 .fin .fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
