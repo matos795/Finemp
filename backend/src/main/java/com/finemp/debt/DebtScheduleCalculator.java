@@ -252,7 +252,7 @@ public final class DebtScheduleCalculator {
         }
         BigDecimal compact = value.signum() == 0 ? BigDecimal.ZERO : value.stripTrailingZeros();
         if (compact.scale() < 0) compact = compact.setScale(0);
-        if (compact.compareTo(new BigDecimal("10000")) > 0 || compact.scale() > 12) {
+        if (compact.compareTo(new BigDecimal("10000")) > 0 || compact.scale() > 24) {
             throw invalid();
         }
         return compact;
