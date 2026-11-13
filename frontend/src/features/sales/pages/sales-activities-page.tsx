@@ -330,7 +330,7 @@ function ActivityDialog({
         !opportunityItems.some((opportunity) => opportunity.id === selectedOpportunity.id)
 
     return (
-        <Modal onClose={onClose} labelledBy="activityDialogTitle">
+        <Modal onClose={save.isPending ? undefined : onClose} labelledBy="activityDialogTitle">
                 <h2 id="activityDialogTitle">Novo follow-up</h2>
 
                 <div className="fg">
