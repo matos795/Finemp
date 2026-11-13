@@ -11,6 +11,7 @@ import com.finemp.finance.partner.BusinessPartner;
 import com.finemp.finance.partner.BusinessPartnerRepository;
 import java.math.BigDecimal;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -25,16 +26,19 @@ public class ContractService {
     private final CompanyRepository companies;
     private final BusinessPartnerRepository partners;
     private final CompanyPermissionAuthorizationService permissions;
+    private final ObjectProvider<ContractPartnerChangeGuard> partnerChangeGuards;
 
     public ContractService(
             ContractRepository contracts,
             CompanyRepository companies,
             BusinessPartnerRepository partners,
-            CompanyPermissionAuthorizationService permissions) {
+            CompanyPermissionAuthorizationService permissions,
+            ObjectProvider<ContractPartnerChangeGuard> partnerChangeGuards) {
         this.contracts = contracts;
         this.companies = companies;
         this.partners = partners;
         this.permissions = permissions;
+        this.partnerChangeGuards = partnerChangeGuards;
     }
 
     public PagedResponse<ContractResponse> list(
@@ -124,6 +128,13 @@ public class ContractService {
         }
 
         BusinessPartner partner = partner(companyId, request.businessPartnerId());
+        UUID currentPartnerId = contract.getBusinessPartner().getId();
+        if (!currentPartnerId.equals(partner.getId())
+                && partnerChangeGuards.orderedStream()
+                        .anyMatch(guard -> guard.blocksPartnerChange(companyId, contractId))) {
+            throw new ContractConflictException(
+                    ContractConflictException.Reason.REFERENCED_PARTNER_CHANGE);
+        }
         contract.replace(partner, values(request));
         contracts.flush();
 
