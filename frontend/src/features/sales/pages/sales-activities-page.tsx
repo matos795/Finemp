@@ -256,6 +256,8 @@ function ActivityDialog({
     const [businessPartnerId, setBusinessPartnerId] = useState("")
     const [selectedPartner, setSelectedPartner] = useState<SalesPartnerOption | null>(null)
     const [opportunityId, setOpportunityId] = useState("")
+    const [selectedOpportunity, setSelectedOpportunity] =
+        useState<OpportunitySummary | null>(null)
     const [opportunitySearch, setOpportunitySearch] = useState("")
     const [opportunityPage, setOpportunityPage] = useState(0)
     const [error, setError] = useState("")
@@ -317,6 +319,9 @@ function ActivityDialog({
     const selectedMissing =
         selectedPartner &&
         !partnerItems.some((partner) => partner.id === selectedPartner.id)
+    const selectedOpportunityMissing =
+        selectedOpportunity &&
+        !opportunityItems.some((opportunity) => opportunity.id === selectedOpportunity.id)
 
     return (
         <div className="modal" role="presentation">
@@ -411,9 +416,25 @@ function ActivityDialog({
                         <select
                             id="activityOpportunity"
                             value={opportunityId}
-                            onChange={(event) => setOpportunityId(event.target.value)}
+                            onChange={(event) => {
+                                const id = event.target.value
+                                setOpportunityId(id)
+                                if (!id) {
+                                    setSelectedOpportunity(null)
+                                    return
+                                }
+                                const opportunity = opportunityItems.find(
+                                    (candidate) => candidate.id === id,
+                                )
+                                if (opportunity) setSelectedOpportunity(opportunity)
+                            }}
                         >
                             <option value="">Sem oportunidade</option>
+                            {selectedOpportunityMissing ? (
+                                <option value={selectedOpportunity.id}>
+                                    {selectedOpportunity.title}
+                                </option>
+                            ) : null}
                             {opportunityItems.map((opportunity) => (
                                 <option key={opportunity.id} value={opportunity.id}>
                                     {opportunity.title}
