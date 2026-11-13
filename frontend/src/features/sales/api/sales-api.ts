@@ -162,12 +162,14 @@ export async function listSalesPartnerOptions(
     companyId: string,
     search: string,
     signal?: AbortSignal,
+    includeInactive = false,
 ): Promise<PageResponse<SalesPartnerOption>> {
     const params = new URLSearchParams({
         page: "0",
         size: String(PAGE_SIZE),
     })
     if (search.trim()) params.set("search", search.trim())
+    if (includeInactive) params.set("includeInactive", "true")
 
     return apiRequest(
         `${companyPath(companyId)}/sales/partners?${params}`,
