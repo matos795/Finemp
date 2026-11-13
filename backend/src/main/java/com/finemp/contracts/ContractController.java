@@ -36,6 +36,22 @@ public class ContractController {
                 size);
     }
 
+    @GetMapping("/partners")
+    public PagedResponse<ContractPartnerOptionResponse> partnerOptions(
+            @AuthenticationPrincipal UserAccountPrincipal actor,
+            @PathVariable UUID companyId,
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        return service.listPartnerOptions(
+                actor.getUserAccountId(),
+                companyId,
+                search,
+                page,
+                size);
+    }
+
     @GetMapping("/{contractId}")
     public ContractResponse find(
             @AuthenticationPrincipal UserAccountPrincipal actor,
