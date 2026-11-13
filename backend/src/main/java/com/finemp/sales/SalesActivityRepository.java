@@ -46,4 +46,9 @@ public interface SalesActivityRepository extends JpaRepository<SalesActivity, UU
             @Param("today") LocalDate today);
 
     boolean existsByCompanyIdAndBusinessPartnerId(UUID companyId, UUID businessPartnerId);
+
+    boolean existsByCompanyIdAndOpportunityIdAndBusinessPartnerIdNot(
+            UUID companyId,
+            UUID opportunityId,
+            UUID businessPartnerId);
 }
