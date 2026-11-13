@@ -19,7 +19,8 @@ public final class StagingProvisioningMain {
         PROVISION(null,"FINEMP_STAGING_SEED_CONFIRM","PROVISION_SYNTHETIC_STAGING",true),
         ISOLATION_COMPANY("--isolation-company","FINEMP_STAGING_SEED_CONFIRM","PROVISION_SYNTHETIC_STAGING",false),
         RESET_PASSWORD("--reset-password","FINEMP_STAGING_SEED_CONFIRM","PROVISION_SYNTHETIC_STAGING",true),
-        PLATFORM_ADMIN("--platform-admin","FINEMP_STAGING_PLATFORM_ADMIN_CONFIRM","GRANT_SYNTHETIC_STAGING_PLATFORM_ADMIN",false);
+        PLATFORM_ADMIN("--platform-admin","FINEMP_STAGING_PLATFORM_ADMIN_CONFIRM","GRANT_SYNTHETIC_STAGING_PLATFORM_ADMIN",false),
+        SYSTEM_ADMIN("--system-admin","FINEMP_STAGING_SYSTEM_ADMIN_CONFIRM","GRANT_SYNTHETIC_STAGING_SYSTEM_ADMIN",false);
 
         private final String flag,confirmationKey,confirmationValue;private final boolean password;
         Mode(String flag,String confirmationKey,String confirmationValue,boolean password) {
@@ -34,7 +35,7 @@ public final class StagingProvisioningMain {
     }
 
     public static void main(String[] args) {
-        if(args.length==1 && "--help".equals(args[0])) {System.out.println("FINEMP staging provisioner: explicit environment-only configuration required; no secrets as arguments. Optional --isolation-company creates a negative-access fixture; --reset-password resets only the deterministic synthetic operator; --platform-admin grants only that operator the platform administration permissions and needs its own confirmation.");return;}
+        if(args.length==1 && "--help".equals(args[0])) {System.out.println("FINEMP staging provisioner: explicit environment-only configuration required; no secrets as arguments. Optional --isolation-company creates a negative-access fixture; --reset-password resets only the deterministic synthetic operator; --platform-admin grants only that operator the limited platform administration permissions; --system-admin grants SYSTEM_ADMIN to that operator. Each elevation mode needs its own confirmation.");return;}
         try {
             var mode=Mode.parse(args);
             var env=System.getenv();validateTarget(env,mode);
@@ -53,6 +54,9 @@ public final class StagingProvisioningMain {
                     case PLATFORM_ADMIN -> System.out.println(StagingSeed.grantSyntheticPlatformAdmin(connection)
                             ?"Synthetic staging operator granted platform administration."
                             :"Synthetic staging operator already has platform administration; unchanged.");
+                    case SYSTEM_ADMIN -> System.out.println(StagingSeed.grantSyntheticSystemAdmin(connection)
+                            ?"Synthetic staging operator granted system administration."
+                            :"Synthetic staging operator already has system administration; unchanged.");
                     case ISOLATION_COMPANY -> {
                         boolean created=StagingSeed.provisionIsolationCompany(connection);
                         System.out.println(created?"Synthetic staging dataset created.":"Synthetic staging dataset already exists; unchanged.");
