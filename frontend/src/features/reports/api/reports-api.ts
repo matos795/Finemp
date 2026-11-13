@@ -8,6 +8,7 @@ import type {
     OpenTitlesPage,
 } from "../types/aging.types"
 import type { AccountBalancesReport } from "../types/account-balances.types"
+import type { ReceivedPaymentsByMethodReport } from "../types/received-payments.types"
 import type {
     DailyCashTotals,
     MonthlyCashCategoryTotalsPage,
@@ -188,6 +189,20 @@ export async function getAccountBalances(
 ): Promise<AccountBalancesReport> {
     return apiRequest<AccountBalancesReport>(
         `${reportsPath(companyId)}/account-balances`,
+        { cache: "no-store" },
+    )
+}
+
+/** Receitas efetivamente baixadas, agrupadas pela forma persistida no lançamento. */
+export async function getReceivedPaymentsByMethod(
+    companyId: string,
+    from: string,
+    to: string,
+): Promise<ReceivedPaymentsByMethodReport> {
+    const params = new URLSearchParams({ from, to })
+
+    return apiRequest<ReceivedPaymentsByMethodReport>(
+        `${reportsPath(companyId)}/received-by-method?${params}`,
         { cache: "no-store" },
     )
 }
