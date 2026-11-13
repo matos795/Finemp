@@ -71,6 +71,8 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
     { value: "PLANNING_MANAGE", label: "Planejamento — gerenciar" },
     { value: "CONTRACT_VIEW", label: "Contratos — visualizar" },
     { value: "CONTRACT_MANAGE", label: "Contratos — gerenciar" },
+    { value: "CRM_VIEW", label: "Comercial — visualizar" },
+    { value: "CRM_MANAGE", label: "Comercial — gerenciar" },
 ]
 
 const READ_ONLY_PERMISSIONS = COMPANY_PERMISSION_OPTIONS
