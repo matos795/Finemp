@@ -5,6 +5,7 @@ import {
 } from "react"
 import type { CompanyPermission, CurrentUser } from "../auth/types/auth.types"
 import { CompanyAccessContext } from "./company-access-context"
+import { canUseCompanyPermission } from "./company-permission-access"
 
 interface CompanyAccessProviderProps {
     user: CurrentUser
@@ -45,10 +46,10 @@ export function CompanyAccessProvider({
     function hasPermission(
         permission: CompanyPermission,
     ) {
-        return (
-            selectedCompany?.permissions.includes(
-                permission,
-            ) ?? false
+        return canUseCompanyPermission(
+            user,
+            selectedCompany,
+            permission,
         )
     }
 
