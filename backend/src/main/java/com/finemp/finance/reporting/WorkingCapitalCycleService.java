@@ -22,7 +22,7 @@ public class WorkingCapitalCycleService {
     public WorkingCapitalCycleService(
             CompanyPermissionAuthorizationService permissions,
             NamedParameterJdbcTemplate jdbc,
-            @Value("${finemp.finance.reporting.calendar-zone:America/Sao_Paulo}") String calendarZone) {
+            @Value("${finemp.finance.entries.calendar-zone:America/Sao_Paulo}") String calendarZone) {
         this.permissions = permissions;
         this.jdbc = jdbc;
         this.calendar = Clock.system(ZoneId.of(calendarZone));
@@ -88,6 +88,7 @@ public class WorkingCapitalCycleService {
                     entry.document_date BETWEEN :from AND :to
                     OR entry.payment_date BETWEEN :from AND :to
                     OR entry.payment_date IS NULL
+                    OR entry.payment_date > :to
                   )
                 """.formatted(effectiveDre, effectiveActivity, effectiveDre);
 
