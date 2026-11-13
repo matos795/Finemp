@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Modal } from "../../../components/finemp/modal"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -344,8 +345,7 @@ function ContractDialog({
         !partnerItems.some((partner) => partner.id === selectedPartner.id)
 
     return (
-        <div className="modal" role="presentation">
-            <div className="mbox" role="dialog" aria-modal="true" aria-labelledby="contractDialogTitle">
+        <Modal onClose={save.isPending ? undefined : onClose} labelledBy="contractDialogTitle">
                 <h2 id="contractDialogTitle">
                     {contract ? "Editar contrato" : "Novo contrato"}
                 </h2>
@@ -506,7 +506,6 @@ function ContractDialog({
                         {save.isPending ? "Salvando…" : "Salvar"}
                     </button>
                 </div>
-            </div>
-        </div>
+            </Modal>
     )
 }

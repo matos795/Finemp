@@ -25,6 +25,22 @@ test("SYSTEM_ADMIN can use company permissions missing from the serialized grant
   )
 })
 
+
+test("SYSTEM_ADMIN without an active company cannot use company-scoped actions", () => {
+  const user = {
+    id: "user-1",
+    name: "Synthetic Admin",
+    email: "admin@example.invalid",
+    platformPermissions: ["SYSTEM_ADMIN"],
+    companies: [],
+  }
+
+  assert.equal(
+    canUseCompanyPermission(user, null, "CRM_MANAGE"),
+    false,
+  )
+})
+
 test("ordinary users still need the explicit company permission", () => {
   const user = {
     id: "user-2",

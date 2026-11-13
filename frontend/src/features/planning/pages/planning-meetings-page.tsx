@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Modal } from "../../../components/finemp/modal"
 import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useCompanyAccess } from "../../companies/company-access-context"
@@ -363,13 +364,7 @@ function PlanningMeetingsCompanyPage() {
             ) : null}
 
             {formOpen ? (
-                <div className="modal" role="presentation">
-                    <div
-                        className="mbox"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="planningMeetingDialogTitle"
-                    >
+                <Modal onClose={busy ? undefined : () => setFormOpen(false)} labelledBy="planningMeetingDialogTitle">
                         <h2 id="planningMeetingDialogTitle">
                             {editing ? "Editar encontro" : "Novo encontro"}
                         </h2>
@@ -489,8 +484,7 @@ function PlanningMeetingsCompanyPage() {
                                 {busy ? "Salvando…" : "Salvar"}
                             </button>
                         </div>
-                    </div>
-                </div>
+                </Modal>
             ) : null}
         </>
     )

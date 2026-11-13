@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Modal } from "../../../components/finemp/modal"
 import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
 import { todayIso } from "../../../lib/formatters/local-date"
@@ -503,13 +504,7 @@ function PlanningGoalsCompanyPage() {
             ) : null}
 
             {formOpen ? (
-                <div className="modal" role="presentation">
-                    <div
-                        className="mbox"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="goalDialogTitle"
-                    >
+                <Modal onClose={busy ? undefined : () => setFormOpen(false)} labelledBy="goalDialogTitle">
                         <h2 id="goalDialogTitle">
                             {editing ? "Editar meta" : "Nova meta"}
                         </h2>
@@ -658,18 +653,11 @@ function PlanningGoalsCompanyPage() {
                                 {busy ? "Salvando…" : "Salvar"}
                             </button>
                         </div>
-                    </div>
-                </div>
+                </Modal>
             ) : null}
 
             {measureTarget ? (
-                <div className="modal" role="presentation">
-                    <div
-                        className="mbox"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="measureGoalDialogTitle"
-                    >
+                <Modal onClose={busy ? undefined : () => setMeasureTarget(null)} labelledBy="measureGoalDialogTitle">
                         <h2 id="measureGoalDialogTitle">
                             Medir · {measureTarget.name}
                         </h2>
@@ -757,18 +745,11 @@ function PlanningGoalsCompanyPage() {
                                 {busy ? "Salvando…" : "Registrar medição"}
                             </button>
                         </div>
-                    </div>
-                </div>
+                </Modal>
             ) : null}
 
             {historyTarget ? (
-                <div className="modal" role="presentation">
-                    <div
-                        className="mbox"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="goalHistoryDialogTitle"
-                    >
+                <Modal onClose={() => setHistoryTarget(null)} labelledBy="goalHistoryDialogTitle">
                         <h2 id="goalHistoryDialogTitle">
                             Histórico · {historyTarget.name}
                         </h2>
@@ -869,8 +850,7 @@ function PlanningGoalsCompanyPage() {
                                 Fechar
                             </button>
                         </div>
-                    </div>
-                </div>
+                </Modal>
             ) : null}
         </>
     )

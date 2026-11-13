@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Modal } from "../../../components/finemp/modal"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -444,35 +445,30 @@ function OpportunityDialog({
 
     if (opportunity && detail.isPending) {
         return (
-            <div className="modal" role="presentation">
-                <div className="mbox" role="dialog" aria-modal="true">
-                    <div className="empty">Carregando oportunidade…</div>
-                </div>
-            </div>
+            <Modal onClose={onClose}>
+                <div className="empty">Carregando oportunidade…</div>
+            </Modal>
         )
     }
 
     if (opportunity && detail.isError) {
         return (
-            <div className="modal" role="presentation">
-                <div className="mbox" role="dialog" aria-modal="true">
-                    <div className="alert e">Não foi possível carregar a oportunidade atual.</div>
-                    <div className="ma">
-                        <button type="button" className="btn sec" onClick={onClose}>
-                            Fechar
-                        </button>
-                        <button type="button" className="btn" onClick={() => detail.refetch()}>
-                            Tentar novamente
-                        </button>
-                    </div>
+            <Modal onClose={onClose}>
+                <div className="alert e">Não foi possível carregar a oportunidade atual.</div>
+                <div className="ma">
+                    <button type="button" className="btn sec" onClick={onClose}>
+                        Fechar
+                    </button>
+                    <button type="button" className="btn" onClick={() => detail.refetch()}>
+                        Tentar novamente
+                    </button>
                 </div>
-            </div>
+            </Modal>
         )
     }
 
     return (
-        <div className="modal" role="presentation">
-            <div className="mbox" role="dialog" aria-modal="true" aria-labelledby="opportunityDialogTitle">
+        <Modal onClose={save.isPending ? undefined : onClose} labelledBy="opportunityDialogTitle">
                 <h2 id="opportunityDialogTitle">
                     {opportunity ? "Editar oportunidade" : "Nova oportunidade"}
                 </h2>
@@ -612,7 +608,6 @@ function OpportunityDialog({
                         {save.isPending ? "Salvando…" : "Salvar"}
                     </button>
                 </div>
-            </div>
-        </div>
+        </Modal>
     )
 }

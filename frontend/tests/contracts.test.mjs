@@ -157,7 +157,9 @@ test("Contratos e reajustes is a real permission-guarded route", () => {
 
   assert.match(page, /className="filters"/)
   assert.match(page, /className="tblwrap"/)
-  assert.match(page, /className="modal"/)
+  assert.match(page, /components\/finemp\/modal/)
+  assert.match(page, /<Modal/)
+  assert.doesNotMatch(page, /className="modal"/)
   assert.doesNotMatch(page, /Number\(monthlyAmount\)/)
   assert.match(page, /listContractPartnerOptions/)
   assert.match(page, /selectedPartnerMissing/)
