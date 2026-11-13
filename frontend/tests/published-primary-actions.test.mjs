@@ -11,13 +11,16 @@ test("action modals render above the onboarding tour", () => {
   const modal = css.match(/\.fin \.modal\{[^}]*z-index:(\d+)/)
   const tourMask = css.match(/\.fin #tourMask\{[^}]*z-index:(\d+)/)
   const tourBox = css.match(/\.fin #tourBox\{[^}]*z-index:(\d+)/)
+  const toasts = css.match(/\.fin #toasts\{[^}]*z-index:(\d+)/)
 
   assert.ok(modal)
   assert.ok(tourMask)
   assert.ok(tourBox)
+  assert.ok(toasts)
 
   assert.ok(Number(modal[1]) > Number(tourMask[1]))
   assert.ok(Number(modal[1]) > Number(tourBox[1]))
+  assert.ok(Number(toasts[1]) > Number(modal[1]))
 })
 
 test("published invoice and opportunity buttons still open real dialog state", () => {
