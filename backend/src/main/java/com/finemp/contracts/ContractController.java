@@ -3,7 +3,10 @@ package com.finemp.contracts;
 import com.finemp.administration.PagedResponse;
 import com.finemp.security.UserAccountPrincipal;
 import jakarta.validation.Valid;
+import java.time.YearMonth;
 import java.util.UUID;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +16,13 @@ import org.springframework.web.bind.annotation.*;
 public class ContractController {
 
     private final ContractService service;
+    private final MonthlyContractBillingPreviewService billingPreviewService;
 
-    public ContractController(ContractService service) {
+    public ContractController(
+            ContractService service,
+            MonthlyContractBillingPreviewService billingPreviewService) {
         this.service = service;
+        this.billingPreviewService = billingPreviewService;
     }
 
     @GetMapping
@@ -34,6 +41,33 @@ public class ContractController {
                 active,
                 page,
                 size);
+    }
+
+    @GetMapping("/billing-preview")
+    public ResponseEntity<MonthlyContractBillingPreviewService.Report> billingPreview(
+            @AuthenticationPrincipal UserAccountPrincipal actor,
+            @PathVariable UUID companyId,
+            @RequestParam String month,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        YearMonth competence;
+        try {
+            competence = YearMonth.parse(month);
+        } catch (java.time.format.DateTimeParseException exception) {
+            throw new IllegalArgumentException("Competência de faturamento inválida.", exception);
+        }
+
+        var report = billingPreviewService.report(
+                actor.getUserAccountId(),
+                companyId,
+                competence,
+                page,
+                size);
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(report);
     }
 
     @GetMapping("/partners")

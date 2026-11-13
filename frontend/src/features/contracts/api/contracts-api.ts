@@ -5,6 +5,7 @@ import type {
     ContractPage,
     ContractPartnerOptionPage,
     ContractValues,
+    MonthlyContractBillingPreview,
 } from "../types/contract.types.ts"
 
 export const CONTRACTS_PAGE_SIZE = 50
@@ -80,5 +81,24 @@ export function updateContract(
                 expectedVersion: contract.version,
             }),
         },
+    )
+}
+
+
+export function getMonthlyContractBillingPreview(
+    companyId: string,
+    month: string,
+    page: number,
+    signal?: AbortSignal,
+): Promise<MonthlyContractBillingPreview> {
+    const params = new URLSearchParams({
+        month,
+        page: String(page),
+        size: String(CONTRACTS_PAGE_SIZE),
+    })
+
+    return apiRequest<MonthlyContractBillingPreview>(
+        `${contractsPath(companyId)}/billing-preview?${params}`,
+        { signal, cache: "no-store" },
     )
 }
