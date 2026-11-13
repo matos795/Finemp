@@ -100,7 +100,7 @@ public final class DebtScheduleCalculator {
                 amortization = payment.subtract(interest)
                         .setScale(2, RoundingMode.UNNECESSARY);
 
-                if (amortization.signum() <= 0) {
+                if (amortization.signum() < 0) {
                     throw invalid();
                 }
                 if (amortization.compareTo(balance) > 0) {
