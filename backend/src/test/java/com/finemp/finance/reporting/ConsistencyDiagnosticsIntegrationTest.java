@@ -104,8 +104,12 @@ class ConsistencyDiagnosticsIntegrationTest {
 
         var foreignContract = contract(
                 fixture.other(),
-                fixture.ownerPartner(),
+                fixture.foreignPartner(),
                 "Foreign company contract");
+        jdbc.update(
+                "UPDATE contracts SET business_partner_id=? WHERE id=?",
+                fixture.ownerPartner().getId(),
+                foreignContract.getId());
         var crossContractInvoice = invoice(
                 fixture.owner(),
                 fixture.ownerPartner(),
