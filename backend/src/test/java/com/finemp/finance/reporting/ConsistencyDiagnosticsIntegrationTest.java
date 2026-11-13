@@ -185,14 +185,21 @@ class ConsistencyDiagnosticsIntegrationTest {
                             "/api/companies/{companyId}/financial-reports/diagnostics",
                             fixture.owner().getId())
                             .with(authentication(auth(denied))))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isForbidden())
+                    .andExpect(header().string(
+                            "Cache-Control",
+                            containsString("no-store")))
+                    .andExpect(jsonPath("$.code")
+                            .value("CONSISTENCY_DIAGNOSTICS_ACCESS_DENIED"));
         }
 
         mvc.perform(get(
                         "/api/companies/{companyId}/financial-reports/diagnostics",
                         fixture.other().getId())
                         .with(authentication(auth(fixture.allowed()))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code")
+                        .value("CONSISTENCY_DIAGNOSTICS_ACCESS_DENIED"));
     }
 
     private Fixture fixture() {
