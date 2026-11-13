@@ -20,7 +20,7 @@ export function CashVsOperationalDrePage() {
         retry: false,
     })
 
-    const data = report.data
+    const data = report.isError ? undefined : report.data
     const monthLabel = formatCompetence(data?.month ?? month)
 
     return (
