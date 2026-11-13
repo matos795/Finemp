@@ -504,7 +504,7 @@ function PlanningGoalsCompanyPage() {
             ) : null}
 
             {formOpen ? (
-                <Modal onClose={() => setFormOpen(false)} labelledBy="goalDialogTitle">
+                <Modal onClose={busy ? undefined : () => setFormOpen(false)} labelledBy="goalDialogTitle">
                         <h2 id="goalDialogTitle">
                             {editing ? "Editar meta" : "Nova meta"}
                         </h2>
@@ -657,7 +657,7 @@ function PlanningGoalsCompanyPage() {
             ) : null}
 
             {measureTarget ? (
-                <Modal onClose={() => setMeasureTarget(null)} labelledBy="measureGoalDialogTitle">
+                <Modal onClose={busy ? undefined : () => setMeasureTarget(null)} labelledBy="measureGoalDialogTitle">
                         <h2 id="measureGoalDialogTitle">
                             Medir · {measureTarget.name}
                         </h2>
