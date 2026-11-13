@@ -64,6 +64,31 @@ public class ContractService {
                 ContractResponse::from);
     }
 
+    public PagedResponse<ContractPartnerOptionResponse> listPartnerOptions(
+            UUID actor,
+            UUID companyId,
+            String search,
+            int page,
+            int size) {
+
+        requireManage(actor, companyId);
+        if (page < 0 || size < 1 || size > 100 || search != null && search.length() > 100) {
+            throw invalid();
+        }
+
+        var pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("displayNameKey").ascending().and(Sort.by("id")));
+
+        return PagedResponse.from(
+                partners.searchActiveLookup(
+                        companyId,
+                        search == null ? "" : search.trim(),
+                        pageable),
+                ContractPartnerOptionResponse::from);
+    }
+
     public ContractResponse find(UUID actor, UUID companyId, UUID contractId) {
         requireRead(actor, companyId);
         return ContractResponse.from(owned(companyId, contractId));
