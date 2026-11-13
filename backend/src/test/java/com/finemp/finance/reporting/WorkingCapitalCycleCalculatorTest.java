@@ -57,10 +57,15 @@ class WorkingCapitalCycleCalculatorTest {
 
     @Test
     void fallsBackToGrantedTermsAndLeavesMetricsNullWithoutAWeightedBase() {
-        var receivable = row(
+        var receivable = new WorkingCapitalCycleCalculator.Row(
                 WorkingCapitalCycleCalculator.Side.RECEIVABLE,
-                null, "Sem cadastro",
-                "120.00", null, 1, 31, null);
+                null,
+                "Sem cadastro",
+                new BigDecimal("120.00"),
+                new BigDecimal("120.00"),
+                LocalDate.of(2026, 11, 1),
+                LocalDate.of(2026, 12, 1),
+                null);
 
         var onlyReceivables = WorkingCapitalCycleCalculator.calculate(
                 FROM, TO, TO, 0, List.of(receivable));
