@@ -142,8 +142,8 @@ export function WorkingCapitalCyclePage() {
                         />
                         <MetricCard
                             label="Inadimplência"
-                            value={money(data.receivables.overdueAmount)}
-                            sub={`Em aberto ${money(data.receivables.openAmount)}`}
+                            value={percent(data.receivables.overduePercent)}
+                            sub={`Vencido ${money(data.receivables.overdueAmount)} · Em aberto ${money(data.receivables.openAmount)}`}
                         />
                         <MetricCard
                             label="Pontualidade dos clientes"
