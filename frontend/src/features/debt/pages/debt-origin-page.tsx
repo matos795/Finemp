@@ -463,7 +463,7 @@ function DebtDialog({
                     <h2 id="debtDialogTitle">
                         {debt ? "Editar" : "Nova"} {config.itemName}
                     </h2>
-                    <button type="button" className="x" onClick={onClose}>×</button>
+                    <button type="button" className="x" disabled={save.isPending} onClick={onClose}>×</button>
                 </div>
 
                 {config.partnerRequired ? (
