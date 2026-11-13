@@ -105,7 +105,7 @@ export function CashVsOperationalDrePage() {
 
                     <Panel
                         title="Composição da comparação"
-                        help="Valores do mesmo mês, calculados e conciliados temporalmente apenas até o limite da cobertura disponível."
+                        help="Valores do mesmo mês, comparados dentro do limite da cobertura disponível."
                     >
                         <div className="tblwrap">
                             <table>
