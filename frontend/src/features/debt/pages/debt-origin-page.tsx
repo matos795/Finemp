@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Modal } from "../../../components/finemp/modal"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -457,13 +458,7 @@ function DebtDialog({
     })
 
     return (
-        <div className="modal" role="presentation">
-            <div
-                className="mbox"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="debtDialogTitle"
-            >
+        <Modal onClose={onClose} labelledBy="debtDialogTitle">
                 <div className="mh">
                     <h2 id="debtDialogTitle">
                         {debt ? "Editar" : "Nova"} {config.itemName}
@@ -665,11 +660,9 @@ function DebtDialog({
                         {save.isPending ? "Salvando…" : "Salvar"}
                     </button>
                 </div>
-            </div>
-        </div>
+            </Modal>
     )
 }
-
 function DebtScheduleDialog({
     companyId,
     debt,
@@ -687,13 +680,7 @@ function DebtScheduleDialog({
     })
 
     return (
-        <div className="modal" role="presentation">
-            <div
-                className="mbox"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="debtScheduleTitle"
-            >
+        <Modal onClose={onClose} labelledBy="debtScheduleTitle">
                 <div className="mh">
                     <div>
                         <h2 id="debtScheduleTitle">Cronograma</h2>
@@ -768,7 +755,6 @@ function DebtScheduleDialog({
                         Fechar
                     </button>
                 </div>
-            </div>
-        </div>
+            </Modal>
     )
 }
