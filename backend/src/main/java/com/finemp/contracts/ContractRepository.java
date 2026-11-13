@@ -11,6 +11,8 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
 
     Optional<Contract> findByIdAndCompanyId(UUID id, UUID companyId);
 
+    boolean existsByCompanyIdAndBusinessPartnerId(UUID companyId, UUID businessPartnerId);
+
     @Query("""
             select contract
               from Contract contract
