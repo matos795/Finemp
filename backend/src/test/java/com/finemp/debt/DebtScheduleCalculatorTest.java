@@ -121,6 +121,24 @@ class DebtScheduleCalculatorTest {
     }
 
     @Test
+    void centRoundingMayProduceZeroAmortizationWithoutInvalidatingSchedule() {
+        var schedule = DebtScheduleCalculator.fixed(
+                new BigDecimal("1000.00"),
+                360,
+                new BigDecimal("30.00"),
+                LocalDate.of(2026, 1, 31));
+
+        assertThat(schedule.getFirst().interest()).isEqualByComparingTo("30.00");
+        assertThat(schedule.getFirst().amortization()).isEqualByComparingTo("0.00");
+        assertThat(schedule.getFirst().balance()).isEqualByComparingTo("1000.00");
+        assertThat(schedule.getLast().balance()).isEqualByComparingTo("0.00");
+        assertThat(schedule.stream()
+                .map(DebtScheduleCalculator.Installment::amortization)
+                .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("1000.00");
+    }
+
+    @Test
     void impliedRateReturnsZeroWhenPaymentsCannotExceedPrincipal() {
         var rate = DebtScheduleCalculator.impliedMonthlyPercent(
                 new BigDecimal("1000.00"),
