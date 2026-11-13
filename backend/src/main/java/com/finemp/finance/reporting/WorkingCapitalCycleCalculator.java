@@ -125,6 +125,10 @@ public final class WorkingCapitalCycleCalculator {
                 Row::nominalAmount);
         BigDecimal openAmount = sum(open, Row::nominalAmount);
         BigDecimal overdueAmount = sum(overdue, Row::nominalAmount);
+        BigDecimal overduePercent = openAmount.signum() <= 0
+                ? null
+                : overdueAmount.multiply(BigDecimal.valueOf(100), MATH)
+                        .divide(openAmount, INTERNAL_SCALE, RoundingMode.HALF_UP);
         BigDecimal openDelayRaw = weighted(
                 overdue,
                 row -> days(row.dueDate(), today),
@@ -164,6 +168,7 @@ public final class WorkingCapitalCycleCalculator {
                 money(cashAmount),
                 money(openAmount),
                 money(overdueAmount),
+                decimal(overduePercent),
                 decimal(openDelayRaw),
                 decimal(balanceDaysRaw),
                 bands,
@@ -366,6 +371,7 @@ public final class WorkingCapitalCycleCalculator {
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal cashAmount,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal openAmount,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal overdueAmount,
+            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal overduePercent,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal openDelayDays,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal balanceDays,
             List<TermBandTotal> bands,
