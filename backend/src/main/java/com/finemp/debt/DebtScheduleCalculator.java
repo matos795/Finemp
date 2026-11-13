@@ -75,11 +75,10 @@ public final class DebtScheduleCalculator {
             throw invalid();
         }
 
-        BigDecimal impliedPercent = impliedMonthlyPercent(
+        BigDecimal rate = impliedMonthlyRateDecimal(
                 normalizedPrincipal,
                 normalizedInstallment,
                 installments);
-        BigDecimal rate = impliedPercent.divide(HUNDRED, MC);
         BigDecimal balance = normalizedPrincipal;
         var rows = new ArrayList<Installment>(installments);
 
@@ -154,6 +153,24 @@ public final class DebtScheduleCalculator {
             int installments) {
 
         BigDecimal normalizedPrincipal = money(principal);
+        BigDecimal rate = impliedMonthlyRateDecimal(
+                normalizedPrincipal,
+                installment,
+                installments);
+
+        if (rate.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return rate.multiply(HUNDRED, MC)
+                .setScale(RATE_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal impliedMonthlyRateDecimal(
+            BigDecimal normalizedPrincipal,
+            BigDecimal installment,
+            int installments) {
+
         if (installment == null
                 || installment.signum() <= 0
                 || installments < 1
@@ -183,10 +200,7 @@ public final class DebtScheduleCalculator {
             }
         }
 
-        return low.add(high)
-                .divide(BigDecimal.valueOf(2), MC)
-                .multiply(HUNDRED, MC)
-                .setScale(RATE_SCALE, RoundingMode.HALF_UP);
+        return low.add(high).divide(BigDecimal.valueOf(2), MC);
     }
 
     private static BigDecimal annuityPresentValue(
