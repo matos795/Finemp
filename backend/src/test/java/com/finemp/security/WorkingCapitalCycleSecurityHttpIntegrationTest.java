@@ -29,6 +29,51 @@ class WorkingCapitalCycleSecurityHttpIntegrationTest {
     @Autowired private CompanyAccessGrantRepository grants;
 
     @Test
+    void authenticatedUserWithoutCompanyPermissionGetsForbidden() throws Exception {
+        var actor = users.saveAndFlush(new UserAccount(
+                "Synthetic Cycle Unauthorized",
+                "cycle-unauthorized@example.invalid",
+                "hash"));
+        var company = companies.saveAndFlush(new Company(
+                "Synthetic Cycle Unauthorized Company",
+                "55555555000170"));
+
+        mvc.perform(get(
+                        "/api/companies/{companyId}/financial-reports/working-capital-cycle",
+                        company.getId())
+                        .with(user(new UserAccountPrincipal(actor)))
+                        .param("from", "2026-11-01")
+                        .param("to", "2026-11-30"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void invalidCycleParametersGetBadRequest() throws Exception {
+        var actor = users.saveAndFlush(new UserAccount(
+                "Synthetic Cycle Invalid",
+                "cycle-invalid@example.invalid",
+                "hash"));
+        var company = companies.saveAndFlush(new Company(
+                "Synthetic Cycle Invalid Company",
+                "55555555000169"));
+
+        grants.saveAndFlush(new CompanyAccessGrant(
+                actor,
+                company,
+                CompanyAccessRole.VIEWER,
+                CostCenterScope.ALL,
+                Set.of(CompanyPermission.FINANCIAL_ENTRY_VIEW)));
+
+        mvc.perform(get(
+                        "/api/companies/{companyId}/financial-reports/working-capital-cycle",
+                        company.getId())
+                        .with(user(new UserAccountPrincipal(actor)))
+                        .param("from", "2026-11-30")
+                        .param("to", "2026-11-01"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void financialViewerReachesWorkingCapitalCycleInsteadOfCompanyDenyAll() throws Exception {
         var actor = users.saveAndFlush(new UserAccount(
                 "Synthetic Cycle Viewer",
