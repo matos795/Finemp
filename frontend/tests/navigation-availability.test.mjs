@@ -50,7 +50,7 @@ test("modules left without available items disappear", () => {
 test("a financial client sees the published financial screens it is allowed to open", () => {
   assert.deepEqual(ids(visibleNavigation(navigationModules, FINANCE_CLIENT, none)), [
     "fluxo:painel,lanc,agenda,ext,mensal,diario,bancos",
-    "rel:relRec,relPag,dre,relApres",
+    "rel:relRec,relPag,dre,conc,relApres",
     "ctr:ctrInad,ctrFormas",
     "cad:empresas,cadEmp,cadContas,cadPlano",
     "ajuda:faq,tutor",

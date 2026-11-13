@@ -8,6 +8,7 @@ import type {
     OpenTitlesPage,
 } from "../types/aging.types.ts"
 import type { AccountBalancesReport } from "../types/account-balances.types.ts"
+import type { CashVsDreReport } from "../types/cash-vs-dre.types.ts"
 import type { ReceivedPaymentsByMethodReport } from "../types/received-payments.types.ts"
 import type {
     DailyCashTotals,
@@ -203,6 +204,19 @@ export async function getReceivedPaymentsByMethod(
 
     return apiRequest<ReceivedPaymentsByMethodReport>(
         `${reportsPath(companyId)}/received-by-method?${params}`,
+        { cache: "no-store" },
+    )
+}
+
+/** Compara caixa realizado e DRE operacional do mesmo mês. */
+export async function getCashVsOperationalDre(
+    companyId: string,
+    month: string,
+): Promise<CashVsDreReport> {
+    const params = new URLSearchParams({ month })
+
+    return apiRequest<CashVsDreReport>(
+        `${reportsPath(companyId)}/cash-vs-dre?${params}`,
         { cache: "no-store" },
     )
 }

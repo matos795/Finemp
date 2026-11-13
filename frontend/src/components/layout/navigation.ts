@@ -171,7 +171,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/reports/dre",
                 permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
             },
-            { id: "conc", label: "Conciliação caixa × DRE" },
+            {
+                id: "conc",
+                label: "Conciliação caixa × DRE",
+                path: "/reports/cash-vs-dre",
+                permissions: ["FINANCIAL_ENTRY_VIEW", "FINANCIAL_ENTRY_MANAGE"],
+            },
             { id: "ciclo", label: "Ciclo financeiro e prazos" },
             { id: "ncg", label: "Capital de giro (NCG)" },
             { id: "bal", label: "Balanço patrimonial" },
