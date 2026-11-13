@@ -6,7 +6,7 @@ CREATE TABLE contracts (
     description VARCHAR(255) NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE,
-    billing_day SMALLINT NOT NULL,
+    billing_day INTEGER NOT NULL,
     monthly_amount NUMERIC(19,2) NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     version BIGINT NOT NULL DEFAULT 0,
