@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Modal } from "../../../components/finemp/modal"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -329,8 +330,7 @@ function ActivityDialog({
         !opportunityItems.some((opportunity) => opportunity.id === selectedOpportunity.id)
 
     return (
-        <div className="modal" role="presentation">
-            <div className="mbox" role="dialog" aria-modal="true" aria-labelledby="activityDialogTitle">
+        <Modal onClose={onClose} labelledBy="activityDialogTitle">
                 <h2 id="activityDialogTitle">Novo follow-up</h2>
 
                 <div className="fg">
@@ -495,7 +495,6 @@ function ActivityDialog({
                         {save.isPending ? "Salvando…" : "Salvar"}
                     </button>
                 </div>
-            </div>
-        </div>
+            </Modal>
     )
 }
