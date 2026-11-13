@@ -39,6 +39,7 @@ export interface WorkingCapitalCycleSide {
     cashAmount: string
     openAmount: string
     overdueAmount: string
+    overduePercent: string | null
     openDelayDays: string | null
     balanceDays: string | null
     bands: WorkingCapitalTermBandTotal[]
