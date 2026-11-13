@@ -9,9 +9,13 @@ export function canUseCompanyPermission(
     company: CompanyAccess | null,
     permission: CompanyPermission,
 ): boolean {
+    if (company === null) {
+        return false
+    }
+
     if (user.platformPermissions?.includes("SYSTEM_ADMIN")) {
         return true
     }
 
-    return company?.permissions.includes(permission) ?? false
+    return company.permissions.includes(permission)
 }
