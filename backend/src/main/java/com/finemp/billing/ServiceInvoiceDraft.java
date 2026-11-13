@@ -84,7 +84,6 @@ public class ServiceInvoiceDraft {
     public void cancel() {
         if (status == ServiceInvoiceStatus.CANCELED) return;
         this.status = ServiceInvoiceStatus.CANCELED;
-        this.invoiceNumber = null;
     }
 
     private void requireDraft() {
