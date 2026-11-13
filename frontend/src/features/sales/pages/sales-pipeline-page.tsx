@@ -128,7 +128,7 @@ function CompanyPipeline() {
                         id="salesStage"
                         maxLength={80}
                         placeholder="Todas"
-                        value={effectiveStage}
+                        value={stage}
                         onChange={(event) => setStage(event.target.value)}
                     />
                 </div>
