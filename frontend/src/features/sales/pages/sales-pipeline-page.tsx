@@ -418,7 +418,9 @@ function OpportunityDialog({
             } else if (caught instanceof Error && caught.message === "DETAIL_NOT_READY") {
                 setError("Carregue os dados atuais da oportunidade antes de salvar.")
             } else if (status === 409) {
-                setError("A oportunidade foi alterada por outro usuário. Feche e abra novamente.")
+                setError(
+                    "A oportunidade mudou ou possui follow-ups vinculados a outro cliente. Atualize e confira os vínculos.",
+                )
             } else if (status === 403) {
                 setError("Seu acesso não permite alterar o CRM.")
             } else {
