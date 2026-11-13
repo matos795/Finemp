@@ -71,6 +71,6 @@ test("shared modal portals into the FINEMP shell", () => {
   )
 
   assert.match(modal, /createPortal/)
-  assert.match(modal, /querySelector<HTMLElement>\("\\.fin"\)/)
+  assert.match(modal, /querySelector<HTMLElement>\("\.fin"\)/)
   assert.match(modal, /createPortal\(modal, shell\)/)
 })
