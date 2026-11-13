@@ -186,7 +186,15 @@ export const navigationModules: NavigationModule[] = [
             { id: "ncg", label: "Capital de giro (NCG)" },
             { id: "bal", label: "Balanço patrimonial" },
             { id: "indServ", label: "Indicadores de serviços" },
-            { id: "consist", label: "Verificação de consistência" },
+            {
+                id: "consist",
+                label: "Verificação de consistência",
+                path: "/reports/consistency",
+                permissionGroups: [
+                    ["CONTRACT_VIEW", "CONTRACT_MANAGE"],
+                    ["BILLING_VIEW", "BILLING_MANAGE"],
+                ],
+            },
             {
                 id: "relApres",
                 label: "Apresentação de resultados",

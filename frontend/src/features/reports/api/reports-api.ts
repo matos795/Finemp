@@ -9,6 +9,7 @@ import type {
 } from "../types/aging.types.ts"
 import type { AccountBalancesReport } from "../types/account-balances.types.ts"
 import type { CashVsDreReport } from "../types/cash-vs-dre.types.ts"
+import type { ConsistencyDiagnosticsReport } from "../types/consistency-diagnostics.types.ts"
 import type { ReceivedPaymentsByMethodReport } from "../types/received-payments.types.ts"
 import type { WorkingCapitalCycleReport } from "../types/working-capital-cycle.types.ts"
 import type {
@@ -237,6 +238,17 @@ export async function getWorkingCapitalCycle(
 
     return apiRequest<WorkingCapitalCycleReport>(
         `${reportsPath(companyId)}/working-capital-cycle?${params}`,
+        { cache: "no-store" },
+    )
+}
+
+
+/** Diagnóstico read-only e de cobertura parcial dos vínculos já implementados. */
+export async function getConsistencyDiagnostics(
+    companyId: string,
+): Promise<ConsistencyDiagnosticsReport> {
+    return apiRequest<ConsistencyDiagnosticsReport>(
+        `${reportsPath(companyId)}/diagnostics`,
         { cache: "no-store" },
     )
 }
