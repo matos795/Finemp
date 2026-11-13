@@ -43,6 +43,7 @@ test("cash versus DRE is published only with financial read access", () => {
   assert.match(router, /path="\/reports\/cash-vs-dre"/)
   assert.match(router, /<CashVsOperationalDrePage \/>/)
   assert.match(page, /Não é[\s\S]*conciliação contábil completa/)
+  assert.match(page, /const data = report\.isError \? undefined : report\.data/)
   assert.match(page, /data\.difference/)
   assert.doesNotMatch(page, /netCashGeneration\s*[-+]\s*/)
 })
