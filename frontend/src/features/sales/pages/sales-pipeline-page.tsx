@@ -128,7 +128,7 @@ function CompanyPipeline() {
                         id="salesStage"
                         maxLength={80}
                         placeholder="Todas"
-                        value={stage}
+                        value={effectiveStage}
                         onChange={(event) => setStage(event.target.value)}
                     />
                 </div>
@@ -332,23 +332,18 @@ function OpportunityDialog({
 }) {
     const [partnerSearch, setPartnerSearch] = useState("")
     const [businessPartnerId, setBusinessPartnerId] =
-        useState(opportunity?.businessPartnerId ?? "")
-    const [selectedPartner, setSelectedPartner] = useState<SalesPartnerOption | null>(
-        opportunity?.businessPartnerId
-            ? {
-                id: opportunity.businessPartnerId,
-                name: opportunity.businessPartnerName ?? "Parceiro selecionado",
-            }
-            : null,
-    )
-    const [title, setTitle] = useState(opportunity?.title ?? "")
-    const [stage, setStage] = useState(opportunity?.stage ?? "Prospecção")
-    const [monthlyAmount, setMonthlyAmount] = useState(opportunity?.monthlyAmount ?? "")
-    const [probability, setProbability] = useState(String(opportunity?.probability ?? 25))
-    const [responsible, setResponsible] = useState(opportunity?.responsible ?? "")
+        useState<string | null>(opportunity ? null : "")
+    const [selectedPartner, setSelectedPartner] = useState<SalesPartnerOption | null>(null)
+    const [title, setTitle] = useState<string | null>(opportunity ? null : "")
+    const [stage, setStage] = useState<string | null>(opportunity ? null : "Prospecção")
+    const [monthlyAmount, setMonthlyAmount] =
+        useState<string | null>(opportunity ? null : "")
+    const [probability, setProbability] =
+        useState<string | null>(opportunity ? null : "25")
+    const [responsible, setResponsible] = useState<string | null>(opportunity ? null : "")
     const [expectedCloseOn, setExpectedCloseOn] =
-        useState(opportunity?.expectedCloseOn ?? "")
-    const [notes, setNotes] = useState<string | null>(null)
+        useState<string | null>(opportunity ? null : "")
+    const [notes, setNotes] = useState<string | null>(opportunity ? null : "")
     const [error, setError] = useState("")
 
     const detail = useQuery({
@@ -366,31 +361,42 @@ function OpportunityDialog({
         retry: false,
     })
 
+    const effectiveBusinessPartnerId =
+        businessPartnerId ?? detail.data?.businessPartnerId ?? ""
+    const effectiveTitle = title ?? detail.data?.title ?? ""
+    const effectiveStage = stage ?? detail.data?.stage ?? ""
+    const effectiveMonthlyAmount = monthlyAmount ?? detail.data?.monthlyAmount ?? ""
+    const effectiveProbability = probability ?? String(detail.data?.probability ?? "")
+    const effectiveResponsible = responsible ?? detail.data?.responsible ?? ""
+    const effectiveExpectedCloseOn =
+        expectedCloseOn ?? detail.data?.expectedCloseOn ?? ""
+    const effectiveNotes = notes ?? detail.data?.notes ?? ""
+
     const save = useMutation({
         mutationFn: async () => {
             setError("")
-            const probabilityNumber = Number(probability)
+            const probabilityNumber = Number(effectiveProbability)
             if (
-                title.trim().length < 2 ||
-                !stage.trim() ||
-                !validMoney(monthlyAmount) ||
+                effectiveTitle.trim().length < 2 ||
+                !effectiveStage.trim() ||
+                !validMoney(effectiveMonthlyAmount) ||
                 !Number.isInteger(probabilityNumber) ||
                 probabilityNumber < 0 ||
                 probabilityNumber > 100 ||
-                !responsible.trim()
+                !effectiveResponsible.trim()
             ) {
                 throw new Error("VALIDATION")
             }
 
             const values: OpportunityValues = {
-                businessPartnerId: businessPartnerId || null,
-                title: title.trim(),
-                stage: stage.trim(),
-                monthlyAmount: normalizeMoney(monthlyAmount),
+                businessPartnerId: effectiveBusinessPartnerId || null,
+                title: effectiveTitle.trim(),
+                stage: effectiveStage.trim(),
+                monthlyAmount: normalizeMoney(effectiveMonthlyAmount),
                 probability: probabilityNumber,
-                responsible: responsible.trim(),
-                expectedCloseOn: expectedCloseOn || null,
-                notes: (notes ?? detail.data?.notes ?? "").trim() || null,
+                responsible: effectiveResponsible.trim(),
+                expectedCloseOn: effectiveExpectedCloseOn || null,
+                notes: effectiveNotes.trim() || null,
             }
 
             if (opportunity && !detail.data) {
@@ -422,9 +428,45 @@ function OpportunityDialog({
     })
 
     const partnerItems = partners.data?.items ?? []
+    const detailPartner =
+        businessPartnerId === null && detail.data?.businessPartnerId
+            ? {
+                id: detail.data.businessPartnerId,
+                name: detail.data.businessPartnerName ?? "Parceiro selecionado",
+            }
+            : null
+    const effectiveSelectedPartner = selectedPartner ?? detailPartner
     const selectedMissing =
-        selectedPartner &&
-        !partnerItems.some((partner) => partner.id === selectedPartner.id)
+        effectiveSelectedPartner &&
+        !partnerItems.some((partner) => partner.id === effectiveSelectedPartner.id)
+
+    if (opportunity && detail.isPending) {
+        return (
+            <div className="modal" role="presentation">
+                <div className="mbox" role="dialog" aria-modal="true">
+                    <div className="empty">Carregando oportunidade…</div>
+                </div>
+            </div>
+        )
+    }
+
+    if (opportunity && detail.isError) {
+        return (
+            <div className="modal" role="presentation">
+                <div className="mbox" role="dialog" aria-modal="true">
+                    <div className="alert e">Não foi possível carregar a oportunidade atual.</div>
+                    <div className="ma">
+                        <button type="button" className="btn sec" onClick={onClose}>
+                            Fechar
+                        </button>
+                        <button type="button" className="btn" onClick={() => detail.refetch()}>
+                            Tentar novamente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="modal" role="presentation">
@@ -439,7 +481,7 @@ function OpportunityDialog({
                         <input
                             id="opportunityTitle"
                             maxLength={180}
-                            value={title}
+                            value={effectiveTitle}
                             onChange={(event) => setTitle(event.target.value)}
                         />
                     </div>
@@ -449,7 +491,7 @@ function OpportunityDialog({
                         <input
                             id="opportunityStage"
                             maxLength={80}
-                            value={stage}
+                            value={effectiveStage}
                             onChange={(event) => setStage(event.target.value)}
                         />
                     </div>
@@ -459,7 +501,7 @@ function OpportunityDialog({
                         <input
                             id="opportunityResponsible"
                             maxLength={160}
-                            value={responsible}
+                            value={effectiveResponsible}
                             onChange={(event) => setResponsible(event.target.value)}
                         />
                     </div>
@@ -469,7 +511,7 @@ function OpportunityDialog({
                         <input
                             id="opportunityAmount"
                             inputMode="decimal"
-                            value={monthlyAmount}
+                            value={effectiveMonthlyAmount}
                             onChange={(event) => setMonthlyAmount(event.target.value)}
                             placeholder="0,00"
                         />
@@ -482,7 +524,7 @@ function OpportunityDialog({
                             type="number"
                             min="0"
                             max="100"
-                            value={probability}
+                            value={effectiveProbability}
                             onChange={(event) => setProbability(event.target.value)}
                         />
                     </div>
@@ -492,7 +534,7 @@ function OpportunityDialog({
                         <input
                             id="opportunityExpectedClose"
                             type="date"
-                            value={expectedCloseOn}
+                            value={effectiveExpectedCloseOn}
                             onChange={(event) => setExpectedCloseOn(event.target.value)}
                         />
                     </div>
@@ -511,7 +553,7 @@ function OpportunityDialog({
                         <label htmlFor="opportunityPartner">Cliente vinculado (opcional)</label>
                         <select
                             id="opportunityPartner"
-                            value={businessPartnerId}
+                            value={effectiveBusinessPartnerId}
                             onChange={(event) => {
                                 const id = event.target.value
                                 setBusinessPartnerId(id)
@@ -525,7 +567,7 @@ function OpportunityDialog({
                         >
                             <option value="">Sem cliente vinculado</option>
                             {selectedMissing ? (
-                                <option value={selectedPartner.id}>{selectedPartner.name}</option>
+                                <option value={effectiveSelectedPartner.id}>{effectiveSelectedPartner.name}</option>
                             ) : null}
                             {partnerItems.map((partner) => (
                                 <option key={partner.id} value={partner.id}>
@@ -540,7 +582,7 @@ function OpportunityDialog({
                         <textarea
                             id="opportunityNotes"
                             maxLength={4000}
-                            value={notes ?? detail.data?.notes ?? ""}
+                            value={effectiveNotes}
                             onChange={(event) => setNotes(event.target.value)}
                         />
                     </div>
