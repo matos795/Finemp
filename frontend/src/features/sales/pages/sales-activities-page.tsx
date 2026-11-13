@@ -256,6 +256,8 @@ function ActivityDialog({
     const [businessPartnerId, setBusinessPartnerId] = useState("")
     const [selectedPartner, setSelectedPartner] = useState<SalesPartnerOption | null>(null)
     const [opportunityId, setOpportunityId] = useState("")
+    const [opportunitySearch, setOpportunitySearch] = useState("")
+    const [opportunityPage, setOpportunityPage] = useState(0)
     const [error, setError] = useState("")
 
     const partners = useQuery({
@@ -266,9 +268,14 @@ function ActivityDialog({
     })
 
     const opportunities = useQuery({
-        queryKey: ["activity-opportunities", companyId] as const,
+        queryKey: ["activity-opportunities", companyId, opportunitySearch, opportunityPage] as const,
         queryFn: ({ signal }) =>
-            listOpportunities(companyId, { status: "OPEN" }, 0, signal),
+            listOpportunities(
+                companyId,
+                { status: "OPEN", search: opportunitySearch.trim() },
+                opportunityPage,
+                signal,
+            ),
         retry: false,
     })
 
@@ -386,6 +393,20 @@ function ActivityDialog({
                     </div>
 
                     <div className="fl full">
+                        <label htmlFor="activityOpportunitySearch">Buscar oportunidade</label>
+                        <input
+                            id="activityOpportunitySearch"
+                            type="search"
+                            maxLength={180}
+                            value={opportunitySearch}
+                            onChange={(event) => {
+                                setOpportunitySearch(event.target.value)
+                                setOpportunityPage(0)
+                            }}
+                        />
+                    </div>
+
+                    <div className="fl full">
                         <label htmlFor="activityOpportunity">Oportunidade (opcional)</label>
                         <select
                             id="activityOpportunity"
@@ -399,6 +420,27 @@ function ActivityDialog({
                                 </option>
                             ))}
                         </select>
+                        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                            <button
+                                type="button"
+                                className="btn sec sm"
+                                disabled={opportunityPage <= 0 || opportunities.isFetching}
+                                onClick={() => setOpportunityPage((current) => Math.max(0, current - 1))}
+                            >
+                                Anterior
+                            </button>
+                            <button
+                                type="button"
+                                className="btn sec sm"
+                                disabled={
+                                    opportunities.isFetching ||
+                                    opportunityPage + 1 >= (opportunities.data?.totalPages ?? 0)
+                                }
+                                onClick={() => setOpportunityPage((current) => current + 1)}
+                            >
+                                Próxima
+                            </button>
+                        </div>
                     </div>
 
                     <div className="fl full">
