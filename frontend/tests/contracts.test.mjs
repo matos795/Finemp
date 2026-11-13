@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
   createContract,
+  listContractPartnerOptions,
   listContracts,
   updateContract,
 } from "../src/features/contracts/api/contracts-api.ts"
@@ -38,6 +39,28 @@ test("contract list keeps filters on the server", async () => {
     "/api/companies/company-1/contracts?page=2&size=50&search=mensalidade&active=true",
   )
   assert.equal(calls[0].options.credentials, "include")
+})
+
+test("contract partner picker uses the contract-scoped lookup", async () => {
+  const calls = []
+
+  globalThis.fetch = async (path, options) => {
+    calls.push({ path, options })
+    return Response.json({
+      items: [],
+      page: 0,
+      size: 50,
+      totalItems: 0,
+      totalPages: 0,
+    })
+  }
+
+  await listContractPartnerOptions("company-1", " cliente ")
+
+  assert.equal(
+    calls[0].path,
+    "/api/companies/company-1/contracts/partners?page=0&size=50&search=cliente",
+  )
 })
 
 test("contract writes preserve exact money as text and optimistic version", async () => {
@@ -136,4 +159,7 @@ test("Contratos e reajustes is a real permission-guarded route", () => {
   assert.match(page, /className="tblwrap"/)
   assert.match(page, /className="modal"/)
   assert.doesNotMatch(page, /Number\(monthlyAmount\)/)
+  assert.match(page, /listContractPartnerOptions/)
+  assert.match(page, /selectedPartnerMissing/)
+  assert.match(page, /invalidateQueries\(\{[\s\S]*?queryKey: \["contracts", companyId\]/)
 })
