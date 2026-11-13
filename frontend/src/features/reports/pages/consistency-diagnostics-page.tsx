@@ -73,7 +73,7 @@ function CompanyConsistencyDiagnostics() {
                 <>
                     <div className="cards">
                         <div className="card">
-                            <div className="lb">Ocorrências encontradas</div>
+                            <div className="lb">Achados encontrados</div>
                             <div className="vl">{data.issueCount}</div>
                             <div className="sub">
                                 {data.issueCount === 0
@@ -93,7 +93,7 @@ function CompanyConsistencyDiagnostics() {
 
                     <Panel
                         title="Resultado das verificações"
-                        help="Os IDs abaixo são identificadores técnicos para rastreio. Nenhum dado pessoal de parceiro é exposto por este relatório."
+                        help="Os IDs abaixo são identificadores técnicos para rastreio, limitados aos primeiros 50 por verificação. Um registro pode aparecer em mais de uma regra. Nenhum dado pessoal de parceiro é exposto por este relatório."
                     >
                         <div className="tblwrap">
                             <table>
