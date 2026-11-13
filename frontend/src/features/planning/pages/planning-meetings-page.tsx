@@ -364,7 +364,7 @@ function PlanningMeetingsCompanyPage() {
             ) : null}
 
             {formOpen ? (
-                <Modal onClose={() => setFormOpen(false)} labelledBy="planningMeetingDialogTitle">
+                <Modal onClose={busy ? undefined : () => setFormOpen(false)} labelledBy="planningMeetingDialogTitle">
                         <h2 id="planningMeetingDialogTitle">
                             {editing ? "Editar encontro" : "Novo encontro"}
                         </h2>
