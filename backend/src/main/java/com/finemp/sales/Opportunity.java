@@ -104,6 +104,7 @@ public class Opportunity {
 
     public void win(Instant now) {
         if (now == null) throw invalid();
+        if (status == OpportunityStatus.WON) return;
         status = OpportunityStatus.WON;
         wonAt = now;
         lostAt = null;
@@ -112,6 +113,7 @@ public class Opportunity {
 
     public void lose(Instant now) {
         if (now == null) throw invalid();
+        if (status == OpportunityStatus.LOST) return;
         status = OpportunityStatus.LOST;
         lostAt = now;
         wonAt = null;
@@ -120,6 +122,7 @@ public class Opportunity {
 
     public void reopen(Instant now) {
         if (now == null) throw invalid();
+        if (status == OpportunityStatus.OPEN) return;
         status = OpportunityStatus.OPEN;
         wonAt = null;
         lostAt = null;
