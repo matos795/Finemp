@@ -63,6 +63,68 @@ public final class DebtScheduleCalculator {
         return List.copyOf(rows);
     }
 
+    public static List<Installment> fixed(
+            BigDecimal principal,
+            int installments,
+            BigDecimal fixedInstallment,
+            LocalDate firstDueDate) {
+
+        BigDecimal normalizedPrincipal = money(principal);
+        BigDecimal normalizedInstallment = money(fixedInstallment);
+        if (installments < 1 || installments > 1200 || firstDueDate == null) {
+            throw invalid();
+        }
+
+        BigDecimal impliedPercent = impliedMonthlyPercent(
+                normalizedPrincipal,
+                normalizedInstallment,
+                installments);
+        BigDecimal rate = impliedPercent.divide(HUNDRED, MC);
+        BigDecimal balance = normalizedPrincipal;
+        var rows = new ArrayList<Installment>(installments);
+
+        for (int index = 1; index <= installments; index++) {
+            BigDecimal interest = balance
+                    .multiply(rate, MC)
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal payment;
+            BigDecimal amortization;
+
+            if (index == installments) {
+                amortization = balance;
+                payment = amortization.add(interest)
+                        .setScale(2, RoundingMode.UNNECESSARY);
+            } else {
+                payment = normalizedInstallment;
+                amortization = payment.subtract(interest)
+                        .setScale(2, RoundingMode.UNNECESSARY);
+
+                if (amortization.signum() <= 0) {
+                    throw invalid();
+                }
+                if (amortization.compareTo(balance) > 0) {
+                    amortization = balance;
+                    payment = amortization.add(interest)
+                            .setScale(2, RoundingMode.UNNECESSARY);
+                }
+            }
+
+            balance = balance.subtract(amortization)
+                    .setScale(2, RoundingMode.UNNECESSARY);
+
+            rows.add(new Installment(
+                    index,
+                    dueDate(firstDueDate, index - 1),
+                    amortization,
+                    interest,
+                    payment,
+                    balance));
+        }
+
+        return List.copyOf(rows);
+    }
+
     /**
      * Effective annual percentage -> equivalent effective monthly percentage.
      * Uses a decimal Newton root instead of binary floating point.
