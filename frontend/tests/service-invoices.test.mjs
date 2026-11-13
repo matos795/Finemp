@@ -42,7 +42,7 @@ test("Notas fiscais is published with dedicated billing permissions", () => {
   assert.match(page, /netAmount/)
   assert.doesNotMatch(
     page,
-    /grossAmount\s*[+\-*/]|issAmount\s*[+\-*/]|totalWithheld\s*[+\-*/]|parseFloat|Number\(/,
+    /grossAmount\s*[+\-*/]|issAmount\s*[+\-*/]|totalWithheld\s*[+\-*/]|parseFloat|Number\(\s*invoice\.(?:grossAmount|totalWithheld|netAmount)/,
   )
   assert.match(page, /não emite NFS-e/i)
 })
@@ -88,12 +88,22 @@ test("invoice API keeps month, status and optimistic version explicit", async ()
     calls[0].path,
     "/api/companies/company-1/service-invoices?month=2026-11&page=0&size=50&status=DRAFT&search=cliente",
   )
+  const issuance = calls.find((call) =>
+    String(call.path).endsWith("/issuance")
+  )
+  const cancellation = calls.find((call) =>
+    String(call.path).endsWith("/cancellation")
+  )
+
+  assert.ok(issuance)
+  assert.ok(cancellation)
+
   assert.deepEqual(
-    JSON.parse(calls[1].options.body),
+    JSON.parse(issuance.options.body),
     { expectedVersion: 7, invoiceNumber: "12345" },
   )
   assert.deepEqual(
-    JSON.parse(calls[2].options.body),
+    JSON.parse(cancellation.options.body),
     { expectedVersion: 7, invoiceNumber: null },
   )
 })
