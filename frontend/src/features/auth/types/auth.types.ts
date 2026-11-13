@@ -40,6 +40,8 @@ export type CompanyPermission =
     | "FINANCIAL_PERIOD_REOPEN"
     | "PLANNING_VIEW"
     | "PLANNING_MANAGE"
+    | "CONTRACT_VIEW"
+    | "CONTRACT_MANAGE"
 
 export type CostCenterScope = "ALL" | "RESTRICTED"
 

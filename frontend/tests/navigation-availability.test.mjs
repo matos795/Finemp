@@ -39,7 +39,7 @@ test("items without a published route are not shown", () => {
 test("modules left without available items disappear", () => {
   const moduleIds = visibleNavigation(navigationModules, () => true, () => true).map((module) => module.id)
 
-  for (const empty of ["grp", "div", "crm", "pes", "ctr", "est", "pat", "orc"]) {
+  for (const empty of ["grp", "div", "crm", "pes", "est", "pat", "orc"]) {
     assert.equal(moduleIds.includes(empty), false, empty)
   }
   for (const published of ["fluxo", "rel", "cad", "ajuda", "dem"]) {

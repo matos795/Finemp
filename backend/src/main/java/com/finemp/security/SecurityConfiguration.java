@@ -152,6 +152,13 @@ public class SecurityConfiguration {
                                                 .authenticated()
 
                                                 .requestMatchers(
+                                                                "/api/companies/{companyId}/contracts",
+                                                                "/api/companies/{companyId}/contracts/partners",
+                                                                "/api/companies/{companyId}/contracts/{contractId}")
+                                                .authenticated()
+
+
+                                                .requestMatchers(
                                                                 "/api/companies/{companyId}/result-centers",
                                                                 "/api/companies/{companyId}/result-centers/{centerId}")
                                                 .authenticated()
