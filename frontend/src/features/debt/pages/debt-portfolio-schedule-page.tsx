@@ -117,7 +117,7 @@ function DebtPortfolioScheduleCompanyPage() {
                                     <tr key={item.id}>
                                         <td>{formatIsoDate(item.dueDate)}</td>
                                         <td>
-                                            <span className="badge b-info">
+                                            <span className="badge b-neu">
                                                 {originLabel[item.origin]}
                                             </span>
                                         </td>
