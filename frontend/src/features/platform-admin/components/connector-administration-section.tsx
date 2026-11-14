@@ -85,13 +85,6 @@ export function ConnectorAdministrationSection({
     useEffect(() => {
         let active = true
 
-        setSources([])
-        setCredentials([])
-        setSelectedSourceId("")
-        setOneTimeSecret(null)
-        setMessage(null)
-        setError(null)
-
         if (!accountingFirmId || !clientId || !companyId) return
 
         void Promise.all([
@@ -115,12 +108,6 @@ export function ConnectorAdministrationSection({
             active = false
         }
     }, [accountingFirmId, clientId, companyId])
-
-    useEffect(() => {
-        setOneTimeSecret(null)
-        setMessage(null)
-        setError(null)
-    }, [selectedSourceId])
 
     async function run(action: () => Promise<void>) {
         setBusy(true)
@@ -184,7 +171,12 @@ export function ConnectorAdministrationSection({
                     id="accounting-source-select"
                     value={selectedSourceId}
                     disabled={disabled || busy}
-                    onChange={(event) => setSelectedSourceId(event.target.value)}
+                    onChange={(event) => {
+                        setOneTimeSecret(null)
+                        setMessage(null)
+                        setError(null)
+                        setSelectedSourceId(event.target.value)
+                    }}
                 >
                     <option value="">Selecione</option>
                     {sources.map((source) => (
