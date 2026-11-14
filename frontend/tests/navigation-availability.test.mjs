@@ -31,7 +31,7 @@ test("items without a published route are not shown", () => {
   }
 
   const all = modules.flatMap((module) => module.items.map((item) => item.id))
-  for (const placeholder of ["orc", "bens"]) {
+  for (const placeholder of ["orc"]) {
     assert.equal(all.includes(placeholder), false, placeholder)
   }
 })
@@ -39,10 +39,10 @@ test("items without a published route are not shown", () => {
 test("modules left without available items disappear", () => {
   const moduleIds = visibleNavigation(navigationModules, () => true, () => true).map((module) => module.id)
 
-  for (const empty of ["grp", "pes", "est", "pat", "orc"]) {
+  for (const empty of ["grp", "pes", "est", "orc"]) {
     assert.equal(moduleIds.includes(empty), false, empty)
   }
-  for (const published of ["fluxo", "rel", "div", "crm", "ctr", "cad", "ajuda", "dem"]) {
+  for (const published of ["fluxo", "rel", "div", "crm", "ctr", "pat", "cad", "ajuda", "dem"]) {
     assert.equal(moduleIds.includes(published), true, published)
   }
 })
@@ -140,7 +140,7 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   const modules = visibleNavigation(navigationModules, () => true, () => true, true)
   const all = modules.flatMap((module) => module.items)
 
-  for (const id of ["orc", "bens"]) {
+  for (const id of ["orc"]) {
     const item = all.find((candidate) => candidate.id === id)
     assert.ok(item, id)
     assert.equal(item.available, false, id)
@@ -150,6 +150,28 @@ test("SYSTEM_ADMIN sees the declared roadmap without synthetic routes", () => {
   for (const item of all.filter((candidate) => candidate.path !== undefined)) {
     assert.equal(item.available, true, item.id)
   }
+})
+
+
+test("Bens is published only with ASSET_VIEW or ASSET_MANAGE", () => {
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("ASSET_VIEW"), none)),
+    ["pat:bens", "cad:empresas,cadEmp", "ajuda:faq,tutor"],
+  )
+
+  assert.deepEqual(
+    ids(visibleNavigation(navigationModules, can("ASSET_MANAGE"), none)),
+    ["pat:bens", "cad:empresas,cadEmp", "ajuda:faq,tutor"],
+  )
+
+  assert.equal(
+    visibleNavigation(navigationModules, none, none)
+      .flatMap((module) => module.items)
+      .some((item) => item.id === "bens"),
+    false,
+  )
+
+  assert.equal(findNavigationByPath(navigationModules, "/assets").item.id, "bens")
 })
 
 

@@ -59,6 +59,7 @@ import { SalesPipelinePage } from "../../features/sales/pages/sales-pipeline-pag
 import { SalesActivitiesPage } from "../../features/sales/pages/sales-activities-page"
 import { SalesPortfolioPage } from "../../features/sales/pages/sales-portfolio-page"
 import { SalesIndicatorsPage } from "../../features/sales/pages/sales-indicators-page"
+import { AssetsPage } from "../../features/assets/pages/assets-page"
 
 export function AppRouter() {
     return (
@@ -208,6 +209,15 @@ export function AppRouter() {
                     />
 
                     <Route path="/companies" element={<CompaniesPage />} />
+
+                    <Route
+                        path="/assets"
+                        element={
+                            <RequirePermission permission={["ASSET_VIEW", "ASSET_MANAGE"]}>
+                                <AssetsPage />
+                            </RequirePermission>
+                        }
+                    />
 
                     <Route
                         path="/planning/meetings"

@@ -78,6 +78,8 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
     { value: "DEBT_MANAGE", label: "Endividamento — gerenciar" },
     { value: "CRM_VIEW", label: "Comercial — visualizar" },
     { value: "CRM_MANAGE", label: "Comercial — gerenciar" },
+    { value: "ASSET_VIEW", label: "Bens — visualizar" },
+    { value: "ASSET_MANAGE", label: "Bens — gerenciar" },
 ]
 
 const READ_ONLY_PERMISSIONS = COMPANY_PERMISSION_OPTIONS

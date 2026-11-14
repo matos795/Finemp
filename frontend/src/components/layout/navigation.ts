@@ -352,7 +352,12 @@ export const navigationModules: NavigationModule[] = [
         label: "Bens",
         icon: "pat",
         items: [
-            { id: "bens", label: "Controle de bens" },
+            {
+                id: "bens",
+                label: "Controle de bens",
+                path: "/assets",
+                permissions: ["ASSET_VIEW", "ASSET_MANAGE"],
+            },
         ],
     },
     {
