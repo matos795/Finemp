@@ -15,9 +15,13 @@ import org.springframework.web.bind.annotation.*;
 public class DebtAgreementController {
 
     private final DebtAgreementService service;
+    private final DebtPortfolioReadService portfolio;
 
-    public DebtAgreementController(DebtAgreementService service) {
+    public DebtAgreementController(
+            DebtAgreementService service,
+            DebtPortfolioReadService portfolio) {
         this.service = service;
+        this.portfolio = portfolio;
     }
 
     @GetMapping
@@ -54,6 +58,36 @@ public class DebtAgreementController {
                         actor.getUserAccountId(),
                         companyId,
                         search,
+                        page,
+                        size));
+    }
+
+    @GetMapping("/overview")
+    public ResponseEntity<DebtPortfolioReadService.Overview> overview(
+            @AuthenticationPrincipal UserAccountPrincipal actor,
+            @PathVariable UUID companyId) {
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(portfolio.overview(
+                        actor.getUserAccountId(),
+                        companyId));
+    }
+
+    @GetMapping("/schedule")
+    public ResponseEntity<PagedResponse<DebtPortfolioReadService.ScheduleItem>> portfolioSchedule(
+            @AuthenticationPrincipal UserAccountPrincipal actor,
+            @PathVariable UUID companyId,
+            @RequestParam String month,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(portfolio.schedule(
+                        actor.getUserAccountId(),
+                        companyId,
+                        month,
                         page,
                         size));
     }
