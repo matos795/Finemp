@@ -39,6 +39,20 @@ export function listResultCenters(
     )
 }
 
+export async function listAllResultCenters(
+    companyId: string,
+) {
+    const first = await listResultCenters(companyId, "", 0, 100)
+    const items = [...first.items]
+
+    for (let page = 1; page < first.totalPages; page += 1) {
+        const next = await listResultCenters(companyId, "", page, 100)
+        items.push(...next.items)
+    }
+
+    return items
+}
+
 export function createResultCenter(
     companyId: string,
     input: { code: string; name: string; type: ResultCenterType },
