@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 public interface AssetRepository extends JpaRepository<Asset, UUID> {
 
     Optional<Asset> findByIdAndCompanyId(UUID id, UUID companyId);
+    boolean existsByCompanyIdAndBusinessPartnerId(UUID companyId, UUID businessPartnerId);
+    boolean existsByCompanyIdAndResultCenterId(UUID companyId, UUID resultCenterId);
 
     @Query("""
             select asset from Asset asset
