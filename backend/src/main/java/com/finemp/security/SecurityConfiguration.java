@@ -193,6 +193,12 @@ public class SecurityConfiguration {
 
 
                                                 .requestMatchers(
+                                                                "/api/companies/{companyId}/assets",
+                                                                "/api/companies/{companyId}/assets/summary",
+                                                                "/api/companies/{companyId}/assets/{assetId}")
+                                                .authenticated()
+
+                                                .requestMatchers(
                                                                 "/api/companies/{companyId}/result-centers",
                                                                 "/api/companies/{companyId}/result-centers/{centerId}")
                                                 .authenticated()
