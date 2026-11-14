@@ -39,7 +39,9 @@ test("connector administration API stays scoped to firm hierarchy and source", a
       })
     }
 
-    if (String(path).endsWith("/connectors") && options.method !== "POST") {
+    const url = new URL(path, "https://example.invalid")
+
+    if (url.pathname.endsWith("/connectors") && options.method !== "POST") {
       return Response.json({
         items: [],
         page: 0,
@@ -153,15 +155,15 @@ test("connector UI keeps the one-time secret only in component memory and discar
     "utf8",
   )
 
-  assert.match(section, /useState<string \\| null>\\(null\\)/)
-  assert.match(section, /setOneTimeSecret\\(issued\\.secret\\)/)
-  assert.match(section, /setOneTimeSecret\\(rotated\\.secret\\)/)
-  assert.match(section, /setOneTimeSecret\\(null\\)/)
+  assert.ok(section.includes("useState<string | null>(null)"))
+  assert.ok(section.includes("setOneTimeSecret(issued.secret)"))
+  assert.ok(section.includes("setOneTimeSecret(rotated.secret)"))
+  assert.ok(section.includes("setOneTimeSecret(null)"))
   assert.match(section, /accountingFirmId, clientId, companyId/)
   assert.match(section, /selectedSourceId/)
 
   assert.doesNotMatch(section, /localStorage|sessionStorage/)
-  assert.doesNotMatch(section, /console\\.(?:log|info|warn|error)/)
+  assert.doesNotMatch(section, /console\.(?:log|info|warn|error)/)
 
   assert.match(page, /ConnectorAdministrationSection/)
   assert.match(page, /selectedFirmId/)
