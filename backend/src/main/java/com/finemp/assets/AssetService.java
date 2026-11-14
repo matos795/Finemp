@@ -97,6 +97,9 @@ public class AssetService {
             var iterator = stream.iterator();
             while (iterator.hasNext()) {
                 Asset asset = iterator.next();
+                if (asset.getAcquisitionDate().isAfter(today)) {
+                    continue;
+                }
                 count += 1;
                 acquisition = acquisition.add(asset.getAcquisitionValue());
                 var input = asset.depreciationInput();
