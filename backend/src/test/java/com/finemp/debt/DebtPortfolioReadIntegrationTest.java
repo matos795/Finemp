@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -36,6 +37,7 @@ class DebtPortfolioReadIntegrationTest {
     @Autowired UserAccountRepository users;
     @Autowired CompanyAccessGrantRepository grants;
     @Autowired MockMvc mvc;
+    @Autowired JdbcTemplate jdbc;
 
     @Test
     void overviewAggregatesExactContractualAmountsByOriginAndCompany() {
@@ -147,6 +149,37 @@ class DebtPortfolioReadIntegrationTest {
         assertThat(february.items()).hasSize(2);
         assertThat(february.items())
                 .allSatisfy(item -> assertThat(item.dueDate().getMonthValue()).isEqualTo(2));
+    }
+
+    @Test
+    void corruptCrossCompanyCreditorLinkNeverLeaksForeignPartnerName() {
+        var fixture = fixture();
+
+        var debt = debt(
+                fixture.owner(),
+                fixture.ownerPartner(),
+                DebtOrigin.BANK,
+                "Legacy corrupt debt",
+                "600.00",
+                2,
+                "0");
+
+        jdbc.update(
+                "UPDATE debt_agreements SET business_partner_id=? WHERE id=?",
+                fixture.otherPartner().getId(),
+                debt.getId());
+
+        var schedule = portfolio.schedule(
+                fixture.viewer().getId(),
+                fixture.owner().getId(),
+                "2026-01",
+                0,
+                50);
+
+        assertThat(schedule.items()).hasSize(1);
+        assertThat(schedule.items().getFirst().creditorName()).isNull();
+        assertThat(schedule.items().getFirst().description())
+                .isEqualTo("Legacy corrupt debt");
     }
 
     @Test
