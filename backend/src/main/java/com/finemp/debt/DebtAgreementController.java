@@ -75,7 +75,7 @@ public class DebtAgreementController {
     }
 
     @GetMapping("/schedule")
-    public ResponseEntity<com.finemp.administration.PagedResponse<DebtPortfolioReadService.ScheduleItem>> portfolioSchedule(
+    public ResponseEntity<PagedResponse<DebtPortfolioReadService.ScheduleItem>> portfolioSchedule(
             @AuthenticationPrincipal UserAccountPrincipal actor,
             @PathVariable UUID companyId,
             @RequestParam String month,
