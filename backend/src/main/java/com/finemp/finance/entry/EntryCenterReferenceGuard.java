@@ -3,9 +3,11 @@ package com.finemp.finance.entry;
 import com.finemp.finance.center.ResultCenterUsageGuard;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /** Historical references remain protected even when entry capture is disabled. */
+@Primary
 @Component("financialEntryCenterReferences")
 public class EntryCenterReferenceGuard implements ResultCenterUsageGuard {
     private final JdbcTemplate jdbc;
