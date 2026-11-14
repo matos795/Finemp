@@ -11,7 +11,7 @@ CREATE TABLE assets (
     quantity INTEGER NOT NULL,
     business_partner_id UUID REFERENCES business_partners(id),
     document_reference VARCHAR(60),
-    result_center_id UUID REFERENCES result_centers(id),
+    result_center_id UUID REFERENCES operational_result_centers(id),
     location VARCHAR(80),
     responsible VARCHAR(120),
     useful_life_months INTEGER NOT NULL,
