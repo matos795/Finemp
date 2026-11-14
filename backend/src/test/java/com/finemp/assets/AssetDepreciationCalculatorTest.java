@@ -164,6 +164,28 @@ class AssetDepreciationCalculatorTest {
     }
 
     @Test
+    void explicitDepreciationStartMayBeginAfterAcquisition() {
+        var asset = new AssetDepreciationCalculator.Input(
+                new BigDecimal("1200.00"),
+                12,
+                BigDecimal.ZERO,
+                true,
+                LocalDate.of(2026, 1, 10),
+                LocalDate.of(2026, 3, 1),
+                null);
+
+        assertThat(AssetDepreciationCalculator.depreciationForMonth(
+                asset,
+                YearMonth.of(2026, 2)))
+                .isEqualByComparingTo("0.00");
+
+        assertThat(AssetDepreciationCalculator.depreciationForMonth(
+                asset,
+                YearMonth.of(2026, 3)))
+                .isEqualByComparingTo("100.00");
+    }
+
+    @Test
     void disposalResultUsesBookValueAtDisposalMonthForGainAndLoss() {
         var asset = input(
                 "1200.00",
@@ -237,6 +259,7 @@ class AssetDepreciationCalculatorTest {
                 new BigDecimal(residualPercent),
                 depreciable,
                 LocalDate.parse(acquisitionDate),
+                null,
                 disposalDate == null ? null : LocalDate.parse(disposalDate));
     }
 }
