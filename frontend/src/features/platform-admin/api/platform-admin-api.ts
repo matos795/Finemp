@@ -41,6 +41,31 @@ export interface PlatformUser {
     invitationPending: boolean
 }
 
+export interface AccountingSource {
+    id: string
+    companyId: string
+    type: "QUESTOR"
+    externalReference: string | null
+    active: boolean
+    connectionMode: "DIRECT" | "CONNECTOR"
+}
+
+export interface ConnectorCredential {
+    id: string
+    accountingFirmId: string
+    accountingSourceId: string
+    label: string
+    createdAt: string
+    expiresAt: string
+    revokedAt: string | null
+    version: number
+}
+
+export interface ConnectorSecret {
+    credential: ConnectorCredential
+    secret: string
+}
+
 export type FirmPermission =
     | "HIERARCHY_MANAGE"
     | "USER_ACCESS_MANAGE"
@@ -243,4 +268,84 @@ export function replaceUserPlatformPermissions(id: string, permissions: Platform
         method: "PUT",
         body: JSON.stringify({ permissions }),
     })
+}
+
+
+export async function listAccountingSources(
+    accountingFirmId: string,
+    clientId: string,
+    companyId: string,
+) {
+    return listAllPages<AccountingSource>(
+        `/api/accounting-firms/${accountingFirmId}/clients/${clientId}/companies/${companyId}/accounting-sources`,
+    )
+}
+
+export async function createAccountingSource(
+    accountingFirmId: string,
+    clientId: string,
+    companyId: string,
+    externalReference: string,
+) {
+    return apiRequest<AccountingSource>(
+        `/api/accounting-firms/${accountingFirmId}/clients/${clientId}/companies/${companyId}/accounting-sources`,
+        {
+            method: "POST",
+            body: JSON.stringify({
+                type: "QUESTOR",
+                externalReference: externalReference.trim() || null,
+            }),
+        },
+    )
+}
+
+export async function listConnectorCredentials(
+    accountingFirmId: string,
+) {
+    return listAllPages<ConnectorCredential>(
+        `/api/admin/accounting-firms/${accountingFirmId}/connectors`,
+    )
+}
+
+export async function issueConnectorCredential(
+    accountingFirmId: string,
+    accountingSourceId: string,
+    label: string,
+) {
+    return apiRequest<ConnectorSecret>(
+        `/api/admin/accounting-firms/${accountingFirmId}/connectors`,
+        {
+            method: "POST",
+            cache: "no-store",
+            body: JSON.stringify({
+                accountingSourceId,
+                label: label.trim(),
+            }),
+        },
+    )
+}
+
+export async function rotateConnectorCredential(
+    accountingFirmId: string,
+    credentialId: string,
+) {
+    return apiRequest<ConnectorSecret>(
+        `/api/admin/accounting-firms/${accountingFirmId}/connectors/${credentialId}/rotate`,
+        {
+            method: "POST",
+            cache: "no-store",
+        },
+    )
+}
+
+export async function revokeConnectorCredential(
+    accountingFirmId: string,
+    credentialId: string,
+) {
+    return apiRequest<void>(
+        `/api/admin/accounting-firms/${accountingFirmId}/connectors/${credentialId}`,
+        {
+            method: "DELETE",
+        },
+    )
 }
