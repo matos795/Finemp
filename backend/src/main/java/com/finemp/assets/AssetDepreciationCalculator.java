@@ -76,9 +76,10 @@ public final class AssetDepreciationCalculator {
                 .setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal base = depreciableBase(input);
-        return accumulated.compareTo(base) > 0
+        return (accumulated.compareTo(base) > 0
                 ? base
-                : accumulated;
+                : accumulated)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     public static BigDecimal bookValue(
@@ -112,13 +113,9 @@ public final class AssetDepreciationCalculator {
     }
 
     private static BigDecimal depreciableBase(Input input) {
-        BigDecimal retained = input.acquisitionValue()
-                .multiply(input.residualPercent())
-                .divide(ONE_HUNDRED, 12, RoundingMode.HALF_UP);
-
         return input.acquisitionValue()
-                .subtract(retained)
-                .setScale(2, RoundingMode.HALF_UP);
+                .multiply(ONE_HUNDRED.subtract(input.residualPercent()))
+                .divide(ONE_HUNDRED, 12, RoundingMode.HALF_UP);
     }
 
     private static YearMonth lastDepreciableMonth(Input input) {
