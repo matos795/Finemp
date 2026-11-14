@@ -171,7 +171,8 @@ public final class AssetDepreciationCalculator {
         public Input {
             acquisitionValue = money(acquisitionValue);
 
-            if (usefulLifeMonths < 1
+            if (usefulLifeMonths < 0
+                    || depreciable && usefulLifeMonths < 1
                     || residualPercent == null
                     || acquisitionDate == null
                     || residualPercent.signum() < 0
