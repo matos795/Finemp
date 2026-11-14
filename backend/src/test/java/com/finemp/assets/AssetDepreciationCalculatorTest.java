@@ -101,23 +101,23 @@ class AssetDepreciationCalculatorTest {
     void accumulatedDepreciationNeverExceedsBaseWhenRoundedMonthlyValueWouldOvershoot() {
         var asset = input(
                 "100.00",
-                3,
+                6,
                 "0",
                 true,
                 "2026-01-01",
                 null);
 
         assertThat(AssetDepreciationCalculator.monthlyDepreciation(asset))
-                .isEqualByComparingTo("33.33");
+                .isEqualByComparingTo("16.67");
 
         assertThat(AssetDepreciationCalculator.accumulatedDepreciation(
                 asset,
-                LocalDate.of(2026, 3, 31)))
-                .isEqualByComparingTo("99.99");
+                LocalDate.of(2026, 5, 31)))
+                .isEqualByComparingTo("83.35");
 
         assertThat(AssetDepreciationCalculator.accumulatedDepreciation(
                 asset,
-                LocalDate.of(2026, 4, 30)))
+                LocalDate.of(2026, 6, 30)))
                 .isEqualByComparingTo("100.00");
     }
 
