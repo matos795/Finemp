@@ -122,10 +122,10 @@ class AssetDepreciationCalculatorTest {
     }
 
     @Test
-    void nonDepreciableAssetKeepsOriginalBookValue() {
+    void nonDepreciableAssetKeepsOriginalBookValueAndMayHaveZeroUsefulLife() {
         var asset = input(
                 "1200.00",
-                12,
+                0,
                 "0",
                 false,
                 "2026-01-01",
