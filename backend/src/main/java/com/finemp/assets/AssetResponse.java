@@ -54,7 +54,7 @@ public record AssetResponse(
                 money(asset.getAcquisitionValue()),
                 asset.getQuantity(),
                 partner == null ? null : partner.getId(),
-                partner == null ? null : partner.getProfile().displayName(),
+                partner == null ? null : partner.getProfile().name(),
                 asset.getDocumentReference(),
                 center == null ? null : center.getId(),
                 center == null ? null : center.getCode(),
