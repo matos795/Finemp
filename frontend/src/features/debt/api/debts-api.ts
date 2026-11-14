@@ -7,6 +7,10 @@ import type {
     DebtOrigin,
     DebtPartnerOptionPage,
 } from "../types/debt.types.ts"
+import type {
+    DebtPortfolioOverview,
+    DebtPortfolioSchedulePage,
+} from "../types/debt-portfolio.types.ts"
 
 export const DEBTS_PAGE_SIZE = 50
 
@@ -96,5 +100,34 @@ export function updateDebt(
                 expectedVersion: debt.version,
             }),
         },
+    )
+}
+
+
+export function getDebtPortfolioOverview(
+    companyId: string,
+    signal?: AbortSignal,
+): Promise<DebtPortfolioOverview> {
+    return apiRequest<DebtPortfolioOverview>(
+        `${debtsPath(companyId)}/overview`,
+        { signal, cache: "no-store" },
+    )
+}
+
+export function getDebtPortfolioSchedule(
+    companyId: string,
+    month: string,
+    page: number,
+    signal?: AbortSignal,
+): Promise<DebtPortfolioSchedulePage> {
+    const params = new URLSearchParams({
+        month,
+        page: String(page),
+        size: String(DEBTS_PAGE_SIZE),
+    })
+
+    return apiRequest<DebtPortfolioSchedulePage>(
+        `${debtsPath(companyId)}/schedule?${params}`,
+        { signal, cache: "no-store" },
     )
 }
