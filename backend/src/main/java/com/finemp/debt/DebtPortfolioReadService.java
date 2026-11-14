@@ -146,7 +146,7 @@ public class DebtPortfolioReadService {
                        i.balance_after
                   FROM debt_installments i
                   JOIN debt_agreements a ON a.id = i.debt_agreement_id
-                  LEFT JOIN business_partners p ON p.id = a.business_partner_id
+                  LEFT JOIN business_partners p ON p.id = a.business_partner_id AND p.company_id = a.company_id
                  WHERE a.company_id = :company
                    AND i.due_date BETWEEN :from AND :to
                  ORDER BY i.due_date, a.origin, a.description, i.installment_number, i.id
