@@ -9,7 +9,7 @@ import { formatExactCurrency, formatIsoDate } from "../../../lib/formatters/deci
 import { ApiError } from "../../../lib/api/api-client"
 import { listBusinessPartnersPage } from "../../business-partners/api/business-partners-api"
 import { useCompanyAccess } from "../../companies/company-access-context"
-import { listResultCenters } from "../../result-centers/api/result-center-api"
+import { listAllResultCenters } from "../../result-centers/api/result-center-api"
 import {
     createAsset,
     getAssetSummary,
@@ -407,7 +407,7 @@ function AssetDialog({
 
     const centers = useQuery({
         queryKey: ["asset-centers", companyId] as const,
-        queryFn: () => listResultCenters(companyId, "", 0, 100),
+        queryFn: () => listAllResultCenters(companyId),
         retry: false,
     })
 
@@ -500,7 +500,7 @@ function AssetDialog({
     }
 
     const partnerItems = partners.data?.items ?? []
-    const centerItems = centers.data?.items.filter((center) => center.active) ?? []
+    const centerItems = centers.data?.filter((center) => center.active) ?? []
 
     return (
         <Modal
