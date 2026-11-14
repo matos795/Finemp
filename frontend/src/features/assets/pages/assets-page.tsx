@@ -654,6 +654,14 @@ function AssetDialog({
                         onChange={(event) => setResultCenterId(event.target.value)}
                     >
                         <option value="">Sem vínculo</option>
+                        {asset?.resultCenterId &&
+                            !centerItems.some((center) => center.id === asset.resultCenterId) ? (
+                            <option value={asset.resultCenterId}>
+                                {asset.resultCenterCode
+                                    ? asset.resultCenterCode + " — " + (asset.resultCenterName ?? "")
+                                    : "Centro atual"}
+                            </option>
+                        ) : null}
                         {centerItems.map((center) => (
                             <option key={center.id} value={center.id}>
                                 {center.code} — {center.name}
