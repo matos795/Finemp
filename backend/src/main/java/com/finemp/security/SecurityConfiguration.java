@@ -172,6 +172,8 @@ public class SecurityConfiguration {
                                                 .requestMatchers(
                                                                 "/api/companies/{companyId}/debts",
                                                                 "/api/companies/{companyId}/debts/partners",
+                                                                "/api/companies/{companyId}/debts/overview",
+                                                                "/api/companies/{companyId}/debts/schedule",
                                                                 "/api/companies/{companyId}/debts/{debtId}",
                                                                 "/api/companies/{companyId}/debts/{debtId}/schedule")
                                                 .authenticated()
