@@ -31,6 +31,7 @@ import {
 } from "../api/platform-admin-api"
 
 import { OfficialUserOnboardingSection } from "../components/official-user-onboarding-section"
+import { ConnectorAdministrationSection } from "../components/connector-administration-section"
 
 const FIRM_ADMIN_PERMISSIONS = [
     "HIERARCHY_MANAGE",
@@ -663,6 +664,20 @@ export function PlatformAdminPage() {
                     Conceder meu acesso à empresa
                 </button>
             </section>
+
+            <ConnectorAdministrationSection
+                key={`${selectedFirmId || "no-firm"}:${selectedClientId || "no-client"}:${selectedCompanyId || "no-company"}`}
+                accountingFirmId={selectedFirmId}
+                clientId={selectedClientId}
+                companyId={selectedCompanyId}
+                disabled={
+                    busy ||
+                    !firmAccessReady ||
+                    !selectedFirmId ||
+                    !selectedClientId ||
+                    !selectedCompanyId
+                }
+            />
 
             <OfficialUserOnboardingSection
                 key={selectedFirmId || "no-firm"}
