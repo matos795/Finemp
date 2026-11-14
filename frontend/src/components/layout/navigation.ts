@@ -217,7 +217,12 @@ export const navigationModules: NavigationModule[] = [
         label: "Endividamento",
         icon: "div",
         items: [
-            { id: "divPainel", label: "Visão geral" },
+            {
+                id: "divPainel",
+                label: "Visão geral",
+                path: "/debts/overview",
+                permissions: ["DEBT_VIEW", "DEBT_MANAGE"],
+            },
             {
                 id: "divBanco",
                 label: "Bancos",
@@ -242,7 +247,12 @@ export const navigationModules: NavigationModule[] = [
                 path: "/debts/third-parties",
                 permissions: ["DEBT_VIEW", "DEBT_MANAGE"],
             },
-            { id: "divCron", label: "Cronograma de pagamentos" },
+            {
+                id: "divCron",
+                label: "Cronograma de pagamentos",
+                path: "/debts/schedule",
+                permissions: ["DEBT_VIEW", "DEBT_MANAGE"],
+            },
         ],
     },
     {
