@@ -42,4 +42,9 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
             @Param("companyId") UUID companyId,
             @Param("assetTag") String assetTag,
             @Param("excludeId") UUID excludeId);
+
+    @Query("select asset from Asset asset where asset.company.id=:companyId and asset.status<>:status")
+    java.util.stream.Stream<Asset> streamByCompanyAndStatusNot(
+            @Param("companyId") UUID companyId,
+            @Param("status") AssetStatus status);
 }
