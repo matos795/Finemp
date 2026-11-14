@@ -53,6 +53,8 @@ import { ContractsPage } from "../../features/contracts/pages/contracts-page"
 import { MonthlyContractBillingPage } from "../../features/contracts/pages/monthly-contract-billing-page"
 import { ServiceInvoicesPage } from "../../features/billing/pages/service-invoices-page"
 import { DebtOriginPage } from "../../features/debt/pages/debt-origin-page"
+import { DebtPortfolioOverviewPage } from "../../features/debt/pages/debt-portfolio-overview-page"
+import { DebtPortfolioSchedulePage } from "../../features/debt/pages/debt-portfolio-schedule-page"
 import { SalesPipelinePage } from "../../features/sales/pages/sales-pipeline-page"
 import { SalesActivitiesPage } from "../../features/sales/pages/sales-activities-page"
 import { SalesPortfolioPage } from "../../features/sales/pages/sales-portfolio-page"
@@ -272,6 +274,24 @@ export function AppRouter() {
                         element={
                             <RequirePermission permission={["CRM_VIEW", "CRM_MANAGE"]}>
                                 <SalesIndicatorsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/debts/overview"
+                        element={
+                            <RequirePermission permission={["DEBT_VIEW", "DEBT_MANAGE"]}>
+                                <DebtPortfolioOverviewPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/debts/schedule"
+                        element={
+                            <RequirePermission permission={["DEBT_VIEW", "DEBT_MANAGE"]}>
+                                <DebtPortfolioSchedulePage />
                             </RequirePermission>
                         }
                     />
