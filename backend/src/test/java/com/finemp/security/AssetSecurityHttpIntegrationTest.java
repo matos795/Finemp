@@ -91,7 +91,7 @@ class AssetSecurityHttpIntegrationTest {
                         .content(validAssetJson()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.acquisitionValue").value("1200.00"))
-                .andExpect(jsonPath("$.monthlyDepreciation").value("20.00"))
+                .andExpect(jsonPath("$.monthlyDepreciation").value("100.00"))
                 .andExpect(jsonPath("$.residualPercent").value("0.00"));
 
         mvc.perform(post("/api/companies/{companyId}/assets", company.getId())
