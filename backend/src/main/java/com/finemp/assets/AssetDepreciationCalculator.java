@@ -37,7 +37,7 @@ public final class AssetDepreciationCalculator {
             return ZERO_MONEY;
         }
 
-        YearMonth first = YearMonth.from(input.acquisitionDate());
+        YearMonth first = YearMonth.from(input.effectiveDepreciationStartDate());
         YearMonth last = lastDepreciableMonth(input);
 
         if (month.isBefore(first) || month.isAfter(last)) {
@@ -57,7 +57,7 @@ public final class AssetDepreciationCalculator {
             return ZERO_MONEY;
         }
 
-        YearMonth first = YearMonth.from(input.acquisitionDate());
+        YearMonth first = YearMonth.from(input.effectiveDepreciationStartDate());
         YearMonth requested = YearMonth.from(asOf);
 
         if (requested.isBefore(first)) {
@@ -122,7 +122,7 @@ public final class AssetDepreciationCalculator {
     }
 
     private static YearMonth lastDepreciableMonth(Input input) {
-        YearMonth first = YearMonth.from(input.acquisitionDate());
+        YearMonth first = YearMonth.from(input.effectiveDepreciationStartDate());
         YearMonth byLife = first.plusMonths(input.usefulLifeMonths() - 1L);
 
         if (input.disposalDate() == null) {
@@ -166,6 +166,7 @@ public final class AssetDepreciationCalculator {
             BigDecimal residualPercent,
             boolean depreciable,
             LocalDate acquisitionDate,
+            LocalDate depreciationStartDate,
             LocalDate disposalDate) {
 
         public Input {
@@ -175,6 +176,8 @@ public final class AssetDepreciationCalculator {
                     || depreciable && usefulLifeMonths < 1
                     || residualPercent == null
                     || acquisitionDate == null
+                    || depreciationStartDate != null
+                    && depreciationStartDate.isBefore(acquisitionDate)
                     || residualPercent.signum() < 0
                     || residualPercent.compareTo(ONE_HUNDRED) > 0
                     || disposalDate != null
@@ -186,6 +189,12 @@ public final class AssetDepreciationCalculator {
             if (residualPercent.scale() < 0) {
                 residualPercent = residualPercent.setScale(0);
             }
+        }
+
+        LocalDate effectiveDepreciationStartDate() {
+            return depreciationStartDate == null
+                    ? acquisitionDate
+                    : depreciationStartDate;
         }
     }
 }
