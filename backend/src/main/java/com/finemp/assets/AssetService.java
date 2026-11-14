@@ -16,7 +16,6 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -123,16 +122,12 @@ public class AssetService {
         Company company = writeOwner(actor, companyId);
         if (request == null || request.expectedVersion() != null) throw invalid();
 
-        AssetValues values = values(companyId, request, false);
+        AssetValues values = values(companyId, request);
         checkTag(companyId, values.assetTag(), null);
 
-        try {
-            return AssetResponse.from(
-                    assets.saveAndFlush(new Asset(company, values)),
-                    LocalDate.now(clock));
-        } catch (DataIntegrityViolationException exception) {
-            throw new AssetConflictException(AssetConflictException.Reason.DUPLICATE_TAG);
-        }
+        return AssetResponse.from(
+                assets.saveAndFlush(new Asset(company, values)),
+                LocalDate.now(clock));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -155,19 +150,15 @@ public class AssetService {
             throw new AssetConflictException(AssetConflictException.Reason.STALE_VERSION);
         }
 
-        AssetValues values = values(companyId, request, true);
+        AssetValues values = values(companyId, request);
         checkTag(companyId, values.assetTag(), assetId);
 
-        try {
-            asset.replace(values);
-            assets.flush();
-            return AssetResponse.from(asset, LocalDate.now(clock));
-        } catch (DataIntegrityViolationException exception) {
-            throw new AssetConflictException(AssetConflictException.Reason.DUPLICATE_TAG);
-        }
+        asset.replace(values);
+        assets.flush();
+        return AssetResponse.from(asset, LocalDate.now(clock));
     }
 
-    private AssetValues values(UUID companyId, AssetRequest request, boolean update) {
+    private AssetValues values(UUID companyId, AssetRequest request) {
         try {
             AssetCategory category = request.category();
             if (category == null || request.acquisitionDate() == null) throw invalid();
