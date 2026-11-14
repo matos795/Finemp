@@ -11,6 +11,9 @@ import {
   findNavigationByPath,
   navigationModules,
 } from "../src/components/layout/navigation.ts"
+import {
+  listAllResultCenters,
+} from "../src/features/result-centers/api/result-center-api.ts"
 
 const originalFetch = globalThis.fetch
 
@@ -143,6 +146,50 @@ test("asset commands send money as strings and optimistic version only on update
   assert.equal(createBody.residualPercent, "0.00")
   assert.equal(createBody.expectedVersion, null)
   assert.equal(updateBody.expectedVersion, 3)
+})
+
+test("asset result-center lookup walks every server page", async () => {
+  const calls = []
+
+  globalThis.fetch = async (path, options = {}) => {
+    calls.push({ path, options })
+    const url = new URL(path, "https://example.invalid")
+    const page = Number(url.searchParams.get("page"))
+
+    return Response.json({
+      items: [{
+        id: "center-" + page,
+        companyId: "company-1",
+        parentId: null,
+        code: String(page + 1),
+        name: "Centro " + page,
+        active: true,
+        hasChildren: false,
+        version: 0,
+        type: "ANALYTICAL",
+      }],
+      page,
+      size: 100,
+      totalItems: 2,
+      totalPages: 2,
+    })
+  }
+
+  const result = await listAllResultCenters("company-1")
+
+  assert.deepEqual(
+    result.map((center) => center.id),
+    ["center-0", "center-1"],
+  )
+  assert.equal(calls.length, 2)
+  assert.equal(
+    calls[0].path,
+    "/api/companies/company-1/result-centers?search=&page=0&size=100",
+  )
+  assert.equal(
+    calls[1].path,
+    "/api/companies/company-1/result-centers?search=&page=1&size=100",
+  )
 })
 
 test("asset page never recomputes depreciation or book value in React", () => {
