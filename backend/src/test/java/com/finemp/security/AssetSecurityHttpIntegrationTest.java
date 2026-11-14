@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.finemp.TestcontainersConfiguration;
@@ -64,6 +65,42 @@ class AssetSecurityHttpIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validAssetJson()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void assetManagerGetsMoneyAsStringsAndDuplicateTagConflicts() throws Exception {
+        var actor = users.saveAndFlush(new UserAccount(
+                "Synthetic Asset Money Manager",
+                "asset-money-manager@example.invalid",
+                "hash"));
+        var company = companies.saveAndFlush(new Company(
+                "Synthetic Asset Money Company",
+                "66666666000167"));
+
+        grants.saveAndFlush(new CompanyAccessGrant(
+                actor,
+                company,
+                CompanyAccessRole.ADMIN,
+                CostCenterScope.ALL,
+                Set.of(CompanyPermission.ASSET_MANAGE)));
+
+        mvc.perform(post("/api/companies/{companyId}/assets", company.getId())
+                        .with(user(new UserAccountPrincipal(actor)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validAssetJson()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.acquisitionValue").value("1200.00"))
+                .andExpect(jsonPath("$.monthlyDepreciation").value("20.00"))
+                .andExpect(jsonPath("$.residualPercent").value("0.00"));
+
+        mvc.perform(post("/api/companies/{companyId}/assets", company.getId())
+                        .with(user(new UserAccountPrincipal(actor)))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validAssetJson()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ASSET_DUPLICATE_TAG"));
     }
 
     @Test
