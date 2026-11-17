@@ -85,7 +85,7 @@ Configurar somente valores previamente homologados:
 - `source-id`;
 - origem HTTPS do FINEMP;
 - nomes das referências de ambiente;
-- mapeamento real da identidade Questor;
+- mapeamento real da identidade Questor, incluindo estabelecimento fiscal quando a tabela não for 1:1 por empresa;
 - limites operacionais validados.
 
 Não colocar no properties:
