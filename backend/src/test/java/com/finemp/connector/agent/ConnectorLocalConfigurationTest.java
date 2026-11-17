@@ -12,7 +12,10 @@ class ConnectorLocalConfigurationTest {
         var file=directory.resolve("connector.properties");Files.writeString(file,valid());
         var config=ConnectorLocalConfiguration.load(file);var profile=config.profiles().getFirst();
         assertThat(config.pollSeconds()).isEqualTo(5);assertThat(profile.maxRecords()).isEqualTo(25000);
-        assertThat(profile.identity().table()).isEqualTo("SYN_COMPANIES");assertThat(profile.credentialEnv()).isEqualTo("FINEMP_CONNECTOR_TEST_TOKEN");
+        assertThat(profile.identity().table()).isEqualTo("SYN_COMPANIES");
+        assertThat(profile.identity().establishmentColumn()).isEqualTo("ESTABLISHMENT_CODE");
+        assertThat(profile.identity().establishmentValue()).isEqualTo(1);
+        assertThat(profile.credentialEnv()).isEqualTo("FINEMP_CONNECTOR_TEST_TOKEN");
         assertThat(config.toString()).doesNotContain("SYN_COMPANIES","FINEMP_CONNECTOR","connector.invalid");
         assertThat(profile.toString()).isEqualTo("ConnectorProfile[redacted]");
     }
@@ -22,10 +25,14 @@ class ConnectorLocalConfigurationTest {
             assertInvalid(()->ConnectorLocalConfiguration.load(file));
         }
     }
-    @Test void shouldRefuseUnsafeOriginMissingMappingAndInvalidBoundsBeforeAnyIo() {
+    @Test void shouldRefuseUnsafeOriginMissingMappingInvalidEstablishmentAndBoundsBeforeAnyIo() {
         for(var replacement:List.of("http://connector.invalid","https://private:private@connector.invalid","https://connector.invalid/?token=private","https://connector.invalid/path"))
             assertInvalid(()->parse(valid().replace("https://connector.invalid",replacement)));
         assertInvalid(()->parse(valid().replace("SYN_COMPANIES","TABLE;DROP")));
+        assertInvalid(()->parse(valid().replace("ESTABLISHMENT_CODE","ESTAB;DROP")));
+        assertInvalid(()->parse(valid().replace("identity-establishment-value=1","identity-establishment-value=0")));
+        assertInvalid(()->parse(valid().replace("profile.test.identity-establishment-column=ESTABLISHMENT_CODE\n","")));
+        assertInvalid(()->parse(valid().replace("profile.test.identity-establishment-value=1\n","")));
         for(var suffix:List.of("poll-seconds=0","profile.test.max-records=100001","profile.test.read-seconds=601","profile.test.query-seconds=0","profile.test.http-seconds=121"))
             assertInvalid(()->parse(valid()+"\n"+suffix));
         assertInvalid(()->parse(valid().replace("version=1","version=2")));
@@ -69,5 +76,7 @@ class ConnectorLocalConfigurationTest {
             profile.test.identity-table=SYN_COMPANIES
             profile.test.identity-code-column=COMPANY_CODE
             profile.test.identity-cnpj-column=TAX_ID
+            profile.test.identity-establishment-column=ESTABLISHMENT_CODE
+            profile.test.identity-establishment-value=1
             """;}
 }
