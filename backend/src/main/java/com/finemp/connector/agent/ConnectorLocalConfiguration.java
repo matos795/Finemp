@@ -10,7 +10,9 @@ import java.util.*;
 /** Trusted local configuration contains only secret references, never their values. */
 public record ConnectorLocalConfiguration(int pollSeconds, List<Profile> profiles) {
     private static final Set<String> FIELDS=Set.of("source-id","origin","credential-env","jdbc-url-env","jdbc-user-env","jdbc-password-env",
-            "identity-table","identity-code-column","identity-cnpj-column","max-records","read-seconds","query-seconds","http-seconds");
+            "identity-table","identity-code-column","identity-cnpj-column","identity-establishment-column","identity-establishment-value",
+            "max-records","read-seconds","query-seconds","http-seconds");
+
     public ConnectorLocalConfiguration {
         if(pollSeconds<1||pollSeconds>60||profiles==null||profiles.isEmpty()||profiles.size()>8)throw invalid();
         profiles=List.copyOf(profiles);var sources=new HashSet<UUID>();var tokens=new HashSet<String>();var jdbc=new HashSet<String>();
@@ -20,6 +22,7 @@ public record ConnectorLocalConfiguration(int pollSeconds, List<Profile> profile
         }
         if(tokens.stream().anyMatch(jdbc::contains))throw invalid();
     }
+
     public static ConnectorLocalConfiguration load(Path file) {
         try {
             if(file==null||!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))throw invalid();
@@ -29,6 +32,7 @@ public record ConnectorLocalConfiguration(int pollSeconds, List<Profile> profile
             properties.load(new InputStreamReader(new ByteArrayInputStream(data),StandardCharsets.UTF_8));return parse(properties);
         }catch(ConnectorClientException safe){throw safe;}catch(IOException|RuntimeException unavailable){throw invalid();}
     }
+
     static ConnectorLocalConfiguration parse(Properties values) {
         try {
             if(!"1".equals(values.getProperty("version")))throw invalid();
@@ -38,15 +42,19 @@ public record ConnectorLocalConfiguration(int pollSeconds, List<Profile> profile
                 String name=raw.trim();if(!name.matches("[a-z][a-z0-9-]{0,31}")||!seen.add(name))throw invalid();String prefix="profile."+name+".";
                 for(var field:FIELDS)allowed.add(prefix+field);
                 String id=required(values,prefix+"source-id");UUID source=UUID.fromString(id);if(!source.toString().equals(id))throw invalid();
+                String establishmentColumn=optional(values,prefix+"identity-establishment-column");
+                Integer establishmentValue=optionalInteger(values,prefix+"identity-establishment-value");
                 profiles.add(new Profile(source,URI.create(required(values,prefix+"origin")),required(values,prefix+"credential-env"),
                         required(values,prefix+"jdbc-url-env"),required(values,prefix+"jdbc-user-env"),required(values,prefix+"jdbc-password-env"),
-                        new QuestorIdentityMapping(required(values,prefix+"identity-table"),required(values,prefix+"identity-code-column"),required(values,prefix+"identity-cnpj-column")),
+                        new QuestorIdentityMapping(required(values,prefix+"identity-table"),required(values,prefix+"identity-code-column"),
+                                required(values,prefix+"identity-cnpj-column"),establishmentColumn,establishmentValue),
                         integer(values,prefix+"max-records",25000),integer(values,prefix+"read-seconds",120),integer(values,prefix+"query-seconds",30),integer(values,prefix+"http-seconds",20)));
             }
             if(values.keySet().stream().anyMatch(key->!allowed.contains(key)))throw invalid();
             return new ConnectorLocalConfiguration(integer(values,"poll-seconds",5),profiles);
         }catch(ConnectorClientException safe){throw safe;}catch(RuntimeException invalid){throw invalid();}
     }
+
     public record Profile(UUID sourceId,URI origin,String credentialEnv,String jdbcUrlEnv,String jdbcUserEnv,String jdbcPasswordEnv,
             QuestorIdentityMapping identity,int maxRecords,int readSeconds,int querySeconds,int httpSeconds) {
         public Profile {
@@ -60,8 +68,11 @@ public record ConnectorLocalConfiguration(int pollSeconds, List<Profile> profile
         }
         @Override public String toString(){return "ConnectorProfile[redacted]";}
     }
+
     private static String required(Properties values,String key){String value=values.getProperty(key);if(value==null||value.isBlank())throw invalid();return value.trim();}
+    private static String optional(Properties values,String key){String value=values.getProperty(key);return value==null?null:value.trim().isEmpty()?null:value.trim();}
     private static int integer(Properties values,String key,int fallback){String value=values.getProperty(key);return value==null?fallback:Integer.parseInt(value);}
+    private static Integer optionalInteger(Properties values,String key){String value=values.getProperty(key);return value==null?null:Integer.valueOf(value.trim());}
     private static ConnectorClientException invalid(){return new ConnectorClientException(ConnectorClientException.Kind.CONFIGURATION);}
     @Override public String toString(){return "ConnectorLocalConfiguration[profiles="+profiles.size()+"]";}
 }
