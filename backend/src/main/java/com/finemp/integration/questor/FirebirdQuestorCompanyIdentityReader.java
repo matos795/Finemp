@@ -9,10 +9,12 @@ public class FirebirdQuestorCompanyIdentityReader implements AccountingCompanyId
     private final QuestorConnectionProvider provider;
     private final QuestorIdentityMapping mapping;
     private final int timeoutSeconds;
+
     public FirebirdQuestorCompanyIdentityReader(QuestorConnectionProvider provider, QuestorIdentityMapping mapping, int timeoutSeconds) {
         if (timeoutSeconds < 1 || timeoutSeconds > 120) throw new IllegalArgumentException("Invalid identity query timeout.");
         this.provider = Objects.requireNonNull(provider); this.mapping = Objects.requireNonNull(mapping); this.timeoutSeconds = timeoutSeconds;
     }
+
     @Override public ExternalCompanyIdentity readIdentity(AccountingReadRequest request) {
         requireCode(request);
         try (var session = QuestorReadOnlySession.open(provider)) { return readOn(session.connection(), request); }
@@ -20,10 +22,13 @@ public class FirebirdQuestorCompanyIdentityReader implements AccountingCompanyId
         catch (AccountingIdentityConfigurationException unsupported) { throw new AccountingIdentityConfigurationException(); }
         catch (SQLException | RuntimeException unavailable) { throw new QuestorReadException("Questor identity read unavailable.", null); }
     }
+
     ExternalCompanyIdentity readOn(Connection connection, AccountingReadRequest request) throws SQLException {
         int code = requireCode(request); validateMetadata(connection.getMetaData());
         try (var statement = connection.prepareStatement(mapping.sql())) {
-            statement.setInt(1, code); statement.setMaxRows(2); statement.setQueryTimeout(timeoutSeconds);
+            statement.setInt(1, code);
+            if (mapping.hasEstablishmentFilter()) statement.setInt(2, mapping.establishmentValue());
+            statement.setMaxRows(2); statement.setQueryTimeout(timeoutSeconds);
             try (var result = statement.executeQuery()) {
                 if (!result.next()) throw new AccountingIdentityMismatchException();
                 int observedCode = result.getInt("FINEMP_OBS_REF"); boolean missingCode = result.wasNull();
@@ -36,6 +41,7 @@ public class FirebirdQuestorCompanyIdentityReader implements AccountingCompanyId
             }
         }
     }
+
     static int requireCode(AccountingReadRequest request) {
         if (request == null || request.sourceType() != AccountingSourceType.QUESTOR) throw new AccountingIdentityConfigurationException();
         try {
@@ -44,6 +50,7 @@ public class FirebirdQuestorCompanyIdentityReader implements AccountingCompanyId
             return code;
         } catch (NumberFormatException invalid) { throw new AccountingIdentityConfigurationException(); }
     }
+
     private void validateMetadata(DatabaseMetaData metadata) throws SQLException {
         String pattern = literalPattern(mapping.table(), metadata.getSearchStringEscape());
         int matches = 0, scanned = 0;
@@ -54,17 +61,15 @@ public class FirebirdQuestorCompanyIdentityReader implements AccountingCompanyId
             }
         }
         if (matches != 1) throw new AccountingIdentityConfigurationException();
-        boolean codeFound = false, cnpjFound = false; scanned = 0;
+
+        boolean codeFound = false, cnpjFound = false, establishmentFound = !mapping.hasEstablishmentFilter(); scanned = 0;
         try (var columns = metadata.getColumns(null, null, pattern, "%")) {
             while (columns.next()) {
                 if (++scanned > 4096) throw new AccountingIdentityConfigurationException();
                 if (!mapping.table().equals(columns.getString("TABLE_NAME"))) continue;
                 String name = columns.getString("COLUMN_NAME"); int type = columns.getInt("DATA_TYPE");
                 if (mapping.companyCodeColumn().equals(name)) {
-                    int scale = columns.getInt("DECIMAL_DIGITS"); boolean knownScale = !columns.wasNull();
-                    boolean integral = type == Types.INTEGER || type == Types.SMALLINT || type == Types.BIGINT
-                            || ((type == Types.NUMERIC || type == Types.DECIMAL) && knownScale && scale == 0);
-                    if (codeFound || !integral) throw new AccountingIdentityConfigurationException();
+                    if (codeFound || !integral(columns, type)) throw new AccountingIdentityConfigurationException();
                     codeFound = true;
                 }
                 if (mapping.cnpjColumn().equals(name)) {
@@ -73,10 +78,21 @@ public class FirebirdQuestorCompanyIdentityReader implements AccountingCompanyId
                     if (cnpjFound || !text || length < 1 || length > 255) throw new AccountingIdentityConfigurationException();
                     cnpjFound = true;
                 }
+                if (mapping.hasEstablishmentFilter() && mapping.establishmentColumn().equals(name)) {
+                    if (establishmentFound || !integral(columns, type)) throw new AccountingIdentityConfigurationException();
+                    establishmentFound = true;
+                }
             }
         }
-        if (!codeFound || !cnpjFound) throw new AccountingIdentityConfigurationException();
+        if (!codeFound || !cnpjFound || !establishmentFound) throw new AccountingIdentityConfigurationException();
     }
+
+    private boolean integral(ResultSet columns, int type) throws SQLException {
+        int scale = columns.getInt("DECIMAL_DIGITS"); boolean knownScale = !columns.wasNull();
+        return type == Types.INTEGER || type == Types.SMALLINT || type == Types.BIGINT
+                || ((type == Types.NUMERIC || type == Types.DECIMAL) && knownScale && scale == 0);
+    }
+
     private String literalPattern(String value, String escape) {
         if (escape == null || escape.isEmpty()) return value;
         return value.replace(escape, escape + escape).replace("_", escape + "_");
