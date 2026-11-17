@@ -44,13 +44,13 @@ jobs:
         run: java -jar target/finemp-api-0.0.1-SNAPSHOT-connector.jar --help
 
       - name: Generate Connector SHA-256
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           cd target
           sha256sum finemp-api-0.0.1-SNAPSHOT-connector.jar > finemp-api-0.0.1-SNAPSHOT-connector.jar.sha256
 
       - name: Stage Connector homologation distribution
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           mkdir -p target/connector-distribution
           cp target/finemp-api-0.0.1-SNAPSHOT-connector.jar target/connector-distribution/
@@ -60,7 +60,7 @@ jobs:
           cp ../docs/operations/connector-production-rollout.md target/connector-distribution/
 
       - name: Publish Connector homologation artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
           name: finemp-connector-${{ github.sha }}
