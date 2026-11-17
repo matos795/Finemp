@@ -12,6 +12,10 @@ profile.synthetic.jdbc-password-env=FINEMP_CONNECTOR_SYNTHETIC_JDBC_PASSWORD
 profile.synthetic.identity-table=SYN_COMPANIES
 profile.synthetic.identity-code-column=COMPANY_CODE
 profile.synthetic.identity-cnpj-column=TAX_ID
+# Optional pair for schemas where one company has multiple establishments.
+# Configure both keys together only after validating the operational schema.
+profile.synthetic.identity-establishment-column=ESTABLISHMENT_CODE
+profile.synthetic.identity-establishment-value=1
 profile.synthetic.max-records=25000
 profile.synthetic.read-seconds=120
 profile.synthetic.query-seconds=30
