@@ -147,7 +147,7 @@ Protect-FileForCurrentAccount $runtimeConfigPath $currentIdentity
 $actionArgs = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$runnerPath`" -RuntimeConfigPath `"$runtimeConfigPath`""
 $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument $actionArgs -WorkingDirectory $RuntimeRoot
 $trigger = New-ScheduledTaskTrigger -AtStartup
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 
 $accountPassword = Read-Host "Senha da conta Windows $currentIdentity para execução sem login" -AsSecureString
 $bstr = [IntPtr]::Zero
