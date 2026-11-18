@@ -167,9 +167,83 @@ Restart:
 - confirmar novo claim vigente;
 - verificar que fencing/idempotência impedem reaproveitamento indevido de tentativa antiga.
 
-A instalação permanente como serviço do sistema operacional deve usar o mecanismo aprovado pelo ambiente do cliente. Este repositório ainda não declara um service manager específico como padrão.
+## 9. Runtime automático no Windows
 
-## 9. Critério para chamar de homologado
+### DECISÃO
+
+A primeira instalação permanente suportada usa o **Agendador de Tarefas do Windows**. O Connector continua sendo o mesmo JAR Java 21; não é registrado com `sc.exe`, porque uma JVM comum não implementa o protocolo do Windows Service Control Manager. Também não é adicionado wrapper executável de terceiros nesta fase.
+
+O task:
+- dispara em `AtStartup`;
+- roda sob a mesma conta Windows que executou o instalador;
+- pode executar mesmo sem sessão interativa;
+- usa Java 21 por caminho explícito, sem alterar o Java 8/PATH/JAVA_HOME do Questor;
+- ignora segunda instância do próprio task e o Connector mantém o lock por AccountingSource;
+- reinicia após saída com falha conforme política do Task Scheduler.
+
+### Secrets locais
+
+Os valores referenciados por `*-env` no `connector.properties` precisam existir apenas no ambiente do processo que executa o instalador. O instalador os converte para `SecureString` e grava `connector-secrets.clixml`.
+
+No Windows, `Export-Clixml` protege `SecureString` com DPAPI da conta atual. Por isso:
+- execute o instalador **logado como a conta operacional que executará o Connector**;
+- outra conta Windows não deve conseguir reaproveitar o arquivo;
+- o arquivo recebe ACL restrita à conta operacional e SYSTEM;
+- o task não recebe token, senha ou JDBC em argumentos;
+- o bootstrap recupera os secrets somente para o ambiente do processo Java.
+
+O ambiente local continua não sendo declarado cofre definitivo; a política de vault pode evoluir sem alterar o protocolo Connector.
+
+### Instalação
+
+Em PowerShell elevado, com as variáveis `FINEMP_CONNECTOR_*` já carregadas na sessão e sem exibir seus valores:
+
+```powershell
+.\windows\connector-windows-install.ps1 `
+  -JavaExePath "C:\caminho\java21\bin\java.exe" `
+  -ConnectorJarPath "C:\caminho\finemp-api-0.0.1-SNAPSHOT-connector.jar" `
+  -ConfigPath "C:\caminho\connector.properties"
+```
+
+O instalador:
+1. confirma Windows e Java 21;
+2. executa `--validate`;
+3. sela as referências de ambiente por DPAPI;
+4. registra o task `FINEMP Connector` em `AtStartup`;
+5. inicia o task.
+
+A senha solicitada é a senha da conta Windows atual para o Task Scheduler armazenar a credencial de logon; ela não é escrita em arquivo nem passada para o Java.
+
+### Controle
+
+```powershell
+C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Status
+C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Start
+C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Stop
+C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Restart
+```
+
+Uninstall remove apenas o task e preserva configuração runtime, secrets DPAPI e logs para rollback/auditoria:
+
+```powershell
+C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Uninstall
+```
+
+### Homologação obrigatória no Windows real
+
+Antes de marcar este mecanismo como aceito:
+- `Status` deve mostrar task em execução;
+- stop precisa encerrar o Connector e liberar o lock;
+- start/restart precisam recuperar polling;
+- logout do usuário não pode interromper o Connector;
+- reboot precisa iniciar o Connector sem login interativo;
+- falha do processo deve ser observável em `LastTaskResult`/log e reiniciada pela política;
+- Java 8 do Questor deve permanecer inalterado;
+- secrets não podem aparecer na linha de comando nem nos logs.
+
+## 10. Critério para chamar de homologado
+
+## 10. Critério para chamar de homologado
 
 Somente marcar o Connector como homologado quando os itens da #310 forem executados no ambiente real e a evidência sanitizada estiver registrada.
 
