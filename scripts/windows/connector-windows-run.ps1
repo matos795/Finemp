@@ -6,6 +6,9 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$runtime = $null
+$secretNames = @()
+
 function Set-ProcessSecret([string]$Name, [Security.SecureString]$Secret) {
     $bstr = [IntPtr]::Zero
     try {
