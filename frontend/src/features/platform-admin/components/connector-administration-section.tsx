@@ -7,6 +7,7 @@ import {
     listConnectorCredentials,
     revokeConnectorCredential,
     rotateConnectorCredential,
+    updateAccountingSourceExternalReference,
     type AccountingSource,
     type ConnectorCredential,
 } from "../api/platform-admin-api"
@@ -49,6 +50,7 @@ export function ConnectorAdministrationSection({
     const [credentials, setCredentials] = useState<ConnectorCredential[]>([])
     const [selectedSourceId, setSelectedSourceId] = useState("")
     const [externalReference, setExternalReference] = useState("")
+    const [selectedExternalReference, setSelectedExternalReference] = useState("")
     const [credentialLabel, setCredentialLabel] = useState("Connector Questor")
     const [oneTimeSecret, setOneTimeSecret] = useState<string | null>(null)
     const [message, setMessage] = useState<string | null>(null)
@@ -62,6 +64,10 @@ export function ConnectorAdministrationSection({
         ),
         [credentials, selectedSourceId],
     )
+
+    useEffect(() => {
+        setSelectedExternalReference(selectedSource?.externalReference ?? "")
+    }, [selectedSource?.id, selectedSource?.externalReference])
 
     async function refreshSources() {
         const page = await listAccountingSources(
@@ -245,6 +251,54 @@ export function ConnectorAdministrationSection({
                             </div>
                         </div>
                     </div>
+
+                    <div className="fl">
+                        <label htmlFor="selected-accounting-source-reference">
+                            Código da empresa no Questor
+                        </label>
+                        <input
+                            id="selected-accounting-source-reference"
+                            maxLength={255}
+                            inputMode="numeric"
+                            value={selectedExternalReference}
+                            disabled={disabled || busy}
+                            onChange={(event) => setSelectedExternalReference(event.target.value)}
+                            placeholder="Ex.: 57"
+                        />
+                        <div className="help">
+                            Deve corresponder ao CODIGOEMPRESA da empresa no Questor.
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="btn sec"
+                        disabled={
+                            disabled ||
+                            busy ||
+                            !selectedExternalReference.trim() ||
+                            selectedExternalReference.trim() ===
+                                (selectedSource.externalReference ?? "")
+                        }
+                        onClick={() => void run(async () => {
+                            const updated =
+                                await updateAccountingSourceExternalReference(
+                                    accountingFirmId,
+                                    clientId,
+                                    companyId,
+                                    selectedSource.id,
+                                    selectedExternalReference,
+                                )
+                            await refreshSources()
+                            setSelectedSourceId(updated.id)
+                            setSelectedExternalReference(
+                                updated.externalReference ?? "",
+                            )
+                            setMessage("Código Questor atualizado na fonte.")
+                        })}
+                    >
+                        Salvar código Questor
+                    </button>
 
                     <div className="fl">
                         <label htmlFor="connector-label">Identificação da credencial</label>
