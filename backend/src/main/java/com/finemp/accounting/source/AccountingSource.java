@@ -70,6 +70,13 @@ public class AccountingSource {
         return externalReference;
     }
 
+    public void updateExternalReference(String externalReference) {
+        if (externalReference == null || externalReference.isBlank() || externalReference.length() > 255) {
+            throw new IllegalArgumentException("Invalid accounting source external reference.");
+        }
+        this.externalReference = externalReference.trim();
+    }
+
     public boolean isActive() {
         return active;
     }
