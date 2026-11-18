@@ -52,7 +52,10 @@ O pacote contém:
 - `finemp-api-0.0.1-SNAPSHOT-connector.jar`;
 - `finemp-api-0.0.1-SNAPSHOT-connector.jar.sha256`;
 - `connector.properties.example`;
-- documentação operacional.
+- documentação operacional;
+- `windows/connector-windows-install.ps1`;
+- `windows/connector-windows-run.ps1`;
+- `windows/connector-windows-control.ps1`.
 
 O artifact é de homologação e possui retenção limitada. Ele não é uma release pública definitiva.
 
@@ -243,10 +246,8 @@ Antes de marcar este mecanismo como aceito:
 
 ## 10. Critério para chamar de homologado
 
-## 10. Critério para chamar de homologado
-
 Somente marcar o Connector como homologado quando os itens da #310 forem executados no ambiente real e a evidência sanitizada estiver registrada.
 
 Até lá, a formulação correta é:
 
-> Connector validado sinteticamente e empacotado para homologação; integração Questor real ainda pendente.
+> Fluxo Questor/Firebird real homologado para leitura e publicação idempotente; runtime automático Windows ainda depende do aceite operacional de start/stop/restart/logout/reboot.
