@@ -26,6 +26,8 @@ $installerRequired = @(
     'New-ScheduledTaskTrigger -AtStartup',
     '-MultipleInstances IgnoreNew',
     '-RestartCount 5',
+    '-AllowStartIfOnBatteries',
+    '-DontStopIfGoingOnBatteries',
     'Export-Clixml',
     'WindowsIdentity]::GetCurrent()',
     'System.Diagnostics.ProcessStartInfo',
@@ -50,6 +52,7 @@ if ($installer -match '(?i)PASSWORD\s*=\s*["''][^"'']+["'']') {
 
 $runnerRequired = @(
     'Import-Clixml',
+    'Get-Content -LiteralPath $RuntimeConfigPath -Raw -Encoding UTF8',
     'SetEnvironmentVariable($Name, $value, "Process")',
     '-jar $runtime.connectorJarPath --run $runtime.connectorPropertiesPath',
     'Clear-ProcessSecrets'
