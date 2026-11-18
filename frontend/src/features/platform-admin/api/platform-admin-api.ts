@@ -367,3 +367,60 @@ export async function revokeConnectorCredential(
         },
     )
 }
+
+
+export type SyncRunStatus =
+    | "REQUESTED"
+    | "RUNNING"
+    | "SUCCEEDED"
+    | "FAILED"
+    | "CANCELLED"
+
+export interface SyncRun {
+    id: string
+    accountingSourceId: string
+    requestedByUserId: string
+    mode: "INITIAL" | "INCREMENTAL" | "RECONCILIATION"
+    status: SyncRunStatus
+    startDate: string
+    endDate: string
+    requestedAt: string
+    startedAt: string | null
+    finishedAt: string | null
+    readCount: number | null
+    importedCount: number | null
+    skippedCount: number | null
+    failureCode: string | null
+}
+
+export async function listSyncRuns(
+    accountingSourceId: string,
+    page = 0,
+    size = 10,
+) {
+    return apiRequest<PagedResponse<SyncRun>>(
+        `/api/accounting-sources/${accountingSourceId}/sync-runs?page=${page}&size=${size}`,
+    )
+}
+
+export async function requestInitialSyncRun(
+    accountingSourceId: string,
+    idempotencyKey: string,
+    startDate: string,
+    endDate: string,
+) {
+    return apiRequest<SyncRun>(
+        `/api/accounting-sources/${accountingSourceId}/sync-runs`,
+        {
+            method: "POST",
+            headers: {
+                "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+                mode: "INITIAL",
+                startDate,
+                endDate,
+            }),
+        },
+    )
+}
