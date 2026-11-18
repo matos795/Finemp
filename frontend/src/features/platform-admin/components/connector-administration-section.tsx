@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { ConnectorSyncControl } from "./connector-sync-control"
 import { ApiError } from "../../../lib/api/api-client"
 import {
     createAccountingSource,
@@ -448,6 +449,13 @@ export function ConnectorAdministrationSection({
                         <div className="empty">
                             Nenhuma credencial emitida para esta fonte.
                         </div>
+                    ) : null}
+
+                    {selectedSource.connectionMode === "CONNECTOR" ? (
+                        <ConnectorSyncControl
+                            source={selectedSource}
+                            disabled={disabled || busy}
+                        />
                     ) : null}
                 </>
             ) : (
