@@ -6,6 +6,8 @@ import {
   issueConnectorCredential,
   listAccountingSources,
   listConnectorCredentials,
+  listSyncRuns,
+  requestInitialSyncRun,
   revokeConnectorCredential,
   rotateConnectorCredential,
   updateAccountingSourceExternalReference,
@@ -27,6 +29,35 @@ test("connector administration API stays scoped to firm hierarchy and source", a
       return Response.json({
         headerName: "X-CSRF-TOKEN",
         token: "csrf-token",
+      })
+    }
+
+    if (String(path).includes("/sync-runs") && options.method === "POST") {
+      return Response.json({
+        id: "run-1",
+        accountingSourceId: "source-1",
+        requestedByUserId: "user-1",
+        mode: "INITIAL",
+        status: "REQUESTED",
+        startDate: "2026-07-01",
+        endDate: "2026-07-01",
+        requestedAt: "2026-11-18T17:00:00Z",
+        startedAt: null,
+        finishedAt: null,
+        readCount: null,
+        importedCount: null,
+        skippedCount: null,
+        failureCode: null,
+      })
+    }
+
+    if (String(path).includes("/sync-runs")) {
+      return Response.json({
+        items: [],
+        page: 0,
+        size: 10,
+        totalItems: 0,
+        totalPages: 1,
       })
     }
 
@@ -111,6 +142,13 @@ test("connector administration API stays scoped to firm hierarchy and source", a
 
   await listAccountingSources("firm-1", "client-1", "company-1")
   await listConnectorCredentials("firm-1")
+  await listSyncRuns("source-1")
+  await requestInitialSyncRun(
+    "source-1",
+    "00000000-0000-4000-8000-000000000001",
+    "2026-07-01",
+    "2026-07-01",
+  )
   await createAccountingSource("firm-1", "client-1", "company-1", "synthetic-source")
   await updateAccountingSourceExternalReference(
     "firm-1",
@@ -137,8 +175,23 @@ test("connector administration API stays scoped to firm hierarchy and source", a
     ["POST", "PUT", "DELETE"].includes(call.options.method),
   )
 
+  const syncRequest = writes.find((call) =>
+    String(call.path).endsWith("/accounting-sources/source-1/sync-runs"),
+  )
+  assert.deepEqual(JSON.parse(syncRequest.options.body), {
+    mode: "INITIAL",
+    startDate: "2026-07-01",
+    endDate: "2026-07-01",
+  })
+  assert.equal(
+    new Headers(syncRequest.options.headers).get("Idempotency-Key"),
+    "00000000-0000-4000-8000-000000000001",
+  )
+
   const sourceCreate = writes.find((call) =>
-    String(call.path).includes("/accounting-sources"),
+    String(call.path).includes("/accounting-sources") &&
+    !String(call.path).includes("/sync-runs") &&
+    !String(call.path).endsWith("/external-reference"),
   )
   assert.deepEqual(JSON.parse(sourceCreate.options.body), {
     type: "QUESTOR",
@@ -216,5 +269,24 @@ test("connector UI never asks for ERP credentials and exposes only safe machine 
   }
 
   assert.match(section, /não recebe senha, usuário, caminho FDB ou DSN/)
+  assert.match(section, /ConnectorSyncControl/)
+  assert.match(section, /key=\{selectedSource\.id\}/)
   assert.doesNotMatch(section, /type="password"/)
+})
+
+
+test("connector sync control exposes only the currently supported initial mode", () => {
+  const section = readFileSync(
+    new URL("../src/features/platform-admin/components/connector-sync-control.tsx", import.meta.url),
+    "utf8",
+  )
+
+  assert.match(section, /requestInitialSyncRun/)
+  assert.match(section, /crypto\.randomUUID\(\)/)
+  assert.match(section, /type="date"/)
+  assert.match(section, /startDate <= endDate/)
+  assert.match(section, /Sincronizar agora/)
+  assert.match(section, /Nesta fase, apenas o modo inicial está suportado/)
+  assert.doesNotMatch(section, /mode:\s*"INCREMENTAL"|mode:\s*"RECONCILIATION"/)
+  assert.doesNotMatch(section, /localStorage|sessionStorage|console\.(?:log|info|warn|error)/)
 })
