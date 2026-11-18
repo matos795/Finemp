@@ -10,6 +10,10 @@ on:
       - main
     paths:
       - "backend/**"
+      - "scripts/windows/**"
+      - "docs/operations/connector-runtime.md"
+      - "docs/operations/connector-production-rollout.md"
+      - "docs/operations/connector.properties.example"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
