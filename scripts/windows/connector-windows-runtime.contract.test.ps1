@@ -29,6 +29,7 @@ $installerRequired = @(
     'Export-Clixml',
     'WindowsIdentity]::GetCurrent()',
     'System.Diagnostics.ProcessStartInfo',
+    'Formato não suportado no connector.properties. Use somente chave=valor nesta distribuição Windows.',
     '-ExecutionPolicy Bypass',
     'version "21',
     'Register-ScheduledTask'
