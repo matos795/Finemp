@@ -28,6 +28,8 @@ $installerRequired = @(
     '-RestartCount 5',
     'Export-Clixml',
     'WindowsIdentity]::GetCurrent()',
+    'System.Diagnostics.ProcessStartInfo',
+    '-ExecutionPolicy Bypass',
     'version "21',
     'Register-ScheduledTask'
 )
