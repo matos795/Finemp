@@ -270,6 +270,7 @@ test("connector UI never asks for ERP credentials and exposes only safe machine 
 
   assert.match(section, /não recebe senha, usuário, caminho FDB ou DSN/)
   assert.match(section, /ConnectorSyncControl/)
+  assert.match(section, /key=\{selectedSource\.id\}/)
   assert.doesNotMatch(section, /type="password"/)
 })
 
