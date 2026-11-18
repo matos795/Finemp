@@ -325,7 +325,7 @@ public class SaasAdministrationService {
         requireCompany(clientId, companyId);
 
         AccountingSource source = accountingSourceRepository
-                .findById(accountingSourceId)
+                .findLockedForSyncById(accountingSourceId)
                 .filter(candidate -> candidate.getCompany().getId().equals(companyId))
                 .orElseThrow(() -> new SaasResourceNotFoundException("Accounting source"));
 
