@@ -73,6 +73,19 @@ class ConnectorAuthenticationFilterTest {
         var next = new MockHttpServletResponse(); filter.doFilter(request(), next, new MockFilterChain());
         assertThat(next.getStatus()).isEqualTo(401); verify(verifier, times(3)).authenticate(raw);
     }
+    @Test void shouldKeepDiagnosticCategoriesFiniteAndValueFree() {
+        assertThat(ConnectorAuthenticationFilter.RejectionCategory.values())
+                .extracting(Enum::name)
+                .containsExactly(
+                        "INSECURE_TRANSPORT",
+                        "INVALID_AUTHORIZATION",
+                        "CREDENTIAL_REJECTED",
+                        "RATE_LIMITED",
+                        "VERIFIER_UNAVAILABLE");
+        assertThat(Arrays.toString(ConnectorAuthenticationFilter.RejectionCategory.values()))
+                .doesNotContain(raw)
+                .doesNotContain(identity.credentialId().toString());
+    }
     private MockHttpServletRequest request() {
         var request = new MockHttpServletRequest("GET", "/api/connector/v1/session");
         request.setSecure(true); request.addHeader("Authorization", "Bearer " + raw); return request;
