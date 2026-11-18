@@ -187,6 +187,8 @@ O task:
 
 ### Secrets locais
 
+Nesta distribuição Windows, o `connector.properties` deve usar a forma canônica `chave=valor` em todas as entradas; variantes aceitas por `java.util.Properties`, como `chave:valor`, são rejeitadas pelo instalador para que a descoberta de referências de secret seja determinística.
+
 Os valores referenciados por `*-env` no `connector.properties` precisam existir apenas no ambiente do processo que executa o instalador. O instalador os converte para `SecureString` e grava `connector-secrets.clixml`.
 
 No Windows, `Export-Clixml` protege `SecureString` com DPAPI da conta atual. Por isso:
