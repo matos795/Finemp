@@ -50,6 +50,34 @@ class AccountingSourceRepositoryIntegrationTest {
     }
 
     @Test
+    void shouldPreserveConnectorRouteWhenUpdatingExternalReference() {
+        Company company = companyRepository.save(
+                new Company("Synthetic Connector Company", "66666666000166"));
+
+        AccountingSource source = accountingSourceRepository.save(
+                new AccountingSource(
+                        company,
+                        AccountingSourceType.QUESTOR,
+                        null,
+                        true));
+
+        source.reserveConnectorRoute();
+        source.updateExternalReference("57");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        AccountingSource retrieved = accountingSourceRepository
+                .findById(source.getId())
+                .orElseThrow();
+
+        assertThat(retrieved.getId()).isEqualTo(source.getId());
+        assertThat(retrieved.getExternalReference()).isEqualTo("57");
+        assertThat(retrieved.getConnectionMode())
+                .isEqualTo(AccountingConnectionMode.CONNECTOR);
+    }
+
+    @Test
     void shouldAllowMultipleAccountingSourcesForSameCompany() {
         Company company = companyRepository.save(
                 new Company("Empresa Exemplo Ltda", "12345678000190"));
