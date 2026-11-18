@@ -26,7 +26,7 @@ function Write-Utf8NoBom([string]$Path, [string]$Content) {
 }
 
 function Get-ReferencedSecretNames([string]$PropertiesPath) {
-    $names = New-Object System.Collections.Generic.HashSet[string]([System.StringComparer]::Ordinal)
+    $names = New-Object "System.Collections.Generic.HashSet[string]" ([System.StringComparer]::Ordinal)
     foreach ($line in Get-Content -LiteralPath $PropertiesPath) {
         $trimmed = $line.Trim()
         if ($trimmed.Length -eq 0 -or $trimmed.StartsWith("#")) { continue }
@@ -52,7 +52,7 @@ function Protect-FileForCurrentAccount([string]$Path, [string]$Identity) {
     }
 }
 
-if (-not $IsWindows -and $PSVersionTable.PSEdition -eq "Core") {
+if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
     throw "A instalação automática do FINEMP Connector exige Windows."
 }
 
