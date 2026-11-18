@@ -31,7 +31,9 @@ function Get-ReferencedSecretNames([string]$PropertiesPath) {
         $trimmed = $line.Trim()
         if ($trimmed.Length -eq 0 -or $trimmed.StartsWith("#")) { continue }
         $separator = $trimmed.IndexOf("=")
-        if ($separator -lt 1) { continue }
+        if ($separator -lt 1) {
+            throw "Formato não suportado no connector.properties. Use somente chave=valor nesta distribuição Windows."
+        }
 
         $key = $trimmed.Substring(0, $separator).Trim()
         $value = $trimmed.Substring($separator + 1).Trim()
