@@ -299,6 +299,24 @@ export async function createAccountingSource(
     )
 }
 
+export async function updateAccountingSourceExternalReference(
+    accountingFirmId: string,
+    clientId: string,
+    companyId: string,
+    accountingSourceId: string,
+    externalReference: string,
+) {
+    return apiRequest<AccountingSource>(
+        `/api/accounting-firms/${accountingFirmId}/clients/${clientId}/companies/${companyId}/accounting-sources/${accountingSourceId}/external-reference`,
+        {
+            method: "PUT",
+            body: JSON.stringify({
+                externalReference: externalReference.trim(),
+            }),
+        },
+    )
+}
+
 export async function listConnectorCredentials(
     accountingFirmId: string,
 ) {
