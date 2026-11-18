@@ -60,8 +60,23 @@ $java = Resolve-FullPath $JavaExePath
 $jar = Resolve-FullPath $ConnectorJarPath
 $config = Resolve-FullPath $ConfigPath
 
-$versionOutput = (& $java -version 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 0 -or $versionOutput -notmatch 'version "21(?:\.|")') {
+$javaProbe = New-Object System.Diagnostics.ProcessStartInfo
+$javaProbe.FileName = $java
+$javaProbe.Arguments = "-version"
+$javaProbe.UseShellExecute = $false
+$javaProbe.RedirectStandardOutput = $true
+$javaProbe.RedirectStandardError = $true
+$javaProbe.CreateNoWindow = $true
+
+$javaProcess = New-Object System.Diagnostics.Process
+$javaProcess.StartInfo = $javaProbe
+[void]$javaProcess.Start()
+$javaStdout = $javaProcess.StandardOutput.ReadToEnd()
+$javaStderr = $javaProcess.StandardError.ReadToEnd()
+$javaProcess.WaitForExit()
+$versionOutput = $javaStdout + $javaStderr
+
+if ($javaProcess.ExitCode -ne 0 -or $versionOutput -notmatch 'version "21(?:\.|")') {
     throw "O FINEMP Connector exige Java 21 no caminho informado."
 }
 
@@ -127,7 +142,7 @@ $runtimeConfig = [ordered]@{
 Write-Utf8NoBom $runtimeConfigPath ($runtimeConfig | ConvertTo-Json -Depth 3)
 Protect-FileForCurrentAccount $runtimeConfigPath $currentIdentity
 
-$actionArgs = "-NoProfile -NonInteractive -File `"$runnerPath`" -RuntimeConfigPath `"$runtimeConfigPath`""
+$actionArgs = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$runnerPath`" -RuntimeConfigPath `"$runtimeConfigPath`""
 $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument $actionArgs -WorkingDirectory $RuntimeRoot
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
