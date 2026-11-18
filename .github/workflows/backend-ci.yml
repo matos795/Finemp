@@ -43,6 +43,11 @@ jobs:
       - name: Verify standalone Connector entry point without database or server startup
         run: java -jar target/finemp-api-0.0.1-SNAPSHOT-connector.jar --help
 
+      - name: Verify Windows Connector runtime scripts
+        working-directory: .
+        shell: pwsh
+        run: ./scripts/windows/connector-windows-runtime.contract.test.ps1
+
       - name: Generate Connector SHA-256
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
@@ -58,6 +63,10 @@ jobs:
           cp ../docs/operations/connector.properties.example target/connector-distribution/
           cp ../docs/operations/connector-runtime.md target/connector-distribution/
           cp ../docs/operations/connector-production-rollout.md target/connector-distribution/
+          mkdir -p target/connector-distribution/windows
+          cp ../scripts/windows/connector-windows-install.ps1 target/connector-distribution/windows/
+          cp ../scripts/windows/connector-windows-run.ps1 target/connector-distribution/windows/
+          cp ../scripts/windows/connector-windows-control.ps1 target/connector-distribution/windows/
 
       - name: Publish Connector homologation artifact
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
