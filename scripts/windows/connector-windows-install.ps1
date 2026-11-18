@@ -26,7 +26,7 @@ function Write-Utf8NoBom([string]$Path, [string]$Content) {
 }
 
 function Get-ReferencedSecretNames([string]$PropertiesPath) {
-    $names = New-Object "System.Collections.Generic.HashSet[string]" ([System.StringComparer]::Ordinal)
+    $names = @()
     foreach ($line in Get-Content -LiteralPath $PropertiesPath) {
         $trimmed = $line.Trim()
         if ($trimmed.Length -eq 0 -or $trimmed.StartsWith("#")) { continue }
@@ -39,10 +39,10 @@ function Get-ReferencedSecretNames([string]$PropertiesPath) {
             if ($value -notmatch '^FINEMP_CONNECTOR_[A-Z0-9_]{1,100}$') {
                 throw "Referência de ambiente inválida no connector.properties."
             }
-            [void]$names.Add($value)
+            $names += $value
         }
     }
-    return @($names)
+    return @($names | Sort-Object -Unique)
 }
 
 function Protect-FileForCurrentAccount([string]$Path, [string]$Identity) {
