@@ -182,7 +182,8 @@ O task:
 - pode executar mesmo sem sessão interativa;
 - usa Java 21 por caminho explícito, sem alterar o Java 8/PATH/JAVA_HOME do Questor;
 - ignora segunda instância do próprio task e o Connector mantém o lock por AccountingSource;
-- reinicia após saída com falha conforme política do Task Scheduler.
+- reinicia após saída com falha conforme política do Task Scheduler;
+- inicia o bootstrap com `-ExecutionPolicy Bypass` apenas no processo PowerShell do task, sem alterar a política persistente da máquina.
 
 ### Secrets locais
 
@@ -216,6 +217,8 @@ O instalador:
 5. inicia o task.
 
 A senha solicitada é a senha da conta Windows atual para o Task Scheduler armazenar a credencial de logon; ela não é escrita em arquivo nem passada para o Java.
+
+O `ExecutionPolicy Bypass` é aplicado somente ao processo do task para que ambientes com política persistente `Restricted` não impeçam o bootstrap após reboot. Isso não altera `LocalMachine`, `CurrentUser` ou a política corporativa persistente.
 
 ### Controle
 
