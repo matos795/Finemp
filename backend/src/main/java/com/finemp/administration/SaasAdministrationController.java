@@ -179,6 +179,24 @@ public class SaasAdministrationController {
                 AccountingSourceResponse::from);
     }
 
+    @PutMapping("/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/accounting-sources/{accountingSourceId}/external-reference")
+    public AccountingSourceResponse updateAccountingSourceExternalReference(
+            @AuthenticationPrincipal UserAccountPrincipal principal,
+            @PathVariable UUID accountingFirmId,
+            @PathVariable UUID clientId,
+            @PathVariable UUID companyId,
+            @PathVariable UUID accountingSourceId,
+            @Valid @RequestBody UpdateAccountingSourceExternalReferenceRequest request) {
+        return AccountingSourceResponse.from(
+                administrationService.updateAccountingSourceExternalReference(
+                        principal.getUserAccountId(),
+                        accountingFirmId,
+                        clientId,
+                        companyId,
+                        accountingSourceId,
+                        request));
+    }
+
     @PostMapping("/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/accounting-sources")
     @ResponseStatus(HttpStatus.CREATED)
     public AccountingSourceResponse createAccountingSource(
