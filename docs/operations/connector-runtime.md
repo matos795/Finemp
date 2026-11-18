@@ -10,7 +10,7 @@ java -jar finemp-api-0.0.1-SNAPSHOT-connector.jar --validate connector.propertie
 java -jar finemp-api-0.0.1-SNAPSHOT-connector.jar --run connector.properties
 ```
 
-`--validate` verifica configuração e disponibilidade/formato dos segredos locais, sem testar conexão/permissões remotas. `--run` é a ação explícita que inicia polling e leitura. Saída0 em validação/help/interrupt;2 em configuração/argumentos inválidos;3 quando todos os perfis foram interrompidos. Não passar token, senha, JDBC URL ou login como argumento. Não há instalação automática de serviço nem deploy incluído.
+`--validate` verifica configuração e disponibilidade/formato dos segredos locais, sem testar conexão/permissões remotas. `--run` é a ação explícita que inicia polling e leitura. Saída0 em validação/help/interrupt;2 em configuração/argumentos inválidos;3 quando todos os perfis foram interrompidos. Não passar token, senha, JDBC URL ou login como argumento. A distribuição inclui scripts para runtime automático no Windows via Task Scheduler; a JVM continua sendo um processo Java comum e não é registrada diretamente como Windows Service.
 
 ## CONFIGURAÇÃO LOCAL CONFIÁVEL
 
@@ -32,4 +32,4 @@ Há um poller por perfil com atraso após o ciclo, sem acumular tarefas a taxa f
 
 O teste de composição usa JDBC sintético com o reader efetivo do factory: identidade divergente impede SQL de movimentos; identidade correspondente permite a consulta na mesma conexão read-only, com rollback/close e sem commit. Isso verifica o encadeamento do código, sem declarar schema/permissões reais do Firebird homologados.
 
-Distribuição/assinatura do binário, política de atualização, cofre definitivo, conta de serviço, configuração real do schema, permissões Firebird, prazos de socket/login e homologação de rede ainda dependem do ambiente de destino. Nenhuma credencial ou instalação real está embutida. Questor continua somente leitura para o FINEMP. Incremental/retificação/cursor não foram inventados; o ciclo atual executa INITIAL.
+Distribuição/assinatura definitiva do binário, política de atualização, cofre definitivo, configuração real do schema, permissões Firebird, prazos de socket/login e homologação de rede ainda dependem do ambiente de destino. O runtime Windows empacotado ainda exige homologação real de boot/logout/stop/restart antes do aceite operacional. Nenhuma credencial ou instalação real está embutida. Questor continua somente leitura para o FINEMP. Incremental/retificação/cursor não foram inventados; o ciclo atual executa INITIAL.
