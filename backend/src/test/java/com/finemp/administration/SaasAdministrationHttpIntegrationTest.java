@@ -445,6 +445,77 @@ class SaasAdministrationHttpIntegrationTest {
                 .isEqualTo(1);
     }
 
+    @Test
+    void shouldUpdateAccountingSourceExternalReferenceInsideAuthorizedHierarchy() throws Exception {
+        UserAccount actor = createUser("source-reference@example.invalid", Set.of());
+        AccountingFirm firm = accountingFirmRepository.save(
+                new AccountingFirm("Synthetic Source Firm", true));
+        Client client = clientRepository.save(
+                new Client(firm, "Synthetic Source Client", true));
+        Company company = companyRepository.save(
+                new Company(client, "Synthetic Source Company", "55555555000155"));
+
+        accountingFirmAccessGrantRepository.saveAndFlush(
+                new AccountingFirmAccessGrant(
+                        actor,
+                        firm,
+                        Set.of(AccountingFirmPermission.ACCOUNTING_SOURCE_MANAGE)));
+
+        MockHttpSession session = login(actor.getEmail(), "senha-segura");
+
+        var created = mockMvc.perform(post(
+                                "/api/accounting-firms/{firmId}/clients/{clientId}/companies/{companyId}/accounting-sources",
+                                firm.getId(),
+                                client.getId(),
+                                company.getId())
+                        .session(session)
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type":"QUESTOR",
+                                  "externalReference":null
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String sourceId = com.jayway.jsonpath.JsonPath.read(
+                created.getResponse().getContentAsString(),
+                "$.id");
+
+        mockMvc.perform(put(
+                                "/api/accounting-firms/{firmId}/clients/{clientId}/companies/{companyId}/accounting-sources/{sourceId}/external-reference",
+                                firm.getId(),
+                                client.getId(),
+                                company.getId(),
+                                sourceId)
+                        .session(session)
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"externalReference":" 57 "}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(sourceId))
+                .andExpect(jsonPath("$.externalReference").value("57"))
+                .andExpect(jsonPath("$.connectionMode").value("DIRECT"));
+
+        mockMvc.perform(put(
+                                "/api/accounting-firms/{firmId}/clients/{clientId}/companies/{companyId}/accounting-sources/{sourceId}/external-reference",
+                                firm.getId(),
+                                client.getId(),
+                                company.getId(),
+                                sourceId)
+                        .session(session)
+                        .with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {"externalReference":"   "}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
     private MockHttpSession createUserAndLogin(
             String email,
             Set<PlatformPermission> platformPermissions) throws Exception {

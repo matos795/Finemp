@@ -8,6 +8,7 @@ import {
   listConnectorCredentials,
   revokeConnectorCredential,
   rotateConnectorCredential,
+  updateAccountingSourceExternalReference,
 } from "../src/features/platform-admin/api/platform-admin-api.ts"
 
 const originalFetch = globalThis.fetch
@@ -26,6 +27,17 @@ test("connector administration API stays scoped to firm hierarchy and source", a
       return Response.json({
         headerName: "X-CSRF-TOKEN",
         token: "csrf-token",
+      })
+    }
+
+    if (String(path).endsWith("/external-reference") && options.method === "PUT") {
+      return Response.json({
+        id: "source-1",
+        companyId: "company-1",
+        type: "QUESTOR",
+        externalReference: "57",
+        active: true,
+        connectionMode: "CONNECTOR",
       })
     }
 
@@ -100,6 +112,13 @@ test("connector administration API stays scoped to firm hierarchy and source", a
   await listAccountingSources("firm-1", "client-1", "company-1")
   await listConnectorCredentials("firm-1")
   await createAccountingSource("firm-1", "client-1", "company-1", "synthetic-source")
+  await updateAccountingSourceExternalReference(
+    "firm-1",
+    "client-1",
+    "company-1",
+    "source-1",
+    " 57 ",
+  )
   await issueConnectorCredential("firm-1", "source-1", "Connector Questor")
   await rotateConnectorCredential("firm-1", "cred-1")
   await revokeConnectorCredential("firm-1", "cred-1")
@@ -115,7 +134,7 @@ test("connector administration API stays scoped to firm hierarchy and source", a
 
   const writes = calls.filter((call) =>
     call.path !== "/api/auth/csrf" &&
-    ["POST", "DELETE"].includes(call.options.method),
+    ["POST", "PUT", "DELETE"].includes(call.options.method),
   )
 
   const sourceCreate = writes.find((call) =>
@@ -124,6 +143,13 @@ test("connector administration API stays scoped to firm hierarchy and source", a
   assert.deepEqual(JSON.parse(sourceCreate.options.body), {
     type: "QUESTOR",
     externalReference: "synthetic-source",
+  })
+
+  const sourceUpdate = writes.find((call) =>
+    String(call.path).endsWith("/accounting-sources/source-1/external-reference"),
+  )
+  assert.deepEqual(JSON.parse(sourceUpdate.options.body), {
+    externalReference: "57",
   })
 
   const issue = writes.find((call) =>
@@ -179,6 +205,8 @@ test("connector UI never asks for ERP credentials and exposes only safe machine 
 
   for (const label of [
     "Criar fonte Questor",
+    "Salvar código Questor",
+    "CODIGOEMPRESA",
     "Emitir credencial Connector",
     "Rotacionar",
     "Revogar",

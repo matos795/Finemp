@@ -310,6 +310,30 @@ public class SaasAdministrationService {
     }
 
     @Transactional
+    public AccountingSource updateAccountingSourceExternalReference(
+            UUID userAccountId,
+            UUID accountingFirmId,
+            UUID clientId,
+            UUID companyId,
+            UUID accountingSourceId,
+            UpdateAccountingSourceExternalReferenceRequest request) {
+        requireAccountingFirmPermission(
+                userAccountId,
+                accountingFirmId,
+                AccountingFirmPermission.ACCOUNTING_SOURCE_MANAGE);
+        requireClient(accountingFirmId, clientId);
+        requireCompany(clientId, companyId);
+
+        AccountingSource source = accountingSourceRepository
+                .findLockedForSyncById(accountingSourceId)
+                .filter(candidate -> candidate.getCompany().getId().equals(companyId))
+                .orElseThrow(() -> new SaasResourceNotFoundException("Accounting source"));
+
+        source.updateExternalReference(request.externalReference());
+        return source;
+    }
+
+    @Transactional
     public AccountingSource createAccountingSource(
             UUID userAccountId,
             UUID accountingFirmId,
