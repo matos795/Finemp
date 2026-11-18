@@ -189,7 +189,9 @@ test("connector administration API stays scoped to firm hierarchy and source", a
   )
 
   const sourceCreate = writes.find((call) =>
-    String(call.path).includes("/accounting-sources"),
+    String(call.path).includes("/accounting-sources") &&
+    !String(call.path).includes("/sync-runs") &&
+    !String(call.path).endsWith("/external-reference"),
   )
   assert.deepEqual(JSON.parse(sourceCreate.options.body), {
     type: "QUESTOR",
@@ -262,13 +264,12 @@ test("connector UI never asks for ERP credentials and exposes only safe machine 
     "Rotacionar",
     "Revogar",
     "Segredo exibido uma única vez",
-    "Sincronizar agora",
-    "Atualizar status",
   ]) {
     assert.ok(section.includes(label), label)
   }
 
   assert.match(section, /não recebe senha, usuário, caminho FDB ou DSN/)
+  assert.match(section, /ConnectorSyncControl/)
   assert.doesNotMatch(section, /type="password"/)
 })
 
