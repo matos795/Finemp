@@ -30,7 +30,7 @@ function Clear-ProcessSecrets([string[]]$Names) {
 }
 
 try {
-    $runtime = Get-Content -LiteralPath $RuntimeConfigPath -Raw | ConvertFrom-Json
+    $runtime = Get-Content -LiteralPath $RuntimeConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($runtime.version -ne 1) { throw "Unsupported runtime config." }
 
     $secrets = Import-Clixml -LiteralPath $runtime.secretsPath
