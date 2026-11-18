@@ -9,7 +9,8 @@ test("frontend proxy sanitizes forwarded headers before the backend trusts them"
   )
 
   assert.match(nginx, /proxy_set_header Forwarded "";/)
-  assert.match(nginx, /proxy_set_header X-Forwarded-For \$remote_addr;/)
-  assert.match(nginx, /proxy_set_header X-Forwarded-Proto \$scheme;/)
-  assert.doesNotMatch(nginx, /\$proxy_add_x_forwarded_for/)
+  assert.match(nginx, /proxy_set_header X-Real-IP \$http_x_real_ip;/)
+  assert.match(nginx, /proxy_set_header X-Forwarded-For \$http_x_real_ip;/)
+  assert.match(nginx, /proxy_set_header X-Forwarded-Proto \$http_x_forwarded_proto;/)
+  assert.doesNotMatch(nginx, /\$proxy_add_x_forwarded_for|\$scheme;/)
 })
