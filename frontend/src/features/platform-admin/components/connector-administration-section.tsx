@@ -453,6 +453,7 @@ export function ConnectorAdministrationSection({
 
                     {selectedSource.connectionMode === "CONNECTOR" ? (
                         <ConnectorSyncControl
+                            key={selectedSource.id}
                             source={selectedSource}
                             disabled={disabled || busy}
                         />
