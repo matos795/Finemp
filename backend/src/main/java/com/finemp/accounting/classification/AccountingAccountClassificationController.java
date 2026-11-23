@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,6 +28,19 @@ public class AccountingAccountClassificationController {
 
         this.queryService = queryService;
         this.classificationService = classificationService;
+    }
+
+    /** Universo importado, paginado e filtrado no servidor (#442). */
+    @GetMapping
+    public ImportedAccountsPageResponse searchImported(
+            @PathVariable UUID companyId,
+            @RequestParam(required = false) UUID accountingSourceId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) ImportedAccountStatusFilter status,
+            @RequestParam(defaultValue = "0") @jakarta.validation.constraints.Min(0) int page,
+            @RequestParam(defaultValue = "50") @jakarta.validation.constraints.Min(1)
+            @jakarta.validation.constraints.Max(100) int size) {
+        return queryService.searchImported(companyId, accountingSourceId, search, status, page, size);
     }
 
     @GetMapping("/classifications")

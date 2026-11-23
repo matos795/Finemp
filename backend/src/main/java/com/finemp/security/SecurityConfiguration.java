@@ -81,6 +81,7 @@ public class SecurityConfiguration {
                                                                 CompanyPermission.ACCOUNTING_MOVEMENT_VIEW))
 
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-accounts",
                                                                 "/api/companies/{companyId}/accounting-accounts/classifications")
                                                 .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
                                                                 permissionAuthorizationManagerFactory.forPermission(
