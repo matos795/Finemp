@@ -20,6 +20,33 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
     List<Company> findAllByClientId(UUID clientId);
 
+    /** Companies com CompanyAccessGrant do usuário ativo, já com Client e AccountingFirm. */
+    @Query("""
+            select company from Company company
+            join fetch company.client client
+            join fetch client.accountingFirm
+            where company.id in (
+                select accessGrant.company.id from CompanyAccessGrant accessGrant
+                where accessGrant.userAccount.id = :userId
+                  and accessGrant.userAccount.active = true)
+            """)
+    List<Company> findGrantedWithHierarchy(@Param("userId") UUID userId);
+
+    @Query("""
+            select company from Company company
+            join fetch company.client client
+            join fetch client.accountingFirm firm
+            where firm.id in :firmIds
+            """)
+    List<Company> findAllWithHierarchyByAccountingFirmIdIn(@Param("firmIds") java.util.Collection<UUID> firmIds);
+
+    @Query("""
+            select company from Company company
+            join fetch company.client client
+            join fetch client.accountingFirm
+            """)
+    List<Company> findAllWithHierarchy();
+
     boolean existsByClientId(UUID clientId);
 
     Optional<Company> findByIdAndClientId(
