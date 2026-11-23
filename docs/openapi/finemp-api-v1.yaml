@@ -3756,6 +3756,43 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/companies/{companyId}/accounting-accounts:
+    get:
+      tags: [Account classification]
+      operationId: searchImportedAccountingAccounts
+      summary: Contas importadas da empresa, paginadas, com pendências de classificação.
+      description: |
+        Requer ACCOUNT_CLASSIFICATION_VIEW ou ACCOUNT_CLASSIFICATION_MANAGE na empresa.
+        universe é sempre IMPORTED_ACCOUNTS: só contas que vieram nos movimentos
+        sincronizados; não é o plano completo (contas sem movimento não aparecem).
+        Ordem: accountKey, fonte e ID. summary conta total/classificadas/pendentes
+        sobre os filtros de fonte e busca (independe de status e página).
+        accountingSourceId de outra empresa retorna página vazia.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - name: accountingSourceId
+          in: query
+          schema: {type: string, format: uuid}
+        - name: search
+          in: query
+          description: Trecho do código ou da descrição, sem diferenciar maiúsculas.
+          schema: {type: string}
+        - name: status
+          in: query
+          schema: {type: string, enum: [PENDING, CLASSIFIED]}
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200':
+          description: Página do universo importado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImportedAccountsPage'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/accounting-accounts/classifications:
     get:
       tags: [Account classification]
@@ -5186,6 +5223,25 @@ components:
           type: [string, 'null']
         sourceEntryKey:
           type: string
+    ImportedAccountsPage:
+      type: object
+      required: [universe, items, page, size, totalItems, totalPages, summary]
+      properties:
+        universe: {type: string, enum: [IMPORTED_ACCOUNTS]}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/AccountingAccountClassification'}
+        page: {type: integer}
+        size: {type: integer}
+        totalItems: {type: integer, format: int64}
+        totalPages: {type: integer}
+        summary:
+          type: object
+          required: [total, classified, pending]
+          properties:
+            total: {type: integer, format: int64}
+            classified: {type: integer, format: int64}
+            pending: {type: integer, format: int64}
     AccountingAccountClassification:
       type: object
       required:

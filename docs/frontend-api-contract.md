@@ -212,6 +212,21 @@ Retorna o catálogo global FINEMP:
 
 Os textos acima são meramente fictícios; `0`, `N/A` e `(-) Verificar`, quando presentes nos dados reais, não podem ser reinterpretados pelo consumidor.
 
+#### `GET /api/companies/{companyId}/accounting-accounts`
+
+Universo **importado** da empresa ([detalhes](architecture/imported-accounts-page.md)), paginado no servidor. Parâmetros opcionais: `accountingSourceId`, `search` (código ou descrição), `status` (`PENDING`|`CLASSIFIED`), `page` (0), `size` (50, máx. 100). Mesma permissão da listagem abaixo.
+
+```json
+{
+  "universe": "IMPORTED_ACCOUNTS",
+  "items": [ { "accountId": "…", "accountingSourceId": "…", "accountKey": "3.1.1", "description": "Conta demonstrativa", "status": "PENDING", "classificationId": null, "dreClassification": null, "dreOpenClassification": null, "ebitdaClassification": null } ],
+  "page": 0, "size": 50, "totalItems": 1, "totalPages": 1,
+  "summary": { "total": 1, "classified": 0, "pending": 1 }
+}
+```
+
+`universe = IMPORTED_ACCOUNTS` significa que contas sem movimento sincronizado não aparecem: a tela não deve chamá-lo de plano completo. `summary` considera fonte e busca, não `status` nem página.
+
 #### `GET /api/companies/{companyId}/accounting-accounts/classifications`
 
 Resposta `200`:
