@@ -20,8 +20,10 @@ const FIRM_PERMISSION_OPTIONS: Array<{
     value: FirmPermission
     label: string
 }> = [
+    { value: "HIERARCHY_VIEW", label: "Ver todos os clientes e empresas" },
     { value: "HIERARCHY_MANAGE", label: "Gerenciar clientes e empresas" },
     { value: "USER_ACCESS_MANAGE", label: "Gerenciar usuários e acessos" },
+    { value: "ACCOUNTING_SOURCE_VIEW", label: "Ver fontes contábeis" },
     { value: "ACCOUNTING_SOURCE_MANAGE", label: "Gerenciar fontes contábeis" },
     { value: "CONNECTOR_MANAGE", label: "Gerenciar Connector" },
 ]
