@@ -31,4 +31,6 @@ public interface AccountingSourceRepository
             @Param("companyId") UUID companyId,
             @Param("search") String search,
             Pageable pageable);
+
+    java.util.List<AccountingSource> findAllByCompanyId(UUID companyId, org.springframework.data.domain.Sort sort);
 }

@@ -15,5 +15,7 @@ public interface SyncRunRepository extends JpaRepository<SyncRun, UUID> {
     Optional<SyncRun> findByAccountingSourceIdAndIdempotencyKey(UUID accountingSourceId, UUID idempotencyKey);
     boolean existsByAccountingSourceIdAndStatusIn(UUID accountingSourceId, Collection<SyncRunStatus> statuses);
     Page<SyncRun> findAllByAccountingSourceId(UUID accountingSourceId, Pageable pageable);
+    Optional<SyncRun> findFirstByAccountingSourceIdOrderByRequestedAtDescIdDesc(UUID accountingSourceId);
+    Optional<SyncRun> findFirstByAccountingSourceIdAndStatusOrderByRequestedAtDescIdDesc(UUID accountingSourceId, SyncRunStatus status);
     Page<SyncRun> findAllByAccountingSourceIdAndStatus(UUID accountingSourceId, SyncRunStatus status, Pageable pageable);
 }
