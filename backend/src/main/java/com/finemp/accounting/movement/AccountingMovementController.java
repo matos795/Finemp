@@ -32,4 +32,19 @@ public class AccountingMovementController {
                 startDate,
                 endDate);
     }
+
+    /** Página determinística com filtros e totais exatos (#444). */
+    @GetMapping("/search")
+    public AccountingMovementSearchResponse search(
+            @PathVariable UUID companyId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) UUID accountingSourceId,
+            @RequestParam(required = false) UUID accountId,
+            @RequestParam(defaultValue = "0") @jakarta.validation.constraints.Min(0) int page,
+            @RequestParam(defaultValue = "100") @jakarta.validation.constraints.Min(1)
+            @jakarta.validation.constraints.Max(200) int size) {
+        return accountingMovementQueryService.search(companyId, startDate, endDate, accountingSourceId, accountId,
+                page, size);
+    }
 }
