@@ -3825,6 +3825,28 @@ paths:
                   $ref: '#/components/schemas/DreClassification'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/companies/{companyId}/accounting-sources:
+    get:
+      tags: [Accounting synchronization]
+      operationId: listCompanySyncStatus
+      summary: Fontes contábeis da empresa com o estado registrado de sincronização.
+      description: |
+        Exige QUESTOR_SYNC na empresa (escopo ALL), a mesma permissão da API de SyncRun.
+        Permissões da contabilidade (HIERARCHY_*, ACCOUNTING_SOURCE_*) não substituem o grant
+        da empresa. Somente leitura, sem configuração externa. latestRun é a última execução
+        solicitada (qualquer status); latestSucceededRun é a última SUCCEEDED, ou seja, o período
+        efetivamente publicado. Sem execução, ambos são nulos. Não informa presença do Connector.
+        Disponível mesmo com FINEMP_SYNC_CONTROL_ENABLED desligado (apenas lê o histórico).
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+      responses:
+        '200':
+          description: Fontes ordenadas por tipo e ID. Cache-Control no-store.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompanySyncStatus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/dre:
     get:
       tags: [DRE]
@@ -4624,6 +4646,27 @@ components:
           type: string
           format: date
           description: Inclusiva, não anterior ao início; janela configurável, padrão 366 dias por solicitação nova.
+    CompanySyncStatus:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CompanySyncStatusSource'}
+    CompanySyncStatusSource:
+      type: object
+      required: [accountingSourceId, type, connectionMode, active, latestRun, latestSucceededRun]
+      properties:
+        accountingSourceId: {type: string, format: uuid}
+        type: {type: string, enum: [QUESTOR]}
+        connectionMode: {type: string, enum: [DIRECT, CONNECTOR]}
+        active: {type: boolean}
+        latestRun:
+          nullable: true
+          allOf: [{$ref: '#/components/schemas/SyncRun'}]
+        latestSucceededRun:
+          nullable: true
+          allOf: [{$ref: '#/components/schemas/SyncRun'}]
     SyncRun:
       type: object
       required: [id, accountingSourceId, requestedByUserId, mode, status, startDate, endDate, requestedAt, startedAt, finishedAt, readCount, importedCount, skippedCount, failureCode]
