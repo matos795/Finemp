@@ -6,10 +6,13 @@
 | --- | --- | --- |
 | Plataforma | GET `/api/admin/accounting-firms` | `ACCOUNTING_FIRM_VIEW` |
 | Plataforma | POST `/api/admin/accounting-firms` | `ACCOUNTING_FIRM_CREATE` |
-| Contabilidade | GET/POST `/api/accounting-firms/{accountingFirmId}/clients` | `HIERARCHY_MANAGE` nessa contabilidade |
-| Cliente | GET/POST `/api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies` | `HIERARCHY_MANAGE` e relação pai/filho válida |
+| Contabilidade | GET `/api/accounting-firms/{accountingFirmId}/clients` | `HIERARCHY_VIEW` ou `HIERARCHY_MANAGE` nessa contabilidade |
+| Contabilidade | POST `/api/accounting-firms/{accountingFirmId}/clients` | `HIERARCHY_MANAGE` nessa contabilidade |
+| Cliente | GET `/api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies` | `HIERARCHY_VIEW` ou `HIERARCHY_MANAGE` e relação pai/filho válida |
+| Cliente | POST `/api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies` | `HIERARCHY_MANAGE` e relação pai/filho válida |
 | Saneamento | PUT `/api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/assignment` | `UNASSIGNED_COMPANY_ASSIGN` na plataforma e `HIERARCHY_MANAGE` no destino |
-| Empresa | GET/POST `/api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/accounting-sources` | `ACCOUNTING_SOURCE_MANAGE` e todas as relações válidas |
+| Empresa | GET `/api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/accounting-sources` | `ACCOUNTING_SOURCE_VIEW` ou `ACCOUNTING_SOURCE_MANAGE` e todas as relações válidas |
+| Empresa | POST `/api/accounting-firms/{accountingFirmId}/clients/{clientId}/companies/{companyId}/accounting-sources` | `ACCOUNTING_SOURCE_MANAGE` e todas as relações válidas |
 
 Todas exigem sessão; mutações também exigem CSRF. Não há concessão automática de acesso financeiro, nem mesmo ao criar uma empresa. Um ID recebido não prova autorização. O backend valida contabilidade → cliente → empresa antes de consultar/gravar a fonte.
 

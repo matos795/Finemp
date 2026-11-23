@@ -3345,6 +3345,25 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/OrganizationAccess'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/auth/accounting-portfolio:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentAccountingPortfolio
+      summary: Carteira operacional AccountingFirm → Client → Company do usuário da sessão.
+      description: >-
+        Identidade somente pela sessão; recalculada a cada chamada (no-store). SYSTEM_ADMIN ativo vê
+        todas as hierarquias. HIERARCHY_VIEW ou HIERARCHY_MANAGE incluem toda a hierarquia da
+        contabilidade (scope FULL_HIERARCHY). Nos demais casos, só Companies com CompanyAccessGrant do
+        usuário e seus ancestrais (scope GRANTED_COMPANIES); Client e contabilidade sem Company
+        autorizada não aparecem. Companies sem Client não entram. Navegar não autoriza ler dados:
+        permissões de Company continuam em /api/auth/me e são verificadas em cada endpoint.
+      responses:
+        '200':
+          description: Carteira navegável (pode ser vazia).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountingPortfolio'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /api/admin/accounting-firms:
     get:
       tags: [SaaS administration]
@@ -3390,7 +3409,7 @@ paths:
     get:
       tags: [SaaS administration]
       operationId: listClients
-      summary: Lista clientes com HIERARCHY_MANAGE na contabilidade.
+      summary: Lista clientes com HIERARCHY_VIEW ou HIERARCHY_MANAGE na contabilidade.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -3433,7 +3452,7 @@ paths:
     get:
       tags: [SaaS administration]
       operationId: listClientCompanies
-      summary: Lista empresas com HIERARCHY_MANAGE e relação contabilidade/cliente válida.
+      summary: Lista empresas com HIERARCHY_VIEW ou HIERARCHY_MANAGE e relação contabilidade/cliente válida.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -3500,7 +3519,7 @@ paths:
     get:
       tags: [SaaS administration]
       operationId: listCompanyAccountingSources
-      summary: Lista fontes com ACCOUNTING_SOURCE_MANAGE e relações pai/filho válidas.
+      summary: Lista fontes com ACCOUNTING_SOURCE_VIEW ou ACCOUNTING_SOURCE_MANAGE e relações pai/filho válidas.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -4859,7 +4878,7 @@ components:
             user: {$ref: '#/components/schemas/UserAdministrationSummary'}
     AccountingFirmPermission:
       type: string
-      enum: [HIERARCHY_MANAGE, USER_ACCESS_MANAGE, ACCOUNTING_SOURCE_MANAGE, CONNECTOR_MANAGE]
+      enum: [HIERARCHY_VIEW, HIERARCHY_MANAGE, ACCOUNTING_SOURCE_VIEW, ACCOUNTING_SOURCE_MANAGE, USER_ACCESS_MANAGE, CONNECTOR_MANAGE]
     FirmUserAccess:
       type: object
       required: [accountingFirmId, user, permissions]
@@ -4920,7 +4939,40 @@ components:
                 uniqueItems: true
                 items:
                   type: string
-                  enum: [HIERARCHY_MANAGE, USER_ACCESS_MANAGE, ACCOUNTING_SOURCE_MANAGE, CONNECTOR_MANAGE]
+                  enum: [HIERARCHY_VIEW, HIERARCHY_MANAGE, ACCOUNTING_SOURCE_VIEW, ACCOUNTING_SOURCE_MANAGE, USER_ACCESS_MANAGE, CONNECTOR_MANAGE]
+    AccountingPortfolio:
+      type: object
+      required: [accountingFirms]
+      properties:
+        accountingFirms:
+          type: array
+          items:
+            type: object
+            required: [accountingFirmId, name, active, scope, clients]
+            properties:
+              accountingFirmId: {type: string, format: uuid}
+              name: {type: string}
+              active: {type: boolean}
+              scope:
+                type: string
+                enum: [FULL_HIERARCHY, GRANTED_COMPANIES]
+              clients:
+                type: array
+                items:
+                  type: object
+                  required: [clientId, name, active, companies]
+                  properties:
+                    clientId: {type: string, format: uuid}
+                    name: {type: string}
+                    active: {type: boolean}
+                    companies:
+                      type: array
+                      items:
+                        type: object
+                        required: [companyId, legalName]
+                        properties:
+                          companyId: {type: string, format: uuid}
+                          legalName: {type: string}
     NameRequest:
       type: object
       required: [name]
@@ -5020,7 +5072,7 @@ components:
           uniqueItems: true
           items:
             type: string
-            enum: [HIERARCHY_MANAGE, USER_ACCESS_MANAGE, ACCOUNTING_SOURCE_MANAGE, CONNECTOR_MANAGE]
+            enum: [HIERARCHY_VIEW, HIERARCHY_MANAGE, ACCOUNTING_SOURCE_VIEW, ACCOUNTING_SOURCE_MANAGE, USER_ACCESS_MANAGE, CONNECTOR_MANAGE]
     CsrfToken:
       type: object
       required: [headerName, token]
