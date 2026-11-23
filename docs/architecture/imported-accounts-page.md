@@ -18,6 +18,8 @@
   pendências do recorte atual.
 - `accountingSourceId` de outra Company resulta em página vazia (o filtro é sempre
   combinado com a Company do path), sem 404 que revele a existência da fonte.
+- Página e `summary` são lidos na mesma transação `REPEATABLE_READ`: uma publicação
+  confirmada entre as consultas não gera resposta incoerente.
 - A listagem antiga `/classifications` e o `PUT .../classification` seguem sem mudança.
 
 ## PONTO ABERTO

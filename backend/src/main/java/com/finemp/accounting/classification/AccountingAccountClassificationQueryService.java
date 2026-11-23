@@ -27,7 +27,9 @@ public class AccountingAccountClassificationQueryService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    /** Página e summary são consultas distintas: REPEATABLE_READ garante o mesmo snapshot. */
+    @Transactional(readOnly = true,
+            isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public ImportedAccountsPageResponse searchImported(
             UUID companyId,
             UUID accountingSourceId,
