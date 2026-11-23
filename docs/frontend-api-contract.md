@@ -264,11 +264,23 @@ Resposta `200`:
       "total": 1000.00
     }
   ],
-  "unclassifiedAccountCount": 2
+  "unclassifiedAccountCount": 2,
+  "groups": [
+    {
+      "dreClassification": "Grupo demonstrativo",
+      "total": "1000.0000",
+      "groups": [
+        { "dreOpenClassification": "Abertura demonstrativa", "total": "1000.0000",
+          "lines": [ { "ebitdaClassification": "Linha demonstrativa", "total": "1000.0000" } ] }
+      ]
+    }
+  ],
+  "classifiedTotal": "1000.0000",
+  "coverage": [ { "accountingSourceId": "…", "syncedStartDate": "2026-01-01", "syncedEndDate": "2026-06-30" } ]
 }
 ```
 
-O backend já agrega os três níveis disponíveis e informa contas pendentes. A hierarquia oficial de drill-down e os níveis adicionais vistos no protótipo permanecem ponto aberto.
+O backend já agrega os três níveis disponíveis e informa contas pendentes. Desde #446 ([detalhes](architecture/dre-aggregation.md)) também devolve `groups` e `classifiedTotal` em strings decimais exatas: a tela usa esses totais em vez de somar `lines` no navegador. A ordem de `lines`/`groups` é técnica (alfabética por nível); a ordem oficial da demonstração e a hierarquia de drill-down permanecem ponto aberto. `coverage` mostra o último período sincronizado com sucesso por fonte; período fora da cobertura deve ser sinalizado, não apresentado como zero.
 
 ### 4.5 Importação Questor atual
 

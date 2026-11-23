@@ -5283,16 +5283,59 @@ components:
           type: string
     DreCalculation:
       type: object
-      required: [lines, unclassifiedAccountCount]
+      required: [lines, unclassifiedAccountCount, groups, classifiedTotal, coverage]
       properties:
         lines:
           type: array
+          description: Ordem técnica estável por DRE, DRE ABERTA e EBITDA; a ordem oficial da demonstração é ponto aberto.
           items:
             $ref: '#/components/schemas/DreLine'
         unclassifiedAccountCount:
           type: integer
           format: int32
           minimum: 0
+        groups:
+          type: array
+          description: Agregação autoritativa DRE → DRE ABERTA → linhas; o cliente apresenta, não soma.
+          items: {$ref: '#/components/schemas/DreGroup'}
+        classifiedTotal:
+          $ref: '#/components/schemas/DreExactAmount'
+        coverage:
+          type: array
+          description: Última execução SUCCEEDED por fonte da empresa; datas nulas quando não há.
+          items:
+            type: object
+            required: [accountingSourceId, syncedStartDate, syncedEndDate]
+            properties:
+              accountingSourceId: {type: string, format: uuid}
+              syncedStartDate: {type: string, format: date, nullable: true}
+              syncedEndDate: {type: string, format: date, nullable: true}
+    DreExactAmount:
+      type: string
+      pattern: '^-?[0-9]+\.[0-9]{4}$'
+      description: Decimal exato com sinal, na escala armazenada (4 casas), sem arredondamento.
+    DreGroup:
+      type: object
+      required: [dreClassification, total, groups]
+      properties:
+        dreClassification: {type: string}
+        total: {$ref: '#/components/schemas/DreExactAmount'}
+        groups:
+          type: array
+          items:
+            type: object
+            required: [dreOpenClassification, total, lines]
+            properties:
+              dreOpenClassification: {type: string}
+              total: {$ref: '#/components/schemas/DreExactAmount'}
+              lines:
+                type: array
+                items:
+                  type: object
+                  required: [ebitdaClassification, total]
+                  properties:
+                    ebitdaClassification: {type: string}
+                    total: {$ref: '#/components/schemas/DreExactAmount'}
     DreLine:
       type: object
       required: [dreClassification, dreOpenClassification, ebitdaClassification, total]
