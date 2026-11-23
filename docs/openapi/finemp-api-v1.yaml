@@ -3731,6 +3731,43 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/companies/{companyId}/accounting-movements/search:
+    get:
+      tags: [Accounting movements]
+      operationId: searchAccountingMovements
+      summary: Movimentos contábeis paginados, com filtros de fonte/conta e totais exatos.
+      description: |
+        Requer ACCOUNTING_MOVEMENT_VIEW na empresa. Ordem: data, fonte, sourceEntryKey,
+        lado e ID. amount e totals são strings decimais com sinal, na escala armazenada
+        (4 casas), sem arredondamento; o contrato canônico preserva valores negativos.
+        Página, contagem e totais são lidos do mesmo snapshot (REPEATABLE_READ).
+        totals cobre todo o filtro, independente da página.
+        Fonte ou conta de outra empresa resultam em página vazia.
+        notSynchronized lista os dados que o contrato canônico ainda não carrega;
+        o cliente não deve exibi-los como existentes.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - name: accountingSourceId
+          in: query
+          schema: {type: string, format: uuid}
+        - name: accountId
+          in: query
+          schema: {type: string, format: uuid}
+        - $ref: '#/components/parameters/Page'
+        - name: size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 100}
+      responses:
+        '200':
+          description: Página de movimentos do período.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountingMovementSearch'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /api/companies/{companyId}/accounting-movements:
     get:
       tags: [Accounting movements]
@@ -4122,6 +4159,39 @@ components:
     NotFound:
       description: Recurso não encontrado dentro do escopo autorizado.
   schemas:
+    AccountingMovementSearch:
+      type: object
+      required: [items, page, size, totalItems, totalPages, totals, notSynchronized]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, accountingDate, accountingSourceId, accountId, accountKey, accountDescription, side, amount, history, sourceEntryKey]
+            properties:
+              id: {type: string, format: uuid}
+              accountingDate: {type: string, format: date}
+              accountingSourceId: {type: string, format: uuid}
+              accountId: {type: string, format: uuid}
+              accountKey: {type: string}
+              accountDescription: {type: string, nullable: true}
+              side: {type: string, enum: [DEBIT, CREDIT]}
+              amount: {type: string, pattern: '^-?[0-9]+\.[0-9]{4}$'}
+              history: {type: string, nullable: true}
+              sourceEntryKey: {type: string}
+        page: {type: integer}
+        size: {type: integer}
+        totalItems: {type: integer, format: int64}
+        totalPages: {type: integer}
+        totals:
+          type: object
+          required: [debit, credit]
+          properties:
+            debit: {type: string, pattern: '^-?[0-9]+\.[0-9]{4}$'}
+            credit: {type: string, pattern: '^-?[0-9]+\.[0-9]{4}$'}
+        notSynchronized:
+          type: array
+          items: {type: string, enum: [COUNTERPART, DOCUMENT, COST_CENTER, CLOSING_ENTRY, OPENING_BALANCE]}
     PresentationRatio:
       type: object
       required: [numerator, denominator, percent, availability]

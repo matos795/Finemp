@@ -75,7 +75,8 @@ public class SecurityConfiguration {
                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE))
 
                                                 .requestMatchers(HttpMethod.GET,
-                                                                "/api/companies/{companyId}/accounting-movements")
+                                                                "/api/companies/{companyId}/accounting-movements",
+                                                                "/api/companies/{companyId}/accounting-movements/search")
                                                 .access(permissionAuthorizationManagerFactory.forPermission(
                                                                 CompanyPermission.ACCOUNTING_MOVEMENT_VIEW))
 
