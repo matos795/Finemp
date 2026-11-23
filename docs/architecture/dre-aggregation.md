@@ -31,7 +31,8 @@
   lançamento de encerramento não é homologável.
 - **Achado (pré-existente):** o contrato canônico preserva valores negativos
   (`CanonicalBatchValidatorTest`), mas `DreMovementValueCalculator` rejeita `amount < 0`
-  com `IllegalArgumentException` sem mapeamento HTTP (resposta 500). O sinal de um valor
+  com `IllegalArgumentException`. Desde a mitigação de #449 a resposta é 422
+  `DRE_UNSUPPORTED_NEGATIVE_AMOUNT` (antes, 500); período invertido é 400. O sinal de um valor
   negativo combinado com o lado D/C depende de evidência da origem (C1) e de decisão
   (O21); não foi alterado por suposição.
 - Mês a mês e drill-down por linha ficam para evolução posterior.

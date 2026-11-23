@@ -47,7 +47,7 @@ public class DreMovementValueCalculator {
         }
 
         if (amount.signum() < 0) {
-            throw new IllegalArgumentException("amount must not be negative");
+            throw new DreUnsupportedMovementException("amount must not be negative");
         }
     }
 }
