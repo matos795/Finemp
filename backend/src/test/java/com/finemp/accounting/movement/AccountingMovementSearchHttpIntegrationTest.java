@@ -154,6 +154,16 @@ class AccountingMovementSearchHttpIntegrationTest {
     }
 
     @Test
+    void preservesSignedAmountsExactlyInItemsAndTotals() throws Exception {
+        // O contrato canônico preserva valores negativos (CanonicalBatchValidatorTest).
+        movement(cash, "NEG", AccountingMovementSide.DEBIT, "2026-03-20", "-200.2002");
+        mvc.perform(march().with(as(reader)).param("accountId", cash.getId().toString()))
+                .andExpect(jsonPath("$.items[*].amount", contains("0.1000", "100.0001", "-200.2002")))
+                .andExpect(jsonPath("$.totals.debit").value("-100.1001"))
+                .andExpect(jsonPath("$.totals.credit").value("0.0000"));
+    }
+
+    @Test
     void rejectsInvalidPeriodAndPaging() throws Exception {
         mvc.perform(get(ROUTE, company.getId()).param("startDate", "2026-04-01").param("endDate", "2026-03-01")
                 .with(as(reader))).andExpect(status().isBadRequest());

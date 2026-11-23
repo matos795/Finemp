@@ -40,7 +40,12 @@ public class AccountingMovementQueryService {
         }
     }
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    /**
+     * Página, contagem e totais vêm de consultas distintas: REPEATABLE_READ garante o mesmo
+     * snapshot mesmo se uma publicação for confirmada entre elas.
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true,
+            isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public AccountingMovementSearchResponse search(
             UUID companyId,
             LocalDate startDate,

@@ -23,6 +23,9 @@ servidor, com filtros opcionais de fonte e conta, e devolve:
   inesperada falha em vez de alterar o valor.
 - Fonte/conta de outra Company → página vazia (filtros sempre combinados com a
   Company do path).
+- Página, contagem e totais vêm de consultas distintas na mesma transação
+  `REPEATABLE_READ`: uma publicação confirmada entre elas não gera resposta incoerente.
+- Valores negativos preservados pelo contrato canônico aparecem com sinal.
 - `size` máximo 200. A listagem antiga (`/accounting-movements`) segue igual.
 
 ## PONTO ABERTO
