@@ -12,6 +12,20 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
 
     List<Client> findAllByAccountingFirmId(UUID accountingFirmId);
 
+    @org.springframework.data.jpa.repository.Query("""
+            select client from Client client
+            join fetch client.accountingFirm firm
+            where firm.id in :firmIds
+            """)
+    List<Client> findAllWithAccountingFirmByAccountingFirmIdIn(
+            @org.springframework.data.repository.query.Param("firmIds") java.util.Collection<UUID> firmIds);
+
+    @org.springframework.data.jpa.repository.Query("""
+            select client from Client client
+            join fetch client.accountingFirm
+            """)
+    List<Client> findAllWithAccountingFirm();
+
     boolean existsByAccountingFirmId(UUID accountingFirmId);
 
     Optional<Client> findByIdAndAccountingFirmId(

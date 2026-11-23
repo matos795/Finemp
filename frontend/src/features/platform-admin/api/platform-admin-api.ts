@@ -67,9 +67,11 @@ export interface ConnectorSecret {
 }
 
 export type FirmPermission =
+    | "HIERARCHY_VIEW"
     | "HIERARCHY_MANAGE"
-    | "USER_ACCESS_MANAGE"
+    | "ACCOUNTING_SOURCE_VIEW"
     | "ACCOUNTING_SOURCE_MANAGE"
+    | "USER_ACCESS_MANAGE"
     | "CONNECTOR_MANAGE"
 
 

@@ -30,10 +30,14 @@ Elas são persistidas para o usuário, mas não representam uma role de negócio
 
 `AccountingFirmAccessGrant` vincula um usuário a uma Contabilidade. A combinação usuário/Contabilidade é única e pode conter:
 
-- `HIERARCHY_MANAGE`;
+- `HIERARCHY_VIEW` (leitura de Clients e Companies);
+- `HIERARCHY_MANAGE` (administração; também satisfaz leitura);
+- `ACCOUNTING_SOURCE_VIEW` (leitura de fontes);
+- `ACCOUNTING_SOURCE_MANAGE` (administração; também satisfaz leitura);
 - `USER_ACCESS_MANAGE`;
-- `ACCOUNTING_SOURCE_MANAGE`;
 - `CONNECTOR_MANAGE`.
+
+A navegação operacional (quais contabilidades, clientes e empresas o usuário vê) é derivada destes grants e dos CompanyAccessGrants em [carteira operacional](accounting-portfolio.md). Navegar não autoriza ler dados de Company.
 
 As verificações consultam diretamente a permission requerida no banco, sem carregar coleções para depois filtrar em memória.
 

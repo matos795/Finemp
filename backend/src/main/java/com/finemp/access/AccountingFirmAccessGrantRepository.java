@@ -23,6 +23,20 @@ public interface AccountingFirmAccessGrantRepository
             @Param("accountingFirmId") UUID accountingFirmId,
             @Param("permission") AccountingFirmPermission permission);
 
+    @Query("""
+            select case when count(accessGrant) > 0 then true else false end
+            from AccountingFirmAccessGrant accessGrant
+            join accessGrant.permissions permission
+            where accessGrant.userAccount.id = :userAccountId
+              and accessGrant.accountingFirm.id = :accountingFirmId
+              and permission in :permissions
+              and accessGrant.userAccount.active = true
+            """)
+    boolean existsByUserAccountIdAndAccountingFirmIdAndAnyPermission(
+            @Param("userAccountId") UUID userAccountId,
+            @Param("accountingFirmId") UUID accountingFirmId,
+            @Param("permissions") java.util.Collection<AccountingFirmPermission> permissions);
+
     java.util.Optional<AccountingFirmAccessGrant> findByUserAccountIdAndAccountingFirmId(
             UUID userAccountId, UUID accountingFirmId);
 

@@ -153,10 +153,10 @@ public class SaasAdministrationService {
             String search,
             int page,
             int size) {
-        requireAccountingFirmPermission(
+        requireAnyAccountingFirmPermission(
                 userAccountId,
                 accountingFirmId,
-                AccountingFirmPermission.HIERARCHY_MANAGE);
+                AccountingFirmPermission.HIERARCHY_READ);
 
         return clientRepository.findAllByAccountingFirmIdAndNameContainingIgnoreCase(
                 accountingFirmId,
@@ -219,10 +219,10 @@ public class SaasAdministrationService {
             String search,
             int page,
             int size) {
-        requireAccountingFirmPermission(
+        requireAnyAccountingFirmPermission(
                 userAccountId,
                 accountingFirmId,
-                AccountingFirmPermission.HIERARCHY_MANAGE);
+                AccountingFirmPermission.HIERARCHY_READ);
         requireClient(accountingFirmId, clientId);
 
         return companyRepository.findAllByClientIdAndLegalNameContainingIgnoreCase(
@@ -296,10 +296,10 @@ public class SaasAdministrationService {
             String search,
             int page,
             int size) {
-        requireAccountingFirmPermission(
+        requireAnyAccountingFirmPermission(
                 userAccountId,
                 accountingFirmId,
-                AccountingFirmPermission.ACCOUNTING_SOURCE_MANAGE);
+                AccountingFirmPermission.ACCOUNTING_SOURCE_READ);
         requireClient(accountingFirmId, clientId);
         requireCompany(clientId, companyId);
 
@@ -387,6 +387,19 @@ public class SaasAdministrationService {
                 userAccountId,
                 accountingFirmId,
                 permission)) {
+            throw new OrganizationAccessDeniedException();
+        }
+    }
+
+    /** Leituras aceitam VIEW ou MANAGE; mutações continuam exigindo MANAGE. */
+    private void requireAnyAccountingFirmPermission(
+            UUID userAccountId,
+            UUID accountingFirmId,
+            java.util.Set<AccountingFirmPermission> permissions) {
+        if (!accountingFirmAuthorizationService.hasAnyPermission(
+                userAccountId,
+                accountingFirmId,
+                permissions)) {
             throw new OrganizationAccessDeniedException();
         }
     }

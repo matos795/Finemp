@@ -30,7 +30,7 @@ public record AccessCatalog(String version, Set<PlatformPermission> platformPerm
     }
 
     public static AccessCatalog current() {
-        return new AccessCatalog("2026-10-28.2", Set.of(PlatformPermission.values()),
+        return new AccessCatalog("2026-11-23.1", Set.of(PlatformPermission.values()),
                 Set.of(AccountingFirmPermission.values()), Set.of(CompanyPermission.values()), List.of(
                 new ScreenPreset("accounting-ledger", "Razão contábil", true, false,
                         Set.of(CompanyPermission.ACCOUNTING_MOVEMENT_VIEW), Set.of(), null),

@@ -2,6 +2,7 @@ package com.finemp.access;
 
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -26,5 +27,16 @@ public class AccountingFirmPermissionAuthorizationService {
                         accountingFirmId,
                         permission);
     }
-}
 
+    /** SYSTEM_ADMIN ou ao menos uma das permissões na contabilidade. */
+    public boolean hasAnyPermission(
+            UUID userAccountId,
+            UUID accountingFirmId,
+            Set<AccountingFirmPermission> permissions) {
+        return platform.isSystemAdmin(userAccountId) || accountingFirmAccessGrantRepository
+                .existsByUserAccountIdAndAccountingFirmIdAndAnyPermission(
+                        userAccountId,
+                        accountingFirmId,
+                        permissions);
+    }
+}
