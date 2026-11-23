@@ -89,6 +89,11 @@ public class SecurityConfiguration {
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
 
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-sources")
+                                                .access(permissionAuthorizationManagerFactory.forPermission(
+                                                                CompanyPermission.QUESTOR_SYNC))
+
+                                                .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/dre")
                                                 .access(
                                                                 permissionAuthorizationManagerFactory
