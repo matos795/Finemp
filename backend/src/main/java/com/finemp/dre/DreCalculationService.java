@@ -15,14 +15,31 @@ import org.springframework.stereotype.Service;
 @Service
 public class DreCalculationService {
 
+    /** Ordem técnica estável; a ordem oficial da demonstração é PONTO ABERTO (O2/O21). */
+    private static final java.util.Comparator<DreLine> LINE_ORDER = java.util.Comparator
+            .comparing(DreLine::dreClassification)
+            .thenComparing(DreLine::dreOpenClassification)
+            .thenComparing(DreLine::ebitdaClassification);
+
     private final DreMovementRepository dreMovementRepository;
     private final DreMovementValueCalculator valueCalculator;
+    private final DreCoverageReader coverageReader;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public DreCalculationService(
+            DreMovementRepository dreMovementRepository,
+            DreMovementValueCalculator valueCalculator,
+            DreCoverageReader coverageReader) {
+        this.dreMovementRepository = dreMovementRepository;
+        this.valueCalculator = valueCalculator;
+        this.coverageReader = coverageReader;
+    }
+
+    /** Sem leitura de cobertura (testes de cálculo puro). */
     public DreCalculationService(
             DreMovementRepository dreMovementRepository,
             DreMovementValueCalculator valueCalculator) {
-        this.dreMovementRepository = dreMovementRepository;
-        this.valueCalculator = valueCalculator;
+        this(dreMovementRepository, valueCalculator, companyId -> List.of());
     }
 
     public DreCalculationResult calculate(
@@ -75,9 +92,12 @@ public class DreCalculationService {
                         key.ebitdaClassification(),
                         total)));
 
+        lines.sort(LINE_ORDER);
+
         return new DreCalculationResult(
                 lines,
-                unclassifiedAccountIds.size());
+                unclassifiedAccountIds.size(),
+                coverageReader.coverage(companyId));
     }
 
     private boolean hasCompleteClassification(
