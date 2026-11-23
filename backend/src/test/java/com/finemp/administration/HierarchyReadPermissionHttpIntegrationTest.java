@@ -64,7 +64,7 @@ class HierarchyReadPermissionHttpIntegrationTest {
 
         mockMvc.perform(get(CLIENTS, f.firm.getId()).session(f.session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items.length()").value(1));
+                .andExpect(jsonPath("$.items.length()").value(2));
         mockMvc.perform(get(COMPANIES, f.firm.getId(), f.client.getId()).session(f.session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].id").value(f.company.getId().toString()));
