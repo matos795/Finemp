@@ -20,6 +20,7 @@
   `classifiedTotal` é a soma das linhas classificadas, não "lucro" homologado.
 - `coverage`: por fonte, início/fim da última execução SUCCEEDED (nulo sem execução).
   Movimentos importados pelo caminho legado não aparecem como cobertura.
+- Movimentos e cobertura lidos na mesma transação `REPEATABLE_READ`.
 - `lines[].total` numérico e `unclassifiedAccountCount` mantidos (mudança aditiva).
 
 ## PONTO ABERTO / bloqueios
@@ -28,4 +29,9 @@
   linhas e totais; ordem oficial da demonstração (O2).
 - Encerramentos não são distinguíveis no canônico (C1/C2): DRE de período com
   lançamento de encerramento não é homologável.
+- **Achado (pré-existente):** o contrato canônico preserva valores negativos
+  (`CanonicalBatchValidatorTest`), mas `DreMovementValueCalculator` rejeita `amount < 0`
+  com `IllegalArgumentException` sem mapeamento HTTP (resposta 500). O sinal de um valor
+  negativo combinado com o lado D/C depende de evidência da origem (C1) e de decisão
+  (O21); não foi alterado por suposição.
 - Mês a mês e drill-down por linha ficam para evolução posterior.

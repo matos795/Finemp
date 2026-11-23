@@ -42,6 +42,9 @@ public class DreCalculationService {
         this(dreMovementRepository, valueCalculator, companyId -> List.of());
     }
 
+    /** Movimentos e cobertura vêm do mesmo snapshot. */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true,
+            isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public DreCalculationResult calculate(
             UUID companyId,
             LocalDate startDate,
