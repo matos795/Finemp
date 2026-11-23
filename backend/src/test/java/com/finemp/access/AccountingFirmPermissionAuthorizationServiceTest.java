@@ -35,5 +35,35 @@ class AccountingFirmPermissionAuthorizationServiceTest {
                 AccountingFirmPermission.HIERARCHY_MANAGE))
                 .isTrue();
     }
-}
 
+    @Test
+    void shouldAcceptAnyOfTheReadPermissionsWithoutWideningToOtherPermissions() {
+        UUID userAccountId = UUID.randomUUID();
+        UUID accountingFirmId = UUID.randomUUID();
+
+        when(accountingFirmAccessGrantRepository.existsByUserAccountIdAndAccountingFirmIdAndAnyPermission(
+                userAccountId,
+                accountingFirmId,
+                AccountingFirmPermission.HIERARCHY_READ))
+                .thenReturn(true);
+
+        AccountingFirmPermissionAuthorizationService service = new AccountingFirmPermissionAuthorizationService(
+                accountingFirmAccessGrantRepository,
+                org.mockito.Mockito.mock(PlatformPermissionAuthorizationService.class));
+
+        assertThat(service.hasAnyPermission(userAccountId, accountingFirmId, AccountingFirmPermission.HIERARCHY_READ))
+                .isTrue();
+        assertThat(service.hasPermission(userAccountId, accountingFirmId, AccountingFirmPermission.HIERARCHY_MANAGE))
+                .isFalse();
+    }
+
+    @Test
+    void readSetsContainViewAndManageOnly() {
+        assertThat(AccountingFirmPermission.HIERARCHY_READ)
+                .containsExactlyInAnyOrder(AccountingFirmPermission.HIERARCHY_VIEW, AccountingFirmPermission.HIERARCHY_MANAGE);
+        assertThat(AccountingFirmPermission.ACCOUNTING_SOURCE_READ)
+                .containsExactlyInAnyOrder(
+                        AccountingFirmPermission.ACCOUNTING_SOURCE_VIEW,
+                        AccountingFirmPermission.ACCOUNTING_SOURCE_MANAGE);
+    }
+}
