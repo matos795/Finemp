@@ -28,17 +28,29 @@ Referências (cópias fiéis, não editar o conteúdo):
 
 | Item | Issue | Branch | PR | CI |
 | --- | --- | --- | --- | --- |
-| M1 carteira e permissões de leitura | #435 | `feat/accounting-portfolio-access` | #438 | aguardando |
+| M7 aceite vertical (backend) | #448 | `feat/m7-vertical-acceptance` | ver Issue | aguardando |
 
-## Concluído
+## Concluído (merge com CI verde)
 
-- Validação do ambiente da sessão (Java 21, Maven, Docker, Testcontainers via `mirror.gcr.io`, `verify` da `main` verde).
-- Bootstrap de contexto: referências em `docs/reference/` e este arquivo.
+| Item | Issue | PR | Entrega |
+| --- | --- | --- | --- |
+| M1 carteira e permissões de leitura | #435 | #438 | `GET /api/auth/accounting-portfolio`; `HIERARCHY_VIEW`, `ACCOUNTING_SOURCE_VIEW` |
+| Bootstrap de contexto | — | #439 | `docs/reference/*`, este arquivo |
+| M3 estado de sincronização | #440 | #441 | `GET /api/companies/{id}/accounting-sources` (QUESTOR_SYNC) |
+| M4 plano importado paginado | #442 | #443 | `GET /api/companies/{id}/accounting-accounts` (`universe: IMPORTED_ACCOUNTS`) |
+| M5 movimentos paginados | #444 | #445 | `GET .../accounting-movements/search` (valores exatos, totais, `notSynchronized`) |
+| M6 DRE agregada no backend | #446 | #447 | `groups`, `classifiedTotal`, `coverage`; ordem determinística |
+
+Todas as leituras novas são aditivas: telas existentes da Área da Empresa não mudaram.
+Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) para página+totais; valores com sinal.
 
 ## Bloqueios
 
-- **Shell contábil (M2):** o patch `0001-feat-frontend-accounting-area-shell.patch` (referência visual do frontend João/Claude) não foi anexado à sessão e não existe em branch/PR do repositório. Sem ele não se reproduz o layout; não será inventado outro. Necessário: anexar o patch e, se houver, o HTML do protótipo.
-- Telas da Central/Pacote: dependem de C1/C2 e das decisões O1–O21 do GAP.
+- **Shell contábil (M2) e telas da Área da Contabilidade:** o patch `0001-feat-frontend-accounting-area-shell.patch` (referência visual congelada) não foi anexado e não existe no repositório. Sem ele, não se reproduz o layout e nenhum outro será inventado. Os contratos de backend M1–M6 já estão prontos para o shell consumir.
+- **C1 (evidência da origem):** exige amostra sanitizada ou esquema de uma instalação Questor real (saldos, documento, encerramento, contrapartida, CC). Não há credencial nesta sessão; nomes de campos não serão inventados.
+- **Valor negativo na DRE (#449):** canônico preserva negativos; DRE responde 500. **DECISÃO DE PRODUTO NECESSÁRIA** sobre a semântica.
+- **Homologação da DRE (O21):** falta amostra aprovada para validar sinal/linhas/totais; ordem oficial (O2).
+- Demais telas da Central/Pacote: dependem de C1/C2 e de O1–O21.
 
 ## Ambiente de sessão (não versionar)
 
@@ -49,4 +61,7 @@ Referências (cópias fiéis, não editar o conteúdo):
 
 ## Próxima tarefa
 
-Merge do M1 com CI verde. Em seguida, sem depender do shell: M3 (estado e solicitação de sincronização) no backend.
+1. Merge do M7 com CI verde.
+2. Com o patch do shell anexado: Issue própria, integrar o shell a `/api/auth/accounting-portfolio` e às leituras M3–M6, preservando o layout.
+3. Com amostra/esquema da origem: C1 → C2 → C3 → C4.
+4. Com decisão em #449: tratar valor negativo na DRE.
