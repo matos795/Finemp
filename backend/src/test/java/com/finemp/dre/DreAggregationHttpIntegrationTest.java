@@ -162,6 +162,27 @@ class DreAggregationHttpIntegrationTest {
                 .andExpect(jsonPath("$.coverage[" + indexB + "].syncedStartDate").isEmpty());
     }
 
+    @Test
+    void invertedPeriodIsABadRequest() throws Exception {
+        mvc.perform(get(ROUTE, company.getId()).param("startDate", "2026-06-30").param("endDate", "2026-06-01")
+                        .with(user(new UserAccountPrincipal(viewer))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void negativeStoredAmountIsReportedExplicitlyInsteadOfServerError() throws Exception {
+        // #449: o canônico preserva negativos; a semântica na DRE é DECISÃO DE PRODUTO pendente.
+        AccountingAccount revenue = accounts.findAll().stream()
+                .filter(account -> account.getAccountingSource().getId().equals(sourceA.getId()))
+                .filter(account -> account.getAccountKey().equals("3.1.01.001"))
+                .findFirst().orElseThrow();
+        movement(revenue, "NEG", AccountingMovementSide.CREDIT, "-1.0000");
+
+        mvc.perform(june().with(user(new UserAccountPrincipal(viewer))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("DRE_UNSUPPORTED_NEGATIVE_AMOUNT"));
+    }
+
     private MockHttpServletRequestBuilder june() {
         return get(ROUTE, company.getId()).param("startDate", "2026-06-01").param("endDate", "2026-06-30");
     }
