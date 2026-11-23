@@ -126,8 +126,7 @@ public class DreCalculationService {
             LocalDate endDate) {
 
         if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException(
-                    "Invalid period: startDate must not be after endDate");
+            throw new InvalidDrePeriodException();
         }
     }
 }
