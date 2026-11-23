@@ -172,6 +172,21 @@ Resposta: `204`.
 
 ### 4.2 Movimentos contábeis
 
+#### `GET /api/companies/{companyId}/accounting-movements/search`
+
+Consulta paginada ([detalhes](architecture/accounting-movement-search.md)): `startDate`, `endDate` obrigatórios; `accountingSourceId`, `accountId`, `page` (0), `size` (100, máx. 200) opcionais. Mesma permissão da listagem abaixo.
+
+```json
+{
+  "items": [ { "id": "…", "accountingDate": "2026-03-10", "accountingSourceId": "…", "accountId": "…", "accountKey": "1.1.01.001", "accountDescription": "Conta demonstrativa", "side": "DEBIT", "amount": "0.1000", "history": "Histórico fictício", "sourceEntryKey": "L1" } ],
+  "page": 0, "size": 100, "totalItems": 1, "totalPages": 1,
+  "totals": { "debit": "0.1000", "credit": "0.0000" },
+  "notSynchronized": ["COUNTERPART", "DOCUMENT", "COST_CENTER", "CLOSING_ENTRY", "OPENING_BALANCE"]
+}
+```
+
+`amount` e `totals` são strings decimais exatas (4 casas armazenadas); a tela formata, não recalcula. `totals` cobre o filtro inteiro. Itens de `notSynchronized` não existem no FINEMP ainda: não exibir colunas com valores inventados.
+
 #### `GET /api/companies/{companyId}/accounting-movements`
 
 Parâmetros obrigatórios: `startDate`, `endDate`.
