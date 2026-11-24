@@ -29,7 +29,7 @@ Referências (cópias fiéis, não editar o conteúdo):
 
 | Item | Issue | Branch | PR | CI |
 | --- | --- | --- | --- | --- |
-| C1 fase 1 — kit de descoberta da origem Questor (somente leitura) | #457 | `docs/c1-questor-discovery` | ver Issue | aguardando |
+| — | — | — | — | — |
 
 ## Concluído (merge com CI verde)
 
@@ -45,6 +45,8 @@ Referências (cópias fiéis, não editar o conteúdo):
 | DRE sem 500 (mitigação de #449) | #449 (aberta) | #451 | período invertido → 400; valor negativo → 422 `DRE_UNSUPPORTED_NEGATIVE_AMOUNT` |
 | M2 Área da Contabilidade: shell fiel ao protótipo | #452 | #453 | CSS do protótipo escopado (`.ctbp`), menu/cabeçalho/telas do protótipo, carteira da sessão, cache por usuário, impressão por aba |
 | Integração M3–M6 nas telas | #454 | #455 | De-Para (contas importadas + classificação), Composição `#mDd`, fontes/sincronização no contexto, DRE do pré-fechamento mês a mês; ver `docs/architecture/accounting-area-integration.md` |
+| C1 fase 1 — kit de descoberta da origem Questor (somente leitura, Firebird 2.5) | #457 (aberta) | #458 | `docs/runbooks/questor-c1-discovery.md` + `.sql`; matriz de evidências; nenhum código alterado |
+| Connector aceita BOM UTF-8 inicial no `connector.properties` | #430 | #459 | um BOM inicial ignorado; BOM extra e UTF-16 recusados; runbooks com codificações aceitas |
 
 Todas as leituras novas são aditivas: telas existentes da Área da Empresa não mudaram.
 Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) para página+totais; valores com sinal; mês com falha de cálculo nunca vira zero; totais da DRE nunca mascarados pela cobertura (o `coverage` da DRE é só a última execução SUCCEEDED de cada fonte, não cumulativa); recarga de contas/movimentos/DRE ao concluir sincronização.
