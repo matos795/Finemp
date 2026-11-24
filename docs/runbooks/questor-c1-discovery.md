@@ -309,6 +309,8 @@ Preencher com o resultado. Hoje nenhuma linha além das já lidas pelo reader es
 
 ## Depois do retorno
 
+A fase 1 já foi executada. O kit direcionado seguinte é o [C1b](questor-c1b-discovery.md).
+
 1. Atualizar a matriz na #457 com o que foi confirmado.
 2. C1 fase 2: especificar o contrato canônico ampliado só com campos confirmados, separando FATO / PROPOSTA / PONTO ABERTO, e levar à decisão de produto o que depender de O3/O7/O14.
 3. Só então C2 (reader → agente → decoder → persistência → API), com testes sintéticos.
