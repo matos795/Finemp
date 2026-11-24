@@ -1,4 +1,4 @@
-import type { SyncRunSummary } from "./accounting-period.ts"
+import type { CompanySyncStatus, SyncRunSummary } from "./accounting-period.ts"
 
 /**
  * Rótulos da situação de sincronização, no padrão de chip .stc do protótipo
@@ -42,4 +42,16 @@ export function syncRequestError(status: number | undefined) {
         default:
             return "Não foi possível solicitar a sincronização."
     }
+}
+
+/** Identifica o conjunto de últimas execuções concluídas; muda quando uma nova sincronização termina. */
+export function succeededSignature(status: CompanySyncStatus | null | undefined): string | null {
+    if (!status) {
+        return null
+    }
+
+    return status.items
+        .map((source) => `${source.accountingSourceId}:${source.latestSucceededRun?.id ?? "-"}`)
+        .sort()
+        .join("|")
 }

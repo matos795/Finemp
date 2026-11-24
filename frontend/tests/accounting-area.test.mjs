@@ -351,3 +351,30 @@ test("the monthly DRE only places backend totals and never computes them", async
   assert.equal(dreCoverageUntil({ coverage: [{ syncedEndDate: null }] }), null)
   assert.deepEqual(trailingMonths("2026-02", 3), ["2025-12", "2026-01", "2026-02"])
 })
+
+test("months before or after the synced coverage are outside the base, never zero", async () => {
+  const { dreCoverageRange, monthOutsideCoverage } = await import("../src/features/accounting-area/lib/dre-matrix.ts")
+  const range = dreCoverageRange({
+    coverage: [
+      { accountingSourceId: "s1", syncedStartDate: "2026-09-01", syncedEndDate: "2026-09-30" },
+      { accountingSourceId: "s2", syncedStartDate: null, syncedEndDate: null },
+    ],
+  })
+
+  assert.deepEqual(range, { start: "2026-09-01", end: "2026-09-30" })
+  assert.equal(monthOutsideCoverage("2026-08", range), true, "history before the first sync")
+  assert.equal(monthOutsideCoverage("2026-09", range), false)
+  assert.equal(monthOutsideCoverage("2026-10", range), true)
+  assert.equal(monthOutsideCoverage("2026-08", null), false, "unknown coverage is not claimed")
+  assert.equal(dreCoverageRange({ coverage: [] }), null)
+})
+
+test("a new succeeded run changes the sync signature so data queries refresh", async () => {
+  const { succeededSignature } = await import("../src/features/accounting-area/lib/sync-labels.ts")
+  const status = (runId) => ({ items: [{ accountingSourceId: "s1", latestSucceededRun: runId ? { id: runId } : null }] })
+
+  assert.equal(succeededSignature(undefined), null)
+  assert.notEqual(succeededSignature(status("r1")), succeededSignature(status("r2")))
+  assert.equal(succeededSignature(status("r1")), succeededSignature(status("r1")))
+  assert.notEqual(succeededSignature(status(null)), succeededSignature(status("r1")))
+})

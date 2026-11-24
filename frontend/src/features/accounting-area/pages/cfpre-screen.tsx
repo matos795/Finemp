@@ -4,7 +4,7 @@ import { useAccountingContext } from "../accounting-context"
 import { getAccountingDre, type AccountingDre } from "../api/accounting-data-api"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { lastDayOf, monthLabel } from "../lib/accounting-period"
-import { buildDreMatrix, dreCoverageUntil, trailingMonths } from "../lib/dre-matrix"
+import { buildDreMatrix, dreCoverageRange, monthOutsideCoverage, trailingMonths } from "../lib/dre-matrix"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
 import { accountingQueryKey } from "../lib/query-keys"
 import { InfoButton } from "../components/accounting-info"
@@ -12,10 +12,20 @@ import { ScreenHeader, SoonPanel, type AccountingScreenPageProps } from "./accou
 
 const MONTHS = 7
 
-function Cell({ value, outside }: { value: string | null; outside: boolean }) {
-    if (outside) {
+type CellState = "ok" | "outside" | "failed"
+
+function Cell({ value, state }: { value: string | null; state: CellState }) {
+    if (state === "outside") {
         return (
             <td className="n muted" title="Mês fora da base sincronizada">
+                —
+            </td>
+        )
+    }
+
+    if (state === "failed") {
+        return (
+            <td className="n muted" title="A DRE deste mês não foi calculada">
                 —
             </td>
         )
@@ -65,8 +75,13 @@ function DrePanel({ competence }: { competence: string }) {
         body = <div className="empty">Sem acesso à DRE desta empresa.</div>
     } else {
         const data: (AccountingDre | null)[] = results.map((result) => result.data ?? null)
-        const coveredUntil = data.map(dreCoverageUntil).find((value) => value !== null) ?? null
-        const outside = months.map((month) => coveredUntil !== null && `${month}-01` > coveredUntil)
+        const coverage = data.map(dreCoverageRange).find((value) => value !== null) ?? null
+        const coveredUntil = coverage?.end ?? null
+        const outside = months.map((month) => monthOutsideCoverage(month, coverage))
+        // Falha de cálculo nunca vira zero: a coluna fica "—" e o motivo aparece no aviso.
+        const states: CellState[] = months.map((_, index) =>
+            results[index].isError ? "failed" : outside[index] ? "outside" : "ok",
+        )
         const rows = buildDreMatrix(data)
         const current = data[MONTHS - 1]
         const errors = results
@@ -109,7 +124,7 @@ function DrePanel({ competence }: { competence: string }) {
                                 >
                                     <td title={row.label}>{row.label}</td>
                                     {row.values.map((value, index) => (
-                                        <Cell key={months[index]} value={value} outside={outside[index]} />
+                                        <Cell key={months[index]} value={value} state={states[index]} />
                                     ))}
                                 </tr>
                             ))}
@@ -127,7 +142,7 @@ function DrePanel({ competence }: { competence: string }) {
                                         <Cell
                                             key={months[index]}
                                             value={month ? month.classifiedTotal : null}
-                                            outside={outside[index]}
+                                            state={states[index]}
                                         />
                                     ))}
                                 </tr>
