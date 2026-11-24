@@ -13,6 +13,8 @@ import "@fontsource/jetbrains-mono/400.css"
 import "@fontsource/jetbrains-mono/600.css"
 import "@/styles/finemp-theme.css"
 import "@/styles/finemp-overrides.css"
+import "@/styles/accounting-prototype.css"
+import "@/styles/accounting-area.css"
 import { AppProviders } from "./app/providers/app-providers"
 import { AppRouter } from "./app/router/app-router"
 

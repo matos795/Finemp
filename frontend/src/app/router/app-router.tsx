@@ -60,6 +60,9 @@ import { SalesActivitiesPage } from "../../features/sales/pages/sales-activities
 import { SalesPortfolioPage } from "../../features/sales/pages/sales-portfolio-page"
 import { SalesIndicatorsPage } from "../../features/sales/pages/sales-indicators-page"
 import { AssetsPage } from "../../features/assets/pages/assets-page"
+import { AreaHomeRedirect } from "../../features/accounting-area/components/area-home-redirect"
+import { RequireAccountingArea } from "../../features/accounting-area/components/require-accounting-area"
+import { ACCOUNTING_AREA_BASE_PATH } from "../../features/accounting-area/lib/accounting-screens"
 
 export function AppRouter() {
     return (
@@ -89,7 +92,7 @@ export function AppRouter() {
                 <Route element={<AppLayout />}>
                     <Route
                         index
-                        element={<Navigate to="/dashboard" replace />}
+                        element={<AreaHomeRedirect />}
                     />
 
                     <Route
@@ -633,6 +636,12 @@ export function AppRouter() {
                         }
                     />
                 </Route>
+
+                {/* Área da Contabilidade: mesmo login, shell do protótipo contábil. */}
+                <Route
+                    path={`${ACCOUNTING_AREA_BASE_PATH}/*`}
+                    element={<RequireAccountingArea />}
+                />
             </Route>
 
             <Route

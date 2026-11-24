@@ -5,6 +5,7 @@ import { useCompanyAccess } from "../../features/companies/company-access-contex
 import { logout } from "../../features/auth/api/auth-api"
 import { currentUserQueryKey } from "../../features/auth/hooks/use-current-user"
 import { CompanySwitcher } from "./company-switcher"
+import { AreaSwitcher } from "./area-switcher"
 
 const todayFormatter =
     new Intl.DateTimeFormat("pt-BR")
@@ -94,6 +95,7 @@ export function AppHeader({
 
             <div className="hd-right">
                 {user.platformPermissions?.includes("SYSTEM_ADMIN") && <small>Administrador do sistema</small>}
+                <AreaSwitcher />
                 <CompanySwitcher />
 
                 <button
