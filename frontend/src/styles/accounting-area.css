@@ -46,3 +46,9 @@
 /* Pílulas de filtro sem contrato ainda (Em breve): visíveis, sem ação. */
 .ctbp .pill:disabled { opacity: .5; cursor: not-allowed; }
 .ctbp .pill:disabled:hover { border-color: var(--line2); }
+
+/* Fontes contábeis e sincronização no modal de contexto. */
+.ctbp .ctb-srcs { border-top: 1px solid var(--line); padding-top: 14px; }
+.ctbp .ctb-src { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
+.ctbp .ctb-src-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ctbp .ctb-src .cf-bar { margin-top: 8px; }

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useCompanyAccess } from "../../companies/company-access-context"
 import { getAccountingPortfolio, getCompanySyncStatus, getOrganizationAccess } from "../api/accounting-area-api"
 import { accountingQueryKey } from "../lib/query-keys"
+import { isRunActive } from "../lib/sync-labels"
 
 /** Id do usuário da sessão: separa o cache de cada usuário (ver lib/query-keys). */
 export function useSessionUserId() {
@@ -40,5 +41,8 @@ export function useCompanySyncStatus(companyId: string | null) {
         queryFn: () => getCompanySyncStatus(companyId as string),
         enabled: companyId !== null,
         retry: false,
+        // Enquanto houver execução solicitada ou em andamento, acompanha o estado.
+        refetchInterval: (query) =>
+            query.state.data?.items.some((source) => isRunActive(source.latestRun)) ? 5_000 : false,
     })
 }
