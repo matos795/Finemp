@@ -63,7 +63,7 @@ A saída deve ser **vazia**.
 
 ### 2. Rodar só metadados (opcional, mais seguro)
 
-As seções Q00–Q09 não leem dados de negócio. O arquivo inteiro sem substituição também é seguro: as consultas de dados filtram a empresa `-1` e retornam vazio.
+As seções Q00–Q09 não leem dados de negócio. O arquivo inteiro sem substituição também é seguro: todas as consultas de dados dependem do marcador da empresa (`-1`) e retornam vazio. Isso vale inclusive para Q13, que percorre todas as empresas só depois da substituição.
 
 ### 3. Substituir os marcadores
 
@@ -318,5 +318,5 @@ Preencher com o resultado. Hoje nenhuma linha além das já lidas pelo reader es
 - **Sintaxe e execução.** As consultas Q00–Q25, os modelos T1–T4 e a consulta da fase 2 foram executados sem erro em Firebird **2.5.9** (imagem `jacobalberty/firebird:2.5-ss`), sobre um esquema **sintético** local.
   - O esquema tinha só as colunas confirmadas acima, mais tabelas/colunas fictícias com prefixo `SYN_` para exercitar os modelos.
   - Isso valida sintaxe e execução, não a origem real.
-- **Sem marcadores.** Com os marcadores sem substituição, as consultas de dados retornam vazio.
+- **Sem marcadores.** Com os marcadores sem substituição, todas as consultas de dados (inclusive Q13) retornam vazio.
 - **Transação somente leitura.** A tentativa de escrita dentro da transação foi recusada pelo motor.

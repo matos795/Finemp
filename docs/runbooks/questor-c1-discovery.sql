@@ -278,12 +278,17 @@ GROUP BY 1, 2
 ORDER BY 1, 2;
 
 -- Q13 — negativos no banco inteiro, por ano (sem identificar empresa) (#449)
+--       Percorre LCTOCTB de todas as empresas. Só roda depois de substituir o
+--       marcador da empresa: com EMP = -1 não lê nenhuma linha.
+WITH P AS (SELECT CAST(-1 AS INTEGER) AS EMP FROM RDB$DATABASE)
 SELECT
     EXTRACT(YEAR FROM L.DATALCTOCTB) AS ANO,
     COUNT(*) AS LINHAS,
     SUM(CASE WHEN L.VALORLCTOCTB < 0 THEN 1 ELSE 0 END) AS LINHAS_NEGATIVAS,
     COUNT(DISTINCT CASE WHEN L.VALORLCTOCTB < 0 THEN L.CODIGOEMPRESA END) AS QTD_EMPRESAS_COM_NEGATIVO
 FROM LCTOCTB L
+CROSS JOIN P
+WHERE P.EMP <> -1
 GROUP BY 1
 ORDER BY 1;
 
