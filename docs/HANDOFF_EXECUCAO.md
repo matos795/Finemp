@@ -29,7 +29,7 @@ Referências (cópias fiéis, não editar o conteúdo):
 
 | Item | Issue | Branch | PR | CI |
 | --- | --- | --- | --- | --- |
-| Integração M3–M6 nas telas (De-Para, Composição, fontes/sincronização, DRE do pré-fechamento) | #454 | `feat/m2-depara-imported-accounts` | ver Issue | aguardando |
+| — | — | — | — | — |
 
 ## Concluído (merge com CI verde)
 
@@ -44,9 +44,10 @@ Referências (cópias fiéis, não editar o conteúdo):
 | M7 aceite vertical (backend) | #448 | #450 | login → carteira → fonte → SyncRun real → contas → movimentos → DRE → logout |
 | DRE sem 500 (mitigação de #449) | #449 (aberta) | #451 | período invertido → 400; valor negativo → 422 `DRE_UNSUPPORTED_NEGATIVE_AMOUNT` |
 | M2 Área da Contabilidade: shell fiel ao protótipo | #452 | #453 | CSS do protótipo escopado (`.ctbp`), menu/cabeçalho/telas do protótipo, carteira da sessão, cache por usuário, impressão por aba |
+| Integração M3–M6 nas telas | #454 | #455 | De-Para (contas importadas + classificação), Composição `#mDd`, fontes/sincronização no contexto, DRE do pré-fechamento mês a mês; ver `docs/architecture/accounting-area-integration.md` |
 
 Todas as leituras novas são aditivas: telas existentes da Área da Empresa não mudaram.
-Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) para página+totais; valores com sinal.
+Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) para página+totais; valores com sinal; mês com falha de cálculo nunca vira zero; totais da DRE nunca mascarados pela cobertura (o `coverage` da DRE é só a última execução SUCCEEDED de cada fonte, não cumulativa); recarga de contas/movimentos/DRE ao concluir sincronização.
 
 ## Bloqueios
 
@@ -64,7 +65,7 @@ Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) pa
 
 ## Próxima tarefa
 
-1. Merge da integração #454 com CI verde.
-2. Com amostra/esquema da origem Questor: C1 → C2 → C3 → C4 (saldos, documento, encerramento, contrapartida, CC, plano completo). Desbloqueia Diagnóstico, De-Para completo, balancete e drilldown por contrapartida.
-3. Com decisão em #449: semântica de valor negativo na DRE.
-4. Com decisões O1–O21 do GAP: preparados, lotes Questor, congelamento, fiscal, folha, pacote.
+1. Com amostra/esquema da origem Questor: C1 → C2 → C3 → C4 (saldos, documento, encerramento, contrapartida, CC, plano completo). Desbloqueia Diagnóstico, De-Para completo, balancete e drilldown por contrapartida.
+2. Com decisão em #449: semântica de valor negativo na DRE.
+3. Com decisões O1–O21 do GAP: preparados, lotes Questor, congelamento, fiscal, folha, pacote.
+4. Se a tela precisar distinguir "mês sem histórico" de "mês sem movimento": contrato de cobertura cumulativa por fonte (hoje inexistente).
