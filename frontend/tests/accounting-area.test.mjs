@@ -132,10 +132,10 @@ test("no screen is marked available without an official contract", () => {
     assert.ok(screen.panels.length > 0, screen.id)
   }
 
-  // De-Para usa #442/#444 em parte; o restante da tela continua "Em breve".
+  // Pré-fechamento (#446) e De-Para (#442/#444) usam contrato em parte; o restante continua "Em breve".
   assert.deepEqual(
     accountingScreens.filter((screen) => screen.status === "partial").map((screen) => screen.id),
-    ["depara"],
+    ["cfpre", "depara"],
   )
 })
 
@@ -321,4 +321,33 @@ test("drilldown period windows end on the last day of the month", async () => {
   assert.equal(lastDayOf("2028-02"), "2028-02-29")
   assert.deepEqual(monthWindow("2026-09", 12), { startDate: "2025-10-01", endDate: "2026-09-30" })
   assert.deepEqual(monthWindow("2026-01", 1), { startDate: "2026-01-01", endDate: "2026-01-31" })
+})
+
+test("the monthly DRE only places backend totals and never computes them", async () => {
+  const { buildDreMatrix, dreCoverageUntil, trailingMonths } = await import("../src/features/accounting-area/lib/dre-matrix.ts")
+  const dre = (groups, until = "2026-09-30") => ({
+    unclassifiedAccountCount: 0,
+    classifiedTotal: "0.0000",
+    coverage: [{ accountingSourceId: "s1", syncedStartDate: "2026-01-01", syncedEndDate: until }],
+    groups,
+  })
+  const ebitda = (revenue, energy) => ({
+    dreClassification: "EBITDA",
+    total: "999.0000", // total do backend, nunca recalculado
+    groups: [
+      { dreOpenClassification: "Receita bruta", total: revenue, lines: [{ ebitdaClassification: "Serviços", total: revenue }] },
+      ...(energy ? [{ dreOpenClassification: "Despesas", total: energy, lines: [{ ebitdaClassification: "Energia", total: energy }] }] : []),
+    ],
+  })
+
+  const rows = buildDreMatrix([dre([ebitda("10.0000", "-2.0000")]), null, dre([ebitda("30.0000")])])
+
+  assert.deepEqual(rows.map((row) => [row.kind, row.label]), [
+    ["group", "EBITDA"], ["open", "Receita bruta"], ["line", "Serviços"], ["open", "Despesas"], ["line", "Energia"],
+  ])
+  assert.deepEqual(rows[0].values, ["999.0000", null, "999.0000"])
+  assert.deepEqual(rows[4].values, ["-2.0000", null, null])
+  assert.equal(dreCoverageUntil(dre([])), "2026-09-30")
+  assert.equal(dreCoverageUntil({ coverage: [{ syncedEndDate: null }] }), null)
+  assert.deepEqual(trailingMonths("2026-02", 3), ["2025-12", "2026-01", "2026-02"])
 })

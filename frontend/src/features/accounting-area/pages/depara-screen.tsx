@@ -10,6 +10,7 @@ import {
     type DreCatalogEntry,
     type ImportedAccount,
 } from "../api/accounting-data-api"
+import { InfoButton } from "../components/accounting-info"
 import { MovementDrilldownModal } from "../components/movement-drilldown-modal"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { accountingQueryKey } from "../lib/query-keys"
@@ -322,7 +323,22 @@ export function DeparaScreen() {
             <div className="panel">
                 <div className="toolbar">
                     <div className="l">
-                        <h3 style={{ margin: 0 }}>Classificação das contas</h3>
+                        <h3 style={{ margin: 0 }}>
+                            Classificação das contas
+                            <InfoButton title="Classificação das contas">
+                                <p className="info-p">
+                                    {firstPage
+                                        ? `${firstPage.totalItems} contas no filtro · ${company?.legalName ?? ""}`
+                                        : "Escolha uma empresa com acesso à classificação."}
+                                </p>
+                                <p className="info-p">
+                                    Contas que vieram nos movimentos sincronizados do Questor; contas sem movimento
+                                    ainda não aparecem, então esta lista não é o plano de contas completo. Toda conta
+                                    precisa dizer em que linha da DRE ela entra. A classificação do balanço e as regras
+                                    por grupo de contas chegam em uma próxima etapa.
+                                </p>
+                            </InfoButton>
+                        </h3>
                         <div className="tabs" id="dpFiltro" role="group" aria-label="Filtro">
                             {FILTERS.map((item) => (
                                 <button
@@ -355,14 +371,6 @@ export function DeparaScreen() {
                             onChange={(event) => setQuery(event.target.value)}
                         />
                     </div>
-                </div>
-                <div className="sub is-info" id="dpSub" style={{ marginTop: 0 }}>
-                    {firstPage ? `${firstPage.totalItems} contas no filtro · ${company?.legalName ?? ""}` : " "}
-                </div>
-                <div className="sub is-info">
-                    Contas que vieram nos movimentos sincronizados do Questor; contas sem movimento ainda não aparecem.
-                    Toda conta precisa dizer em que linha da DRE ela entra. A classificação do balanço e as regras por
-                    grupo de contas chegam em uma próxima etapa.
                 </div>
                 {body}
             </div>

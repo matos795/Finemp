@@ -1,4 +1,5 @@
 import type { AccountingScreen } from "../lib/accounting-screens"
+import { InfoButton } from "../components/accounting-info"
 
 interface CompetenceBarProps {
     screenId: string
@@ -44,41 +45,53 @@ export function SoonPanel({ title }: { title: string }) {
     )
 }
 
-interface AccountingScreenPageProps {
+export interface AccountingScreenPageProps {
     screen: AccountingScreen
     competence: string
     baseText: string
     onCompetenceChange: (competence: string) => void
 }
 
+/** Bloco de cabeçalho da tela (.ind-bloco.emp): selo, título, objetivo e barra de competência. */
+export function ScreenHeader({ screen, competence, baseText, onCompetenceChange }: AccountingScreenPageProps) {
+    if (screen.tag === null) {
+        return null
+    }
+
+    return (
+        <div className="ind-bloco emp">
+            <div className="ind-head">
+                <span className="ind-tag">{screen.tag}</span>
+                <h3>
+                    {screen.title}
+                    <InfoButton title={`${screen.tag} · ${screen.title}`}>
+                        <p className="info-p">{screen.objective}</p>
+                    </InfoButton>
+                </h3>
+                {screen.status === "soon" && <span className="stc info ctb-soon-tag">Em breve</span>}
+            </div>
+            {screen.competenceBar && (
+                <CompetenceBar
+                    screenId={screen.id}
+                    competence={competence}
+                    baseText={baseText}
+                    onCompetenceChange={onCompetenceChange}
+                />
+            )}
+        </div>
+    )
+}
+
 /**
  * Tela da Área da Contabilidade na estrutura do protótipo: section#p-{código},
- * bloco de cabeçalho (.ind-bloco.emp com selo, título e barra de competência)
- * e os painéis na ordem e com os títulos do protótipo.
+ * bloco de cabeçalho e os painéis na ordem e com os títulos do protótipo.
  */
-export function AccountingScreenPage({ screen, competence, baseText, onCompetenceChange }: AccountingScreenPageProps) {
+export function AccountingScreenPage(props: AccountingScreenPageProps) {
+    const { screen } = props
+
     return (
         <section id={`p-${screen.id}`} className="grid" style={{ gap: 18 }} data-handoff={screen.handoffSection}>
-            {screen.tag !== null && (
-                <div className="ind-bloco emp">
-                    <div className="ind-head">
-                        <span className="ind-tag">{screen.tag}</span>
-                        <h3>{screen.title}</h3>
-                        {screen.status === "soon" && <span className="stc info ctb-soon-tag">Em breve</span>}
-                    </div>
-                    <div className="sub is-info" id={`${screen.id}Sub`}>
-                        {screen.objective}
-                    </div>
-                    {screen.competenceBar && (
-                        <CompetenceBar
-                            screenId={screen.id}
-                            competence={competence}
-                            baseText={baseText}
-                            onCompetenceChange={onCompetenceChange}
-                        />
-                    )}
-                </div>
-            )}
+            <ScreenHeader {...props} />
 
             {screen.panels.map((title, index) => (
                 <SoonPanel key={`${screen.id}-${index}`} title={title} />

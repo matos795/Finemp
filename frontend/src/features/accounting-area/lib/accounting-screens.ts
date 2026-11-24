@@ -17,7 +17,7 @@
 export type AccountingScreenStatus = "soon" | "partial" | "available"
 
 /** Telas com parte dos painéis ligada a contrato oficial. */
-const PARTIAL = new Set(["depara"])
+const PARTIAL = new Set(["cfpre", "depara"])
 
 export interface AccountingScreen {
     /** Código do protótipo / HANDOFF_CONTABIL (ex.: "cfcock"). */

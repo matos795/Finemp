@@ -93,3 +93,25 @@ export function searchMovements(
 
     return apiRequest<MovementSearchPage>(`${companyPath(companyId)}/accounting-movements/search?${params}`)
 }
+
+/** GET /api/companies/{companyId}/dre (#446): agregação autoritativa do backend. */
+export interface AccountingDre {
+    unclassifiedAccountCount: number
+    groups: {
+        dreClassification: string
+        total: string
+        groups: {
+            dreOpenClassification: string
+            total: string
+            lines: { ebitdaClassification: string; total: string }[]
+        }[]
+    }[]
+    classifiedTotal: string
+    coverage: { accountingSourceId: string; syncedStartDate: string | null; syncedEndDate: string | null }[]
+}
+
+export function getAccountingDre(companyId: string, startDate: string, endDate: string) {
+    const params = new URLSearchParams({ startDate, endDate })
+
+    return apiRequest<AccountingDre>(`${companyPath(companyId)}/dre?${params}`)
+}
