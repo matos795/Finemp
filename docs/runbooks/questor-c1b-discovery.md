@@ -156,7 +156,7 @@ Use o checklist e devolva `resultado-c1b.txt` sanitizado na #457.
 | A. Plano e hierarquia | Q40–Q48 | Distribuição de `TIPOCONTA`, `TIPOCONTACALC`, `NATURSALDO`, `CTRLSALDO`, `EMITIRBALANCO`; preenchimento de `CODIGODRE`/`CONTADRE`; `TIPOCONTA` × comprimento × pontos; classificações repetidas; pai por prefixo (nenhum, único ou ambíguo); conta com filho × movimento; `PLANOESPECPLANODRE` × `PLANOESPEC`; tamanho dos modelos `DRE` usados |
 | B. Saldos | Q50–Q54 + T-B1/T-B2 | Linhas, contas, estabelecimentos e primeira/última data por tabela; competências; duplicidade por empresa/estab/conta/data; contas com saldo × `TIPOCONTA` × movimento; saldo no dia ou no mês do movimento; se a variação do saldo bate com o líquido dos movimentos |
 | C. Participante | Q60–Q62 | Registros por lançamento (0, 1 ou vários), preenchimento de `CODIGOPARTDEB`/`CODIGOPARTCRED` × lado da linha, cobertura por ano |
-| D. Origem/lote/documento/encerramento | Q70–Q76 + T-D1 | Combinação `TIPOLANCAMENTO` × `CODIGOORIGLCTOCTB` × `ORIGEMDADO`; preenchimento de lote, documento, `CHAVEORIGEM`, `TRANSCTB`, `IDSYN`; **qual campo agrupa partidas** (grupos que fecham); linhas por lote; `LOTECTB` (situação, origem, se o valor fecha); códigos em 31/12 × resto de dezembro × demais meses; uso da conta e dos históricos de `CFGZERAMENTOCTB` |
+| D. Origem/lote/documento/encerramento | Q70–Q76 + T-D1 | Combinação `TIPOLANCAMENTO` × `CODIGOORIGLCTOCTB` × `ORIGEMDADO`; preenchimento de lote, documento, `CHAVEORIGEM`, `TRANSCTB`, `IDSYN`; **qual campo agrupa partidas** (grupos que fecham); linhas por lote; `LOTECTB` (situação, origem, se o valor fecha com **todas** as linhas do lote, inclusive fora do período); códigos em 31/12 × resto de dezembro × demais meses; uso da conta e dos históricos de `CFGZERAMENTOCTB` |
 | E. Identidade/exclusão (O3) | Q80–Q85 + T-E1 | Volume de `LCTOCTBEXCLUIDO`, chave excluída que ainda existe em `LCTOCTB`, repetição da chave na exclusão, cardinalidade e escopo de `IDSYN`/`CHAVEORIGEM`, data de gravação × competência, chave crescente com a gravação |
 | F. Centro de custo | Q90–Q93 + T-F1 | `LCTOGER` por lançamento (0, 1 ou vários) e por formato; conta de `LCTOGER` × lado da linha; `NATURLCTOCTB`; configuração (`PLESPECCENCUSRELAC`, `RATCENTROCUSTO`) × movimento (`LCTOGER`) por conta; se a soma dos CC fecha com a linha |
 
@@ -174,18 +174,28 @@ Substitua `<<...>>` pelo nome exato de coluna mostrado em Q30. Se a coluna não 
 
 Use quando a tabela de saldo tiver **uma** coluna de saldo acumulado. Rode uma vez por tabela candidata (`SALDOCTBMENSAL`, `SALDOCTB`, `SALDOCTBMENSALHIST`).
 
+**Pré-requisito: Q52.** A comparação é feita no grão `(empresa, estabelecimento, conta, data)`.
+
+- Se Q52 mostrar mais de uma linha por chave, a tabela tem outra dimensão. `SALDOCTBMENSALHIST`, por exemplo, tem `CODIGOHISTCTB`.
+- Nesse caso as linhas repetidas não são somadas nem escolhidas. Elas caem em `6_CHAVE_NAO_UNICA`.
+- Se `6` dominar, anote "não aplicável (chave não única)" e devolva a saída de Q30 para essa tabela.
+
 A consulta compara `saldo(data) − saldo(data anterior)` com débitos e créditos de `LCTOCTB` da mesma conta e do mesmo estabelecimento no intervalo `(data anterior, data]`. Devolve só a contagem de linhas de saldo em cada resultado:
 
 - `1_BATE_DEB_MENOS_CRED`: a variação bate com débitos − créditos;
 - `2_BATE_CRED_MENOS_DEB`: a variação bate com créditos − débitos;
 - `3_BATE_SEM_MOVIMENTO`: sem movimento, sem variação;
 - `4_NAO_COMPARAVEL`: sem saldo anterior;
-- `5_NAO_BATE`: nenhuma das anteriores.
+- `5_NAO_BATE`: nenhuma das anteriores;
+- `6_CHAVE_NAO_UNICA`: a chave atual ou a anterior aparece mais de uma vez.
 
 ```sql
 WITH P AS (SELECT CAST(-1 AS INTEGER) AS EMP, DATE '1900-01-01' AS INI, DATE '1900-01-31' AS FIM FROM RDB$DATABASE),
 R AS (
     SELECT C.CODIGOESTAB, C.CONTACTB, C.DATASALDO, C.<<COL_SALDO>> AS SALDO_ATUAL,
+        (SELECT COUNT(*) FROM <<TABELA_SALDO>> A
+          WHERE A.CODIGOEMPRESA = C.CODIGOEMPRESA AND A.CODIGOESTAB = C.CODIGOESTAB
+            AND A.CONTACTB = C.CONTACTB AND A.DATASALDO = C.DATASALDO) AS REPETICOES_ATUAL,
         (SELECT MAX(A.DATASALDO) FROM <<TABELA_SALDO>> A
           WHERE A.CODIGOEMPRESA = C.CODIGOEMPRESA AND A.CODIGOESTAB = C.CODIGOESTAB
             AND A.CONTACTB = C.CONTACTB AND A.DATASALDO < C.DATASALDO) AS DATA_ANTERIOR
@@ -194,7 +204,10 @@ R AS (
 ),
 V AS (
     SELECT R.*,
-        (SELECT A.<<COL_SALDO>> FROM <<TABELA_SALDO>> A CROSS JOIN P
+        (SELECT COUNT(*) FROM <<TABELA_SALDO>> A CROSS JOIN P
+          WHERE A.CODIGOEMPRESA = P.EMP AND A.CODIGOESTAB = R.CODIGOESTAB
+            AND A.CONTACTB = R.CONTACTB AND A.DATASALDO = R.DATA_ANTERIOR) AS REPETICOES_ANTERIOR,
+        (SELECT MAX(A.<<COL_SALDO>>) FROM <<TABELA_SALDO>> A CROSS JOIN P
           WHERE A.CODIGOEMPRESA = P.EMP AND A.CODIGOESTAB = R.CODIGOESTAB
             AND A.CONTACTB = R.CONTACTB AND A.DATASALDO = R.DATA_ANTERIOR) AS SALDO_ANTERIOR,
         (SELECT COALESCE(SUM(L.VALORLCTOCTB), 0) FROM LCTOCTB L CROSS JOIN P
@@ -207,6 +220,7 @@ V AS (
 )
 SELECT
     CASE
+        WHEN V.REPETICOES_ATUAL > 1 OR V.REPETICOES_ANTERIOR > 1 THEN '6_CHAVE_NAO_UNICA'
         WHEN V.DATA_ANTERIOR IS NULL OR V.SALDO_ANTERIOR IS NULL OR V.SALDO_ATUAL IS NULL THEN '4_NAO_COMPARAVEL'
         WHEN V.SALDO_ATUAL - V.SALDO_ANTERIOR = V.MOV_DEB - V.MOV_CRED
          AND V.SALDO_ATUAL - V.SALDO_ANTERIOR = V.MOV_CRED - V.MOV_DEB THEN '3_BATE_SEM_MOVIMENTO'
@@ -220,11 +234,13 @@ GROUP BY 1
 ORDER BY 1;
 ```
 
+O `MAX` em `SALDO_ANTERIOR` só evita erro quando a chave anterior se repete. Esses casos já caem em `6` antes de qualquer comparação.
+
 Se `5_NAO_BATE` dominar, repita sem a condição `L.CODIGOESTAB = R.CODIGOESTAB`: o saldo pode estar consolidado por empresa. A tabela só serve como fonte autoritativa de saldo inicial/final se quase tudo cair em `1`, `2` ou `3` e os casos `5` tiverem explicação. Isso continua sendo decisão da #457.
 
 ### T-B2 — colunas de débito/crédito do mês batem com os movimentos?
 
-Use quando a tabela de saldo tiver colunas separadas de débito e crédito do período.
+Use quando a tabela de saldo tiver colunas separadas de débito e crédito do período. O pré-requisito é o mesmo do T-B1: Q52 com uma linha por chave. Senão, anote "não aplicável (chave não única)".
 
 ```sql
 WITH P AS (SELECT CAST(-1 AS INTEGER) AS EMP, DATE '1900-01-01' AS INI, DATE '1900-01-31' AS FIM FROM RDB$DATABASE),
@@ -272,24 +288,41 @@ GROUP BY 1, 2
 ORDER BY 1, 2;
 ```
 
-### T-F1 — os valores de `LCTOGER` somam o valor da linha?
+### T-F1 — o rateio de `LCTOGER` fecha com a linha, lado a lado?
 
 Use se Q30 mostrar uma coluna de valor em `LCTOGER`.
+
+Uma linha com débito e crédito pode ter CC nos **dois** lados. Por isso a comparação é feita separadamente:
+
+- débito: soma das linhas de `LCTOGER` cuja `CONTACTB` é a conta de débito × `VALORLCTOCTB`;
+- crédito: o mesmo com a conta de crédito.
+
+Linhas de `LCTOGER` com conta diferente dos dois lados já são contadas em Q91.
 
 ```sql
 WITH P AS (SELECT CAST(-1 AS INTEGER) AS EMP, DATE '1900-01-01' AS INI, DATE '1900-01-31' AS FIM FROM RDB$DATABASE),
 V AS (
-    SELECT L.VALORLCTOCTB AS VALOR_LINHA,
-        (SELECT SUM(G.<<COL_VALOR_LCTOGER>>) FROM LCTOGER G
-          WHERE G.CODIGOEMPRESA = L.CODIGOEMPRESA AND G.CHAVELCTOCTB = L.CHAVELCTOCTB) AS SOMA_CC,
+    SELECT L.VALORLCTOCTB AS VALOR_LINHA, L.CONTACTBDEB, L.CONTACTBCRED,
         (SELECT COUNT(*) FROM LCTOGER G
-          WHERE G.CODIGOEMPRESA = L.CODIGOEMPRESA AND G.CHAVELCTOCTB = L.CHAVELCTOCTB) AS LINHAS_CC
+          WHERE G.CODIGOEMPRESA = L.CODIGOEMPRESA AND G.CHAVELCTOCTB = L.CHAVELCTOCTB AND G.CONTACTB = L.CONTACTBDEB) AS CC_DEB_LINHAS,
+        (SELECT SUM(G.<<COL_VALOR_LCTOGER>>) FROM LCTOGER G
+          WHERE G.CODIGOEMPRESA = L.CODIGOEMPRESA AND G.CHAVELCTOCTB = L.CHAVELCTOCTB AND G.CONTACTB = L.CONTACTBDEB) AS CC_DEB_SOMA,
+        (SELECT COUNT(*) FROM LCTOGER G
+          WHERE G.CODIGOEMPRESA = L.CODIGOEMPRESA AND G.CHAVELCTOCTB = L.CHAVELCTOCTB AND G.CONTACTB = L.CONTACTBCRED) AS CC_CRED_LINHAS,
+        (SELECT SUM(G.<<COL_VALOR_LCTOGER>>) FROM LCTOGER G
+          WHERE G.CODIGOEMPRESA = L.CODIGOEMPRESA AND G.CHAVELCTOCTB = L.CHAVELCTOCTB AND G.CONTACTB = L.CONTACTBCRED) AS CC_CRED_SOMA
     FROM LCTOCTB L CROSS JOIN P
     WHERE L.CODIGOEMPRESA = P.EMP AND L.DATALCTOCTB BETWEEN P.INI AND P.FIM
 )
 SELECT
-    CASE WHEN V.LINHAS_CC = 0 THEN '0_SEM_CC' WHEN V.LINHAS_CC = 1 THEN '1_UM_CC' ELSE '2_VARIOS_CC' END AS RATEIO,
-    CASE WHEN V.LINHAS_CC = 0 THEN 'NAO_COMPARAVEL' WHEN V.SOMA_CC = V.VALOR_LINHA THEN 'SOMA_IGUAL_LINHA' ELSE 'SOMA_DIFERENTE' END AS SOMA,
+    CASE WHEN V.CONTACTBDEB IS NULL THEN 'SEM_LADO'
+         WHEN V.CC_DEB_LINHAS = 0 THEN 'SEM_CC'
+         WHEN V.CC_DEB_SOMA = V.VALOR_LINHA THEN CASE WHEN V.CC_DEB_LINHAS = 1 THEN 'UM_CC_IGUAL' ELSE 'VARIOS_CC_IGUAL' END
+         ELSE 'SOMA_DIFERENTE' END AS LADO_DEBITO,
+    CASE WHEN V.CONTACTBCRED IS NULL THEN 'SEM_LADO'
+         WHEN V.CC_CRED_LINHAS = 0 THEN 'SEM_CC'
+         WHEN V.CC_CRED_SOMA = V.VALOR_LINHA THEN CASE WHEN V.CC_CRED_LINHAS = 1 THEN 'UM_CC_IGUAL' ELSE 'VARIOS_CC_IGUAL' END
+         ELSE 'SOMA_DIFERENTE' END AS LADO_CREDITO,
     COUNT(*) AS LINHAS
 FROM V
 GROUP BY 1, 2
