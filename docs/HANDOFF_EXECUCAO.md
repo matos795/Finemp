@@ -29,7 +29,7 @@ Referências (cópias fiéis, não editar o conteúdo):
 
 | Item | Issue | Branch | PR | CI |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | — |
+| C1 fase 1 — kit de descoberta da origem Questor (somente leitura) | #457 | `docs/c1-questor-discovery` | ver Issue | aguardando |
 
 ## Concluído (merge com CI verde)
 
@@ -51,7 +51,7 @@ Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) pa
 
 ## Bloqueios
 
-- **C1 (evidência da origem):** exige amostra sanitizada ou esquema de uma instalação Questor real (saldos, documento, encerramento, contrapartida, CC). Não há credencial nesta sessão; nomes de campos não serão inventados.
+- **C1 (evidência da origem):** exige amostra sanitizada ou esquema de uma instalação Questor real (saldos, documento, encerramento, contrapartida, CC). Não há credencial nesta sessão; nomes de campos não serão inventados. Kit para o operador: `docs/runbooks/questor-c1-discovery.md` + `.sql` (#457); a fase 2 de C1 depende do retorno sanitizado.
 - **Valor negativo na DRE (#449):** canônico preserva negativos; a DRE responde 422 explícito (#451). **DECISÃO DE PRODUTO NECESSÁRIA** sobre a semântica.
 - **Homologação da DRE (O21):** falta amostra aprovada para validar sinal/linhas/totais; ordem oficial (O2).
 - Demais telas da Central/Pacote: dependem de C1/C2 e de O1–O21.
