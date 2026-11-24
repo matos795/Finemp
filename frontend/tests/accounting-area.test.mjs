@@ -128,9 +128,15 @@ test("screens mirror the prototype header block and competence bar", () => {
 
 test("no screen is marked available without an official contract", () => {
   for (const screen of accountingScreens) {
-    assert.equal(screen.status, "soon", screen.id)
+    assert.notEqual(screen.status, "available", screen.id)
     assert.ok(screen.panels.length > 0, screen.id)
   }
+
+  // Pré-fechamento (#446) e De-Para (#442/#444) usam contrato em parte; o restante continua "Em breve".
+  assert.deepEqual(
+    accountingScreens.filter((screen) => screen.status === "partial").map((screen) => screen.id),
+    ["cfpre", "depara"],
+  )
 })
 
 const membership = (overrides = {}) => ({
@@ -293,4 +299,76 @@ test("accounting caches are partitioned by the session user and share one root f
   // Toda chave da área passa pelo helper (nenhuma chave solta sem o usuário).
   const hooks = readFileSync(new URL("../src/features/accounting-area/hooks/use-accounting-area-queries.ts", import.meta.url), "utf8")
   assert.doesNotMatch(hooks, /queryKey:\s*\[/)
+})
+
+test("exact decimals are formatted in pt-BR without rounding", async () => {
+  const { formatExactDecimal, isNegativeDecimal } = await import("../src/features/accounting-area/lib/exact-decimal.ts")
+
+  assert.equal(formatExactDecimal("1250.5000"), "1.250,50")
+  assert.equal(formatExactDecimal("100.0001"), "100,0001")
+  assert.equal(formatExactDecimal("-200.2002"), "-200,2002")
+  assert.equal(formatExactDecimal("0.0000"), "0,00")
+  assert.equal(formatExactDecimal("-0.0000"), "0,00")
+  assert.equal(formatExactDecimal("1234567.1"), "1.234.567,10")
+  assert.equal(isNegativeDecimal("-0.0000"), false)
+  assert.equal(isNegativeDecimal("-0.0100"), true)
+})
+
+test("drilldown period windows end on the last day of the month", async () => {
+  const { lastDayOf, monthWindow } = await import("../src/features/accounting-area/lib/accounting-period.ts")
+
+  assert.equal(lastDayOf("2026-02"), "2026-02-28")
+  assert.equal(lastDayOf("2028-02"), "2028-02-29")
+  assert.deepEqual(monthWindow("2026-09", 12), { startDate: "2025-10-01", endDate: "2026-09-30" })
+  assert.deepEqual(monthWindow("2026-01", 1), { startDate: "2026-01-01", endDate: "2026-01-31" })
+})
+
+test("the monthly DRE only places backend totals and never computes them", async () => {
+  const { buildDreMatrix, dreCoverageUntil, trailingMonths } = await import("../src/features/accounting-area/lib/dre-matrix.ts")
+  const dre = (groups, until = "2026-09-30") => ({
+    unclassifiedAccountCount: 0,
+    classifiedTotal: "0.0000",
+    coverage: [{ accountingSourceId: "s1", syncedStartDate: "2026-01-01", syncedEndDate: until }],
+    groups,
+  })
+  const ebitda = (revenue, energy) => ({
+    dreClassification: "EBITDA",
+    total: "999.0000", // total do backend, nunca recalculado
+    groups: [
+      { dreOpenClassification: "Receita bruta", total: revenue, lines: [{ ebitdaClassification: "Serviços", total: revenue }] },
+      ...(energy ? [{ dreOpenClassification: "Despesas", total: energy, lines: [{ ebitdaClassification: "Energia", total: energy }] }] : []),
+    ],
+  })
+
+  const rows = buildDreMatrix([dre([ebitda("10.0000", "-2.0000")]), null, dre([ebitda("30.0000")])])
+
+  assert.deepEqual(rows.map((row) => [row.kind, row.label]), [
+    ["group", "EBITDA"], ["open", "Receita bruta"], ["line", "Serviços"], ["open", "Despesas"], ["line", "Energia"],
+  ])
+  assert.deepEqual(rows[0].values, ["999.0000", null, "999.0000"])
+  assert.deepEqual(rows[4].values, ["-2.0000", null, null])
+  assert.equal(dreCoverageUntil(dre([])), "2026-09-30")
+  assert.equal(dreCoverageUntil({ coverage: [{ syncedEndDate: null }] }), null)
+  assert.deepEqual(trailingMonths("2026-02", 3), ["2025-12", "2026-01", "2026-02"])
+})
+
+test("latest-sync coverage only warns about later months and never masks earlier history", async () => {
+  const { monthAfterLatestSync } = await import("../src/features/accounting-area/lib/dre-matrix.ts")
+
+  // Coverage is the latest run per source, not cumulative: August imported by an
+  // earlier run stays visible even when the latest run covered only September.
+  assert.equal(monthAfterLatestSync("2026-08", "2026-09-30"), false)
+  assert.equal(monthAfterLatestSync("2026-09", "2026-09-30"), false)
+  assert.equal(monthAfterLatestSync("2026-10", "2026-09-30"), true)
+  assert.equal(monthAfterLatestSync("2026-10", null), false, "unknown coverage is not claimed")
+})
+
+test("a new succeeded run changes the sync signature so data queries refresh", async () => {
+  const { succeededSignature } = await import("../src/features/accounting-area/lib/sync-labels.ts")
+  const status = (runId) => ({ items: [{ accountingSourceId: "s1", latestSucceededRun: runId ? { id: runId } : null }] })
+
+  assert.equal(succeededSignature(undefined), null)
+  assert.notEqual(succeededSignature(status("r1")), succeededSignature(status("r2")))
+  assert.equal(succeededSignature(status("r1")), succeededSignature(status("r1")))
+  assert.notEqual(succeededSignature(status(null)), succeededSignature(status("r1")))
 })

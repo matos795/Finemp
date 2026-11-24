@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import { useAccountingContext } from "../accounting-context"
+import { SourcesSyncPanel } from "./sources-sync-panel"
 
 interface AccountingContextModalProps {
     open: boolean
@@ -49,7 +50,7 @@ export function AccountingContextModal({ open, onClose }: AccountingContextModal
                 }
             }}
         >
-            <div className="dlg sm">
+            <div className="dlg">
                 <h2 id="mFiltTit">Contabilidade, cliente e empresa</h2>
                 <p className="sub" style={{ marginTop: 0 }}>
                     Escolha a contabilidade, o cliente e a empresa. Vale para todas as abas. A lista mostra só a
@@ -108,6 +109,8 @@ export function AccountingContextModal({ open, onClose }: AccountingContextModal
                         </select>
                     </div>
                 </div>
+
+                <SourcesSyncPanel />
 
                 <div className="actions">
                     <button className="btn primary" id="btnFiltrosOk" type="button" onClick={onClose}>

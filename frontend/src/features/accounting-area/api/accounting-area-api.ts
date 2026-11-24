@@ -19,3 +19,15 @@ export function getAccountingPortfolio(): Promise<AccountingPortfolio> {
 export function getCompanySyncStatus(companyId: string): Promise<CompanySyncStatus> {
     return apiRequest<CompanySyncStatus>(`/api/companies/${encodeURIComponent(companyId)}/accounting-sources`)
 }
+
+/**
+ * POST /api/accounting-sources/{id}/sync-runs: registra a intenção de
+ * sincronização INITIAL (idempotente pela chave). Exige QUESTOR_SYNC.
+ */
+export function requestSourceSync(sourceId: string, startDate: string, endDate: string, idempotencyKey: string) {
+    return apiRequest<unknown>(`/api/accounting-sources/${encodeURIComponent(sourceId)}/sync-runs`, {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ mode: "INITIAL", startDate, endDate }),
+    })
+}

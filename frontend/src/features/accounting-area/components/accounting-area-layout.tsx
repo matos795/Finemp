@@ -7,6 +7,10 @@ import { defaultCompetence, syncedUntil } from "../lib/accounting-period"
 import { baseStatusText } from "../lib/base-status"
 import { ACCOUNTING_AREA_HOME, findAccountingScreen, findAccountingScreenById } from "../lib/accounting-screens"
 import { AccountingScreenPage } from "../pages/accounting-screen-page"
+import { CfpreScreen } from "../pages/cfpre-screen"
+import { DeparaScreen } from "../pages/depara-screen"
+import { AccountingToasts } from "./accounting-toasts"
+import { AccountingInfoProvider } from "./accounting-info"
 import { AccountingContextModal } from "./accounting-context-modal"
 import { AccountingHeader } from "./accounting-header"
 import { AccountingMenu } from "./accounting-menu"
@@ -128,51 +132,66 @@ export function AccountingAreaLayout() {
 
     return (
         <div className="ctbp" ref={rootRef}>
-            <div className={side.open ? "app" : "app closed"} id="app">
-                <button
-                    className="side-tog"
-                    id="sideTog"
-                    type="button"
-                    aria-label={side.open ? "Recolher menu" : "Abrir menu"}
-                    aria-expanded={side.open}
-                    aria-controls="side"
-                    title="Recolher ou abrir o menu"
-                    onClick={side.toggle}
-                >
-                    <span className="burger" aria-hidden="true">
-                        <i />
-                        <i />
-                        <i />
-                    </span>
-                </button>
-                <div className="side-bg" id="sideBg" hidden={!(side.open && side.mobile)} onClick={side.close} />
+            <AccountingToasts>
+            <AccountingInfoProvider>
+                    <div className={side.open ? "app" : "app closed"} id="app">
+                        <button
+                            className="side-tog"
+                            id="sideTog"
+                            type="button"
+                            aria-label={side.open ? "Recolher menu" : "Abrir menu"}
+                            aria-expanded={side.open}
+                            aria-controls="side"
+                            title="Recolher ou abrir o menu"
+                            onClick={side.toggle}
+                        >
+                            <span className="burger" aria-hidden="true">
+                                <i />
+                                <i />
+                                <i />
+                            </span>
+                        </button>
+                        <div className="side-bg" id="sideBg" hidden={!(side.open && side.mobile)} onClick={side.close} />
 
-                <AccountingMenu currentTab={current.screen.id} onOpenTab={openTab} />
+                        <AccountingMenu currentTab={current.screen.id} onOpenTab={openTab} />
 
-                <div className="main-col">
-                    <div className="wrap">
-                        <AccountingHeader
-                            current={current}
-                            competence={effectiveCompetence}
-                            baseUntil={baseUntil}
-                            onOpenTab={openTab}
-                            onOpenContext={() => setContextOpen(true)}
-                        />
+                        <div className="main-col">
+                            <div className="wrap">
+                                <AccountingHeader
+                                    current={current}
+                                    competence={effectiveCompetence}
+                                    baseUntil={baseUntil}
+                                    onOpenTab={openTab}
+                                    onOpenContext={() => setContextOpen(true)}
+                                />
 
-                        <main>
-                            <AccountingScreenPage
-                                key={current.screen.id}
-                                screen={current.screen}
-                                competence={effectiveCompetence}
-                                baseText={baseText}
-                                onCompetenceChange={setCompetence}
-                            />
-                        </main>
+                                <main>
+                                    {current.screen.id === "depara" ? (
+                                        <DeparaScreen key={company?.companyId ?? "none"} />
+                                    ) : current.screen.id === "cfpre" ? (
+                                        <CfpreScreen
+                                            screen={current.screen}
+                                            competence={effectiveCompetence}
+                                            baseText={baseText}
+                                            onCompetenceChange={setCompetence}
+                                        />
+                                    ) : (
+                                        <AccountingScreenPage
+                                            key={current.screen.id}
+                                            screen={current.screen}
+                                            competence={effectiveCompetence}
+                                            baseText={baseText}
+                                            onCompetenceChange={setCompetence}
+                                        />
+                                    )}
+                                </main>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <AccountingContextModal open={contextOpen} onClose={() => setContextOpen(false)} />
+                    <AccountingContextModal open={contextOpen} onClose={() => setContextOpen(false)} />
+            </AccountingInfoProvider>
+            </AccountingToasts>
         </div>
     )
 }
