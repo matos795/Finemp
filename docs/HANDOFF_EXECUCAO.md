@@ -53,7 +53,7 @@ Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) pa
 
 ## Bloqueios
 
-- **C1 (evidência da origem):** exige amostra sanitizada ou esquema de uma instalação Questor real (saldos, documento, encerramento, contrapartida, CC). Não há credencial nesta sessão; nomes de campos não serão inventados. Kit para o operador: `docs/runbooks/questor-c1-discovery.md` + `.sql` (#457); a fase 2 de C1 depende do retorno sanitizado.
+- **C1 (evidência da origem):** exige amostra sanitizada ou esquema de uma instalação Questor real (saldos, documento, encerramento, contrapartida, CC). Não há credencial nesta sessão; nomes de campos não serão inventados. A fase 1 foi executada em instalação real (Firebird 2.5.8): plano completo vem de `PLANOESPEC` e não há valor negativo em 2019–2025. O kit direcionado C1b (`docs/runbooks/questor-c1b-discovery.md` + `.sql`, #457) cobre saldos, participante, lote/encerramento, exclusão e centro de custo. A fase 2 de C1 depende do retorno sanitizado do C1b.
 - **Valor negativo na DRE (#449):** canônico preserva negativos; a DRE responde 422 explícito (#451). **DECISÃO DE PRODUTO NECESSÁRIA** sobre a semântica.
 - **Homologação da DRE (O21):** falta amostra aprovada para validar sinal/linhas/totais; ordem oficial (O2).
 - Demais telas da Central/Pacote: dependem de C1/C2 e de O1–O21.
