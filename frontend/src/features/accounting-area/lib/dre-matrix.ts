@@ -98,28 +98,12 @@ export function dreCoverageUntil(dre: AccountingDre | null | undefined): string 
 }
 
 /**
- * Intervalo coberto por sincronização concluída segundo a própria DRE: do menor
- * início ao maior fim entre as fontes; null quando nenhuma fonte tem base.
+ * Competência "AAAA-MM" posterior ao fim da última sincronização concluída.
+ * A cobertura da DRE é a da última execução de cada fonte, não cumulativa:
+ * serve só para avisar, nunca para esconder totais calculados pelo backend.
  */
-export function dreCoverageRange(dre: AccountingDre | null | undefined): { start: string; end: string } | null {
-    let start: string | null = null
-    let end: string | null = null
-
-    for (const item of dre?.coverage ?? []) {
-        if (item.syncedStartDate && (start === null || item.syncedStartDate < start)) start = item.syncedStartDate
-        if (item.syncedEndDate && (end === null || item.syncedEndDate > end)) end = item.syncedEndDate
-    }
-
-    return start !== null && end !== null ? { start, end } : null
-}
-
-/** Mês "AAAA-MM" fora da cobertura (antes do início ou depois do fim da base sincronizada). */
-export function monthOutsideCoverage(month: string, range: { start: string; end: string } | null): boolean {
-    if (range === null) {
-        return false
-    }
-
-    return `${month}-31` < range.start || `${month}-01` > range.end
+export function monthAfterLatestSync(month: string, latestEnd: string | null): boolean {
+    return latestEnd !== null && `${month}-01` > latestEnd
 }
 
 /** As `count` competências terminando em `competence` ("AAAA-MM"), da mais antiga à mais recente. */

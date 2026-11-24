@@ -11,7 +11,7 @@ Base: [shell do protótipo](accounting-area-shell.md) (#452). Mapa original de t
 | Barra de competência (14 telas da Central) | funcional | #440 | "Base contábil até" pela última SyncRun SUCCEEDED | — |
 | `depara` De-Para do Plano de Contas | parcial | `GET .../accounting-accounts` (#442), `GET /api/dre-classifications`, `PUT .../classification` | Cards (importadas, pendentes, classificadas), filtros Pendentes/Todas, busca, páginas do servidor, editor inline na DRE | Contas novas, Divergentes, Com regra, regras por grupo, balanço/patrimonial, saldo 12m |
 | Composição (`#mDd`) a partir da lupa da conta | parcial | `GET .../accounting-movements/search` (#444) | Lançamentos por período, débito/crédito e totais exatos | Contrapartida, documento, CC, encerramento, saldo inicial (`notSynchronized`) |
-| `cfpre` Pré-fechamento | parcial | `GET /api/companies/{id}/dre` (#446) | DRE mês a mês (6 meses + competência) com os totais do backend; mês fora da base sinalizado; 422 de valor negativo exibido | Alertas, média e variação, flags de pré-fechamento, preparados, balancete |
+| `cfpre` Pré-fechamento | parcial | `GET /api/companies/{id}/dre` (#446) | DRE mês a mês (6 meses + competência) com os totais do backend; totais nunca mascarados pela cobertura (que é só a da última sincronização de cada fonte); competência posterior à última sincronização avisada; mês com falha em "—"; 422 de valor negativo exibido | Alertas, média e variação, flags de pré-fechamento, preparados, balancete |
 | Demais 36 telas | Em breve | — | Estrutura do protótipo | Tudo (dependem de C1–C6 e O1–O21) |
 
 ## DECISÃO técnica

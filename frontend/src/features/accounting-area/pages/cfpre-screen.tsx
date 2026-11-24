@@ -4,7 +4,7 @@ import { useAccountingContext } from "../accounting-context"
 import { getAccountingDre, type AccountingDre } from "../api/accounting-data-api"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { lastDayOf, monthLabel } from "../lib/accounting-period"
-import { buildDreMatrix, dreCoverageRange, monthOutsideCoverage, trailingMonths } from "../lib/dre-matrix"
+import { buildDreMatrix, dreCoverageUntil, monthAfterLatestSync, trailingMonths } from "../lib/dre-matrix"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
 import { accountingQueryKey } from "../lib/query-keys"
 import { InfoButton } from "../components/accounting-info"
@@ -12,17 +12,9 @@ import { ScreenHeader, SoonPanel, type AccountingScreenPageProps } from "./accou
 
 const MONTHS = 7
 
-type CellState = "ok" | "outside" | "failed"
+type CellState = "ok" | "failed"
 
 function Cell({ value, state }: { value: string | null; state: CellState }) {
-    if (state === "outside") {
-        return (
-            <td className="n muted" title="Mês fora da base sincronizada">
-                —
-            </td>
-        )
-    }
-
     if (state === "failed") {
         return (
             <td className="n muted" title="A DRE deste mês não foi calculada">
@@ -75,13 +67,11 @@ function DrePanel({ competence }: { competence: string }) {
         body = <div className="empty">Sem acesso à DRE desta empresa.</div>
     } else {
         const data: (AccountingDre | null)[] = results.map((result) => result.data ?? null)
-        const coverage = data.map(dreCoverageRange).find((value) => value !== null) ?? null
-        const coveredUntil = coverage?.end ?? null
-        const outside = months.map((month) => monthOutsideCoverage(month, coverage))
+        const coveredUntil = data.map(dreCoverageUntil).find((value) => value !== null) ?? null
         // Falha de cálculo nunca vira zero: a coluna fica "—" e o motivo aparece no aviso.
-        const states: CellState[] = months.map((_, index) =>
-            results[index].isError ? "failed" : outside[index] ? "outside" : "ok",
-        )
+        // Totais calculados pelo backend sempre aparecem: a cobertura informada é só a da
+        // última sincronização de cada fonte e não prova ausência de histórico importado.
+        const states: CellState[] = months.map((_, index) => (results[index].isError ? "failed" : "ok"))
         const rows = buildDreMatrix(data)
         const current = data[MONTHS - 1]
         const errors = results
@@ -97,11 +87,11 @@ function DrePanel({ competence }: { competence: string }) {
                         ))}
                     </div>
                 )}
-                {outside[MONTHS - 1] && (
+                {monthAfterLatestSync(competence, coveredUntil) && (
                     <div className="warnbar" role="status">
-                        A competência {monthLabel(competence)} ainda não está na base sincronizada (base até{" "}
-                        {coveredUntil ? monthLabel(coveredUntil) : "—"}); lançamentos preparados ainda não existem no
-                        FINEMP.
+                        A competência {monthLabel(competence)} é posterior à última sincronização concluída (até{" "}
+                        {monthLabel(coveredUntil as string)}); os valores podem estar incompletos. Lançamentos preparados
+                        ainda não existem no FINEMP.
                     </div>
                 )}
                 <div className="tbl-wrap" tabIndex={0} aria-label="DRE pré-fechamento">
