@@ -5,6 +5,7 @@ import { logout } from "../../auth/api/auth-api"
 import { currentUserQueryKey } from "../../auth/hooks/use-current-user"
 import { useAccountingContext } from "../accounting-context"
 import { monthLabel } from "../lib/accounting-period"
+import { ACCOUNTING_AREA_QUERY_ROOT } from "../lib/query-keys"
 import type { AccountingModule, AccountingScreen, AccountingSubgroup } from "../lib/accounting-screens"
 
 const LONG_MONTHS = [
@@ -80,7 +81,7 @@ export function AccountingHeader({ current, competence, baseUntil, onOpenTab, on
     async function handleLogout() {
         await logout()
         queryClient.setQueryData(currentUserQueryKey, null)
-        queryClient.removeQueries({ queryKey: ["accounting-portfolio"] })
+        queryClient.removeQueries({ queryKey: [ACCOUNTING_AREA_QUERY_ROOT] })
         navigate("/login", { replace: true })
     }
 

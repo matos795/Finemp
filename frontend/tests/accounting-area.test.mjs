@@ -282,3 +282,14 @@ test("the prototype stylesheet is scoped to the accounting area without renaming
     }
   }
 })
+
+test("accounting caches are partitioned by the session user and share one root for logout", async () => {
+  const { ACCOUNTING_AREA_QUERY_ROOT, accountingQueryKey } = await import("../src/features/accounting-area/lib/query-keys.ts")
+
+  assert.deepEqual(accountingQueryKey("u1", "portfolio"), [ACCOUNTING_AREA_QUERY_ROOT, "u1", "portfolio"])
+  assert.notDeepEqual(accountingQueryKey("u1", "portfolio"), accountingQueryKey("u2", "portfolio"))
+
+  // Toda chave da área passa pelo helper (nenhuma chave solta sem o usuário).
+  const hooks = readFileSync(new URL("../src/features/accounting-area/hooks/use-accounting-area-queries.ts", import.meta.url), "utf8")
+  assert.doesNotMatch(hooks, /queryKey:\s*\[/)
+})

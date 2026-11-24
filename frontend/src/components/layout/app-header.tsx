@@ -6,6 +6,7 @@ import { logout } from "../../features/auth/api/auth-api"
 import { currentUserQueryKey } from "../../features/auth/hooks/use-current-user"
 import { CompanySwitcher } from "./company-switcher"
 import { AreaSwitcher } from "./area-switcher"
+import { ACCOUNTING_AREA_QUERY_ROOT } from "../../features/accounting-area/lib/query-keys"
 
 const todayFormatter =
     new Intl.DateTimeFormat("pt-BR")
@@ -39,6 +40,8 @@ export function AppHeader({
             currentUserQueryKey,
             null,
         )
+        // Dados da Área da Contabilidade são do usuário que saiu.
+        queryClient.removeQueries({ queryKey: [ACCOUNTING_AREA_QUERY_ROOT] })
 
         navigate("/login", {
             replace: true,
