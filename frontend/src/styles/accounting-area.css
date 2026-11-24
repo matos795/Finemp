@@ -1,0 +1,44 @@
+/*
+ * Complementos da Área da Contabilidade. O visual vem de accounting-prototype.css
+ * (CSS do protótipo contábil, classes preservadas, escopo .ctbp). Aqui ficam só
+ * os elementos que o protótipo não tem: seletor de área, sair, painéis "Em breve"
+ * e o seletor de contexto Contabilidade → Cliente → Empresa.
+ */
+
+/* Raiz: faz o papel de html/body do protótipo. */
+.ctbp { min-height: 100vh; }
+
+/* Cabeçalho: seletor de área, filtro de contexto e sair, à direita da marca. */
+.ctbp .ctb-hd-acts { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+.ctbp .ctb-hd-acts .area-seg { display: flex; gap: 6px; flex-wrap: nowrap; }
+.ctbp .ctb-hd-acts .area-seg .pill { padding: 5px 12px; font-size: 13px; }
+
+/* Telas e painéis sem contrato oficial: estrutura visível, sem dado. */
+.ctbp .ctb-soon-tag { margin-left: 4px; }
+.ctbp .panel.ctb-soon .empty { border: 1px dashed var(--line2); border-radius: 10px; }
+
+/* Modal de contexto: três seletores em linha, um por linha no celular. */
+.ctbp .ctb-ctxgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.ctbp .ctb-ctxgrid select { width: 100%; }
+
+/* Seletor de área na Área da Empresa (Empresa | Contabilidade). */
+.fin .area-seg { display: inline-flex; border: 1px solid var(--bd); border-radius: 6px; overflow: hidden; }
+.fin .area-seg .area-opt {
+    display: inline-block;
+    color: #fff;
+    padding: 7px 14px;
+    font: 700 14px Barlow, sans-serif;
+    text-decoration: none;
+}
+.fin .area-seg .area-opt.on { background: var(--gold); color: #001044; }
+.fin .area-seg a.area-opt:hover { background: rgba(255, 255, 255, .06); }
+
+@media (max-width: 1000px) {
+    .fin .hd-right .f.area-f { flex: 1 1 100%; }
+    .fin .area-seg { display: flex; }
+    .fin .area-seg .area-opt { flex: 1; text-align: center; }
+}
+
+@media (max-width: 600px) {
+    .ctbp .ctb-hd-acts { margin-left: 0; width: 100%; }
+}

@@ -6,7 +6,8 @@ Atualizar a cada merge.
 Referências (cópias fiéis, não editar o conteúdo):
 [HANDOFF_CONTABIL](reference/HANDOFF_CONTABIL.md) (produto/protótipo) ·
 [GAP_CONTABIL](reference/GAP_CONTABIL.md) (auditoria da `main` `2c18461`, backlog M1–M7 e C1–C14, pontos O1–O21) ·
-[accounting-area-map](reference/accounting-area-map.md) (mapa tela → rota → API do shell contábil).
+[accounting-area-map](reference/accounting-area-map.md) (mapa tela → rota → API do shell contábil) ·
+[FRONTEND_CONTABIL_REFERENCE](reference/FRONTEND_CONTABIL_REFERENCE.md) (referência visual oficial do protótipo; o pacote com HTML/JS/capturas contém dados reais e **não** é versionado).
 
 ## Arquitetura (fixa)
 
@@ -28,7 +29,7 @@ Referências (cópias fiéis, não editar o conteúdo):
 
 | Item | Issue | Branch | PR | CI |
 | --- | --- | --- | --- | --- |
-| M7 aceite vertical (backend) | #448 | `feat/m7-vertical-acceptance` | ver Issue | aguardando |
+| M2 Área da Contabilidade: shell fiel ao protótipo | #452 | `feat/m2-accounting-area` | ver Issue | aguardando |
 
 ## Concluído (merge com CI verde)
 
@@ -40,15 +41,16 @@ Referências (cópias fiéis, não editar o conteúdo):
 | M4 plano importado paginado | #442 | #443 | `GET /api/companies/{id}/accounting-accounts` (`universe: IMPORTED_ACCOUNTS`) |
 | M5 movimentos paginados | #444 | #445 | `GET .../accounting-movements/search` (valores exatos, totais, `notSynchronized`) |
 | M6 DRE agregada no backend | #446 | #447 | `groups`, `classifiedTotal`, `coverage`; ordem determinística |
+| M7 aceite vertical (backend) | #448 | #450 | login → carteira → fonte → SyncRun real → contas → movimentos → DRE → logout |
+| DRE sem 500 (mitigação de #449) | #449 (aberta) | #451 | período invertido → 400; valor negativo → 422 `DRE_UNSUPPORTED_NEGATIVE_AMOUNT` |
 
 Todas as leituras novas são aditivas: telas existentes da Área da Empresa não mudaram.
 Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) para página+totais; valores com sinal.
 
 ## Bloqueios
 
-- **Shell contábil (M2) e telas da Área da Contabilidade:** o patch `0001-feat-frontend-accounting-area-shell.patch` (referência visual congelada) não foi anexado e não existe no repositório. Sem ele, não se reproduz o layout e nenhum outro será inventado. Os contratos de backend M1–M6 já estão prontos para o shell consumir.
 - **C1 (evidência da origem):** exige amostra sanitizada ou esquema de uma instalação Questor real (saldos, documento, encerramento, contrapartida, CC). Não há credencial nesta sessão; nomes de campos não serão inventados.
-- **Valor negativo na DRE (#449):** canônico preserva negativos; DRE responde 500. **DECISÃO DE PRODUTO NECESSÁRIA** sobre a semântica.
+- **Valor negativo na DRE (#449):** canônico preserva negativos; a DRE responde 422 explícito (#451). **DECISÃO DE PRODUTO NECESSÁRIA** sobre a semântica.
 - **Homologação da DRE (O21):** falta amostra aprovada para validar sinal/linhas/totais; ordem oficial (O2).
 - Demais telas da Central/Pacote: dependem de C1/C2 e de O1–O21.
 
@@ -61,7 +63,7 @@ Revisões automáticas (Codex) atendidas: snapshot único (`REPEATABLE_READ`) pa
 
 ## Próxima tarefa
 
-1. Merge do M7 com CI verde.
-2. Com o patch do shell anexado: Issue própria, integrar o shell a `/api/auth/accounting-portfolio` e às leituras M3–M6, preservando o layout.
+1. Merge do M2 (#452) com CI verde.
+2. Integrar M3–M6 nas telas do protótipo, sem redesenho: fontes/sincronização no contexto; De-Para com contas importadas e drilldown de movimentos; DRE do pré-fechamento com os totais do backend.
 3. Com amostra/esquema da origem: C1 → C2 → C3 → C4.
-4. Com decisão em #449: tratar valor negativo na DRE.
+4. Com decisão em #449: semântica de valor negativo na DRE.
