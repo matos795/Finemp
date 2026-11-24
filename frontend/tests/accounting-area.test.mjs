@@ -263,6 +263,7 @@ test("the prototype stylesheet is scoped to the accounting area without renaming
   assert.equal(scopeSelector("body.imprimindo-pk .side"), ".ctbp.imprimindo-pk .side")
   assert.equal(scopeSelector(".app.closed .side"), ".ctbp .app.closed .side")
   assert.equal(scopeSelector("table td.n"), ".ctbp table td.n")
+  assert.equal(scopeSelector("html:has(body.imp-x)"), ".ctbp.imp-x")
 
   const scoped = scopeCss(":root{--bg:#001044}html,body{margin:0}.pill.on{color:red}@keyframes sp{to{opacity:1}}")
   assert.match(scoped, /\.ctbp\{--bg:#001044\}/)

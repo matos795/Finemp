@@ -739,7 +739,7 @@
 .ctbp .cmp-fonte{font-size:.76rem;color:var(--muted);line-height:1.5;margin:12px 0 0}.ctbp .cmp-fonte a{color:var(--sky)}
 /* impressão de seção (bancos, apresentação) */
 @media print{
-  .ctbp,.ctbp.imp-x{background:#fff!important}.ctbp html:has(body.imp-x){color-scheme:light!important}.ctbp.imp-x .bco-2{grid-template-columns:1fr 1fr!important}.ctbp.imp-x .bco-db{white-space:nowrap}
+  .ctbp,.ctbp.imp-x{background:#fff!important}.ctbp.imp-x{color-scheme:light!important}.ctbp.imp-x .bco-2{grid-template-columns:1fr 1fr!important}.ctbp.imp-x .bco-db{white-space:nowrap}
   .ctbp.imp-x .side,.ctbp.imp-x .side-tog,.ctbp.imp-x header.top,.ctbp.imp-x #legend,.ctbp.imp-x .pg-row,.ctbp.imp-x .no-print,.ctbp.imp-x .toasts,.ctbp.imp-x .ibtn{display:none!important}
   .ctbp.imp-x main>section:not(.imp-alvo){display:none!important}
   .ctbp.imp-x .app,.ctbp.imp-x .main-col,.ctbp.imp-x .wrap,.ctbp.imp-x main{display:block!important;padding:0!important;margin:0!important;max-width:none!important}

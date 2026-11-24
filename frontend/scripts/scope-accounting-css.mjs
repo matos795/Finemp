@@ -4,6 +4,7 @@
 // Todo seletor passa a valer só dentro da Área da Contabilidade (.ctbp):
 //   :root, html, body      -> .ctbp
 //   body.x Y               -> .ctbp.x Y
+//   html:has(body.x)       -> .ctbp.x
 //   qualquer outro seletor -> .ctbp <seletor>
 // Regras de @keyframes não são alteradas.
 //
@@ -20,6 +21,13 @@ export function scopeSelector(selector) {
 
     if (s === ":root" || s === "html" || s === "body") {
         return ROOT
+    }
+
+    // html:has(body.x) — a raiz da área faz o papel de html e de body.
+    const htmlHasBody = /^html:has\(body((?:\.[\w-]+)+)\)(.*)$/.exec(s)
+
+    if (htmlHasBody) {
+        return `${ROOT}${htmlHasBody[1]}${htmlHasBody[2]}`
     }
 
     const bodyClass = /^body(\.[\w-]+)+(\s|$)/.exec(s)

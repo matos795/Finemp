@@ -6,6 +6,7 @@ import { currentUserQueryKey } from "../../auth/hooks/use-current-user"
 import { useAccountingContext } from "../accounting-context"
 import { monthLabel } from "../lib/accounting-period"
 import { ACCOUNTING_AREA_QUERY_ROOT } from "../lib/query-keys"
+import { printAccountingTab } from "../print-tab"
 import type { AccountingModule, AccountingScreen, AccountingSubgroup } from "../lib/accounting-screens"
 
 const LONG_MONTHS = [
@@ -146,7 +147,14 @@ export function AccountingHeader({ current, competence, baseUntil, onOpenTab, on
                         id="btnImpAba"
                         type="button"
                         title="Imprimir esta aba (ou salvar em PDF)"
-                        onClick={() => window.print()}
+                        onClick={() =>
+                            current &&
+                            printAccountingTab(
+                                current.screen.id,
+                                `${current.module.label} › ${current.screen.label}`,
+                                company?.legalName ?? "",
+                            )
+                        }
                     >
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path
