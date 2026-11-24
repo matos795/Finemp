@@ -81,6 +81,12 @@ Checksum confirma integridade do arquivo obtido. Não substitui uma política fu
 
 Copiar `connector.properties.example` para um arquivo local fora do repositório.
 
+Codificação do arquivo:
+
+- UTF-8 **sem BOM** é o formato padrão. Copiar o exemplo com `Copy-Item` preserva esse formato, e o Bloco de Notas atual grava UTF-8 sem BOM.
+- UTF-8 **com BOM** também é aceito. É o formato de `Set-Content -Encoding UTF8` no Windows PowerShell 5.1. Um único BOM no início é ignorado e nunca vira parte da primeira chave (#430).
+- UTF-16 é recusado com erro de configuração. É o padrão de `Out-File` e do redirecionamento `>` no Windows PowerShell 5.1. Salve novamente como UTF-8.
+
 O arquivo contém **referências** aos secrets, não seus valores.
 
 Configurar somente valores previamente homologados:
