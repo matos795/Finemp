@@ -128,9 +128,15 @@ test("screens mirror the prototype header block and competence bar", () => {
 
 test("no screen is marked available without an official contract", () => {
   for (const screen of accountingScreens) {
-    assert.equal(screen.status, "soon", screen.id)
+    assert.notEqual(screen.status, "available", screen.id)
     assert.ok(screen.panels.length > 0, screen.id)
   }
+
+  // De-Para usa #442/#444 em parte; o restante da tela continua "Em breve".
+  assert.deepEqual(
+    accountingScreens.filter((screen) => screen.status === "partial").map((screen) => screen.id),
+    ["depara"],
+  )
 })
 
 const membership = (overrides = {}) => ({
@@ -293,4 +299,26 @@ test("accounting caches are partitioned by the session user and share one root f
   // Toda chave da área passa pelo helper (nenhuma chave solta sem o usuário).
   const hooks = readFileSync(new URL("../src/features/accounting-area/hooks/use-accounting-area-queries.ts", import.meta.url), "utf8")
   assert.doesNotMatch(hooks, /queryKey:\s*\[/)
+})
+
+test("exact decimals are formatted in pt-BR without rounding", async () => {
+  const { formatExactDecimal, isNegativeDecimal } = await import("../src/features/accounting-area/lib/exact-decimal.ts")
+
+  assert.equal(formatExactDecimal("1250.5000"), "1.250,50")
+  assert.equal(formatExactDecimal("100.0001"), "100,0001")
+  assert.equal(formatExactDecimal("-200.2002"), "-200,2002")
+  assert.equal(formatExactDecimal("0.0000"), "0,00")
+  assert.equal(formatExactDecimal("-0.0000"), "0,00")
+  assert.equal(formatExactDecimal("1234567.1"), "1.234.567,10")
+  assert.equal(isNegativeDecimal("-0.0000"), false)
+  assert.equal(isNegativeDecimal("-0.0100"), true)
+})
+
+test("drilldown period windows end on the last day of the month", async () => {
+  const { lastDayOf, monthWindow } = await import("../src/features/accounting-area/lib/accounting-period.ts")
+
+  assert.equal(lastDayOf("2026-02"), "2026-02-28")
+  assert.equal(lastDayOf("2028-02"), "2028-02-29")
+  assert.deepEqual(monthWindow("2026-09", 12), { startDate: "2025-10-01", endDate: "2026-09-30" })
+  assert.deepEqual(monthWindow("2026-01", 1), { startDate: "2026-01-01", endDate: "2026-01-31" })
 })

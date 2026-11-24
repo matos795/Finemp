@@ -10,8 +10,14 @@
  * Módulo sem dependências de runtime: é importado pelos testes node.
  */
 
-/** Disponibilidade da tela. Só muda para "available" com contrato confirmado. */
-export type AccountingScreenStatus = "soon" | "available"
+/**
+ * Disponibilidade da tela. "partial": parte dos painéis usa contrato oficial e o
+ * restante continua "Em breve". Só vira "available" com equivalência confirmada.
+ */
+export type AccountingScreenStatus = "soon" | "partial" | "available"
+
+/** Telas com parte dos painéis ligada a contrato oficial. */
+const PARTIAL = new Set(["depara"])
 
 export interface AccountingScreen {
     /** Código do protótipo / HANDOFF_CONTABIL (ex.: "cfcock"). */
@@ -88,7 +94,7 @@ function screen(
         panels,
         objective,
         handoffSection,
-        status: "soon",
+        status: PARTIAL.has(id) ? "partial" : "soon",
     }
 }
 

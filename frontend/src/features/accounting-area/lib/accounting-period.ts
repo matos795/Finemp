@@ -82,3 +82,20 @@ export function defaultCompetence(baseUntil: string | null, today: Date): string
 
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
 }
+
+/** Último dia do mês "AAAA-MM" → "AAAA-MM-DD". */
+export function lastDayOf(month: string): string {
+    const [year, monthNumber] = month.split("-").map(Number)
+    const day = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate()
+
+    return `${month}-${String(day).padStart(2, "0")}`
+}
+
+/** Janela de `months` meses terminando em `endMonth` ("AAAA-MM"), em datas ISO. */
+export function monthWindow(endMonth: string, months: number): { startDate: string; endDate: string } {
+    const [year, monthNumber] = endMonth.split("-").map(Number)
+    const start = new Date(Date.UTC(year, monthNumber - months, 1))
+    const startMonth = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}`
+
+    return { startDate: `${startMonth}-01`, endDate: lastDayOf(endMonth) }
+}
