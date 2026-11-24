@@ -19,6 +19,28 @@ class ConnectorLocalConfigurationTest {
         assertThat(config.toString()).doesNotContain("SYN_COMPANIES","FINEMP_CONNECTOR","connector.invalid");
         assertThat(profile.toString()).isEqualTo("ConnectorProfile[redacted]");
     }
+    @Test void shouldLoadUtf8WithAndWithoutByteOrderMarkIdentically() throws Exception {
+        var plain=directory.resolve("plain.properties");Files.writeString(plain,valid());
+        var withBom=directory.resolve("bom.properties");
+        Files.write(withBom,concat(new byte[]{(byte)0xEF,(byte)0xBB,(byte)0xBF},valid().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        var expected=ConnectorLocalConfiguration.load(plain);var actual=ConnectorLocalConfiguration.load(withBom);
+        assertThat(actual.pollSeconds()).isEqualTo(expected.pollSeconds());
+        assertThat(actual.profiles()).isEqualTo(expected.profiles());
+    }
+    @Test void shouldNeverTurnAnExtraOrForeignByteOrderMarkIntoASilentKey() throws Exception {
+        byte[] bom={(byte)0xEF,(byte)0xBB,(byte)0xBF};byte[] utf8=valid().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        var doubleBom=directory.resolve("double-bom.properties");Files.write(doubleBom,concat(concat(bom,bom),utf8));
+        assertInvalid(()->ConnectorLocalConfiguration.load(doubleBom));
+        var bomOnLaterLine=directory.resolve("later-bom.properties");
+        Files.write(bomOnLaterLine,valid().replace("profiles=test","\uFEFFprofiles=test".translateEscapes()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertInvalid(()->ConnectorLocalConfiguration.load(bomOnLaterLine));
+        var utf16=directory.resolve("utf16.properties");
+        Files.write(utf16,concat(new byte[]{(byte)0xFF,(byte)0xFE},valid().getBytes(java.nio.charset.StandardCharsets.UTF_16LE)));
+        assertInvalid(()->ConnectorLocalConfiguration.load(utf16));
+    }
+    private static byte[] concat(byte[] first,byte[] second) {
+        byte[] result=Arrays.copyOf(first,first.length+second.length);System.arraycopy(second,0,result,first.length,second.length);return result;
+    }
     @Test void shouldRefuseUnknownKeysDuplicatePropertiesAndOversizedFilesWithConstantDiagnostic() throws Exception {
         for(var text:List.of(valid()+"\nprofile.test.password=synthetic-private-value",valid()+"\nversion=1",valid()+"\n#"+"x".repeat(32768))) {
             var file=directory.resolve(UUID.randomUUID()+".properties");Files.writeString(file,text);

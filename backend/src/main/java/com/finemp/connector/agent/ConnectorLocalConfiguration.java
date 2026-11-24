@@ -26,7 +26,9 @@ public record ConnectorLocalConfiguration(int pollSeconds, List<Profile> profile
     public static ConnectorLocalConfiguration load(Path file) {
         try {
             if(file==null||!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))throw invalid();
-            byte[] data;try(var input=Files.newInputStream(file,LinkOption.NOFOLLOW_LINKS)){data=input.readNBytes(32769);}
+            byte[] data;try(var input=Files.newInputStream(file,LinkOption.NOFOLLOW_LINKS)){data=input.readNBytes(UTF8_BOM.length+32769);}
+            // Windows PowerShell 5.1 writes UTF-8 with BOM; accept exactly one leading BOM so it never becomes part of the first key.
+            if(startsWithUtf8Bom(data))data=Arrays.copyOfRange(data,UTF8_BOM.length,data.length);
             if(data.length>32768)throw invalid();
             var properties=new Properties(){@Override public synchronized Object put(Object key,Object value){if(containsKey(key))throw invalid();return super.put(key,value);}};
             properties.load(new InputStreamReader(new ByteArrayInputStream(data),StandardCharsets.UTF_8));return parse(properties);
@@ -73,6 +75,8 @@ public record ConnectorLocalConfiguration(int pollSeconds, List<Profile> profile
     private static String optional(Properties values,String key){String value=values.getProperty(key);return value==null?null:value.trim().isEmpty()?null:value.trim();}
     private static int integer(Properties values,String key,int fallback){String value=values.getProperty(key);return value==null?fallback:Integer.parseInt(value);}
     private static Integer optionalInteger(Properties values,String key){String value=values.getProperty(key);return value==null?null:Integer.valueOf(value.trim());}
+    private static final byte[] UTF8_BOM={(byte)0xEF,(byte)0xBB,(byte)0xBF};
+    private static boolean startsWithUtf8Bom(byte[] data){return data.length>=UTF8_BOM.length&&Arrays.equals(data,0,UTF8_BOM.length,UTF8_BOM,0,UTF8_BOM.length);}
     private static ConnectorClientException invalid(){return new ConnectorClientException(ConnectorClientException.Kind.CONFIGURATION);}
     @Override public String toString(){return "ConnectorLocalConfiguration[profiles="+profiles.size()+"]";}
 }
