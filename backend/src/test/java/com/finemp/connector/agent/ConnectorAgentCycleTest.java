@@ -68,14 +68,17 @@ class ConnectorAgentCycleTest {
     }
 
     @Test void shouldNeverReplayV2AfterAnUncertainCompletion() {
+        var nanos=new AtomicLong();
         var v2Work=workV2(Set.of(1,2),Set.of(AccountingDataset.CHART));
         var batch=canonicalBatch(Set.of(AccountingDataset.CHART));
         prepare(v2Work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
         when(v2Reader.readBatch(v2Work.context())).thenReturn(batch);
         when(client.completeV2(v2Work,batch)).thenThrow(new ConnectorClientException(ConnectorClientException.Kind.TIMEOUT));
         when(client.result(v2Work)).thenReturn(receipt(v2Work,SyncAttemptStatus.SUCCEEDED));
-        try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2))) {
+        try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2),nanos::get)) {
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.RETRY_LATER);
+            nanos.set(TimeUnit.SECONDS.toNanos(5));
             assertThat(afterWorkerCleanup(agent)).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
         }
         verify(v2Reader,times(1)).readBatch(any());
