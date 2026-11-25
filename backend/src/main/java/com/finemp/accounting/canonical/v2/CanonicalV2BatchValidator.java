@@ -41,34 +41,36 @@ public final class CanonicalV2BatchValidator {
         requireDatasetPresence(capabilities, AccountingDataset.PARTICIPANTS, batch.participants());
         requireDatasetPresence(capabilities, AccountingDataset.COST_ALLOCATIONS, batch.costAllocations());
 
-        Map<String, CanonicalAccountingAccount> accounts = validateChart(batch.chart(), maxRecordsPerDataset);
+        Map<String, CanonicalAccountingAccount> chartAccounts = validateChart(batch.chart(), maxRecordsPerDataset);
+        Map<String, CanonicalObservedAccountDescriptor> observedAccounts =
+                validateObservedAccountDescriptors(batch.observedAccountDescriptors(), maxRecordsPerDataset);
+        boolean chartDeclared = capabilities.datasets().contains(AccountingDataset.CHART);
+        Map<String, ? extends CanonicalAccountDescriptor> accountAuthority =
+                chartDeclared ? chartAccounts : observedAccounts;
+
         Map<String, CanonicalAccountingEntry> entries = validateEntries(
                 batch.entries(),
                 capabilities.amountSignPolicy(),
-                accounts,
-                capabilities.datasets().contains(AccountingDataset.CHART),
+                accountAuthority,
                 expectedStartDate,
                 expectedEndDate,
                 maxRecordsPerDataset);
 
         validateDailyTotals(
                 batch.dailyTotals(),
-                accounts,
-                capabilities.datasets().contains(AccountingDataset.CHART),
+                accountAuthority,
                 expectedStartDate,
                 expectedEndDate,
                 maxRecordsPerDataset);
         validateMonthlyTotals(
                 batch.monthlyTotals(),
-                accounts,
-                capabilities.datasets().contains(AccountingDataset.CHART),
+                accountAuthority,
                 expectedStartDate,
                 expectedEndDate,
                 maxRecordsPerDataset);
         validateOriginCatalog(batch.originCatalog(), maxRecordsPerDataset);
         validateParticipants(batch.participants(), entries, maxRecordsPerDataset);
-        validateCostAllocations(batch.costAllocations(), entries, accounts,
-                capabilities.datasets().contains(AccountingDataset.CHART), maxRecordsPerDataset);
+        validateCostAllocations(batch.costAllocations(), entries, accountAuthority, maxRecordsPerDataset);
 
         return batch;
     }
@@ -108,11 +110,37 @@ public final class CanonicalV2BatchValidator {
         return accounts;
     }
 
+    private static Map<String, CanonicalObservedAccountDescriptor> validateObservedAccountDescriptors(
+            List<CanonicalObservedAccountDescriptor> descriptors,
+            int maxRecords) {
+        Map<String, CanonicalObservedAccountDescriptor> accounts = new LinkedHashMap<>();
+        if (descriptors == null) {
+            return accounts;
+        }
+        if (descriptors.size() > maxRecords) {
+            throw invalid();
+        }
+
+        for (var account : descriptors) {
+            if (account == null
+                    || !identity(account.sourceAccountId())
+                    || !identity(account.classificationCode())
+                    || !identity(account.description())) {
+                throw invalid();
+            }
+
+            var previous = accounts.putIfAbsent(account.sourceAccountId(), account);
+            if (previous != null && !previous.equals(account)) {
+                throw conflict();
+            }
+        }
+        return accounts;
+    }
+
     private static Map<String, CanonicalAccountingEntry> validateEntries(
             CanonicalEntriesDataset dataset,
             AmountSignPolicy signPolicy,
-            Map<String, CanonicalAccountingAccount> accounts,
-            boolean chartDeclared,
+            Map<String, ? extends CanonicalAccountDescriptor> accounts,
             LocalDate expectedStartDate,
             LocalDate expectedEndDate,
             int maxRecords) {
@@ -149,10 +177,8 @@ public final class CanonicalV2BatchValidator {
                 throw invalid();
             }
 
-            if (chartDeclared) {
-                requireAccount(accounts, entry.debitAccountId());
-                requireAccount(accounts, entry.creditAccountId());
-            }
+            requireAccount(accounts, entry.debitAccountId());
+            requireAccount(accounts, entry.creditAccountId());
 
             var previous = entries.putIfAbsent(entry.sourceEntryKey(), entry);
             if (previous != null && !sameEntry(previous, entry)) {
@@ -201,8 +227,7 @@ public final class CanonicalV2BatchValidator {
 
     private static void validateDailyTotals(
             List<CanonicalAccountDailyDebitCreditTotals> totals,
-            Map<String, CanonicalAccountingAccount> accounts,
-            boolean chartDeclared,
+            Map<String, ? extends CanonicalAccountDescriptor> accounts,
             LocalDate start,
             LocalDate end,
             int maxRecords) {
@@ -226,9 +251,7 @@ public final class CanonicalV2BatchValidator {
             }
             validateNonNegativeTotal(total.debitTotal());
             validateNonNegativeTotal(total.creditTotal());
-            if (chartDeclared) {
-                requireAccount(accounts, total.sourceAccountId());
-            }
+            requireAccount(accounts, total.sourceAccountId());
 
             var key = new DailyTotalsIdentity(
                     total.establishmentCode(),
@@ -244,8 +267,7 @@ public final class CanonicalV2BatchValidator {
 
     private static void validateMonthlyTotals(
             List<CanonicalAccountMonthlyDebitCreditTotals> totals,
-            Map<String, CanonicalAccountingAccount> accounts,
-            boolean chartDeclared,
+            Map<String, ? extends CanonicalAccountDescriptor> accounts,
             LocalDate start,
             LocalDate end,
             int maxRecords) {
@@ -271,9 +293,7 @@ public final class CanonicalV2BatchValidator {
             }
             validateNonNegativeTotal(total.debitTotal());
             validateNonNegativeTotal(total.creditTotal());
-            if (chartDeclared) {
-                requireAccount(accounts, total.sourceAccountId());
-            }
+            requireAccount(accounts, total.sourceAccountId());
 
             var key = new MonthlyTotalsIdentity(
                     total.establishmentCode(),
@@ -339,8 +359,7 @@ public final class CanonicalV2BatchValidator {
     private static void validateCostAllocations(
             List<CanonicalEntryCostAllocation> allocations,
             Map<String, CanonicalAccountingEntry> entries,
-            Map<String, CanonicalAccountingAccount> accounts,
-            boolean chartDeclared,
+            Map<String, ? extends CanonicalAccountDescriptor> accounts,
             int maxRecords) {
         if (allocations == null) {
             return;
@@ -360,9 +379,7 @@ public final class CanonicalV2BatchValidator {
                 throw invalid();
             }
             validateAmount(item.amount());
-            if (chartDeclared) {
-                requireAccount(accounts, item.sourceAccountId());
-            }
+            requireAccount(accounts, item.sourceAccountId());
 
             var key = new CostAllocationIdentity(
                     item.sourceEntryKey(),
@@ -420,7 +437,7 @@ public final class CanonicalV2BatchValidator {
     }
 
     private static void requireAccount(
-            Map<String, CanonicalAccountingAccount> accounts,
+            Map<String, ? extends CanonicalAccountDescriptor> accounts,
             String accountId) {
         if (accountId != null && !accounts.containsKey(accountId)) {
             throw invalid();
