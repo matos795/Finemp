@@ -69,6 +69,13 @@ $java = Resolve-FullPath $JavaExePath
 $jar = Resolve-FullPath $ConnectorJarPath
 $config = Resolve-FullPath $ConfigPath
 
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$runnerSource = Join-Path $scriptRoot "connector-windows-run.ps1"
+$controlSource = Join-Path $scriptRoot "connector-windows-control.ps1"
+if (-not (Test-Path -LiteralPath $runnerSource) -or -not (Test-Path -LiteralPath $controlSource)) {
+    throw "Distribuição incompleta: scripts de runtime Windows ausentes."
+}
+
 $javaProbe = New-Object System.Diagnostics.ProcessStartInfo
 $javaProbe.FileName = $java
 $javaProbe.Arguments = "-version"
@@ -151,12 +158,6 @@ if (-not [string]::Equals($config, $runtimePropertiesPath, [System.StringCompari
 Protect-FileForCurrentAccount $runtimeJarPath $currentIdentity
 Protect-FileForCurrentAccount $runtimePropertiesPath $currentIdentity
 
-$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$runnerSource = Join-Path $scriptRoot "connector-windows-run.ps1"
-$controlSource = Join-Path $scriptRoot "connector-windows-control.ps1"
-if (-not (Test-Path -LiteralPath $runnerSource) -or -not (Test-Path -LiteralPath $controlSource)) {
-    throw "Distribuição incompleta: scripts de runtime Windows ausentes."
-}
 
 $runnerPath = Join-Path $RuntimeRoot "connector-windows-run.ps1"
 $controlPath = Join-Path $RuntimeRoot "connector-windows-control.ps1"
