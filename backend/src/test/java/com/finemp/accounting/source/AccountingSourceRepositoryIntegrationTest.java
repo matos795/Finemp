@@ -126,7 +126,7 @@ class AccountingSourceRepositoryIntegrationTest {
                 .hasMessage("Only Questor sources can use the Connector route.");
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.updateExternalReference("57"))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("File import source has no external reference.");
     }
 
