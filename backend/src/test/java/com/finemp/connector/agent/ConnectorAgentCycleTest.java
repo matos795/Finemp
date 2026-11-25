@@ -30,7 +30,8 @@ class ConnectorAgentCycleTest {
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
         }
         verify(v2Reader,never()).readBatch(any());
-        verify(client,never()).completeV2(any(),any());
+        verify(client,never()).prepareV2(any(),any());
+        verify(client,never()).completePreparedV2(any(),any());
         verify(client).complete(work,snapshot);
     }
 
@@ -39,14 +40,17 @@ class ConnectorAgentCycleTest {
         var batch=canonicalBatch(Set.of(AccountingDataset.CHART));
         prepare(v2Work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
         when(v2Reader.readBatch(v2Work.context())).thenReturn(batch);
-        when(client.completeV2(v2Work,batch)).thenReturn(receipt(v2Work,SyncAttemptStatus.SUCCEEDED));
+        byte[] prepared={1,2,3};
+        when(client.prepareV2(v2Work,batch)).thenReturn(prepared);
+        when(client.completePreparedV2(v2Work,prepared)).thenReturn(receipt(v2Work,SyncAttemptStatus.SUCCEEDED));
         try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2))) {
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
         }
         var order=inOrder(client,v2Reader);
         order.verify(client).claim();
         order.verify(v2Reader).readBatch(v2Work.context());
-        order.verify(client).completeV2(v2Work,batch);
+        order.verify(client).prepareV2(v2Work,batch);
+        order.verify(client).completePreparedV2(v2Work,prepared);
         verify(reader,never()).readSnapshot(any());
         verify(client,never()).complete(any(),any());
     }
@@ -67,13 +71,35 @@ class ConnectorAgentCycleTest {
         verify(client).complete(v2Work,snapshot);
     }
 
+    @Test void shouldReportLocalV2WireBudgetFailureWithoutCreatingPendingSubmission() {
+        var v2Work=workV2(Set.of(1,2),Set.of(AccountingDataset.CHART));
+        var batch=canonicalBatch(Set.of(AccountingDataset.CHART));
+        prepare(v2Work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
+        when(v2Reader.readBatch(v2Work.context())).thenReturn(batch);
+        when(client.prepareV2(v2Work,batch))
+                .thenThrow(new ConnectorClientException(ConnectorClientException.Kind.RESOURCE_LIMIT));
+        when(client.fail(v2Work,SyncFailureCode.RESOURCE_LIMIT))
+                .thenReturn(receipt(v2Work,SyncAttemptStatus.FAILED));
+
+        try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2))) {
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);
+        }
+
+        verify(client).prepareV2(v2Work,batch);
+        verify(client,never()).completePreparedV2(any(),any());
+        verify(client,never()).result(v2Work);
+        verify(client).fail(v2Work,SyncFailureCode.RESOURCE_LIMIT);
+    }
+
     @Test void shouldNeverReplayV2AfterAnUncertainCompletion() {
         var nanos=new AtomicLong();
         var v2Work=workV2(Set.of(1,2),Set.of(AccountingDataset.CHART));
         var batch=canonicalBatch(Set.of(AccountingDataset.CHART));
         prepare(v2Work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
         when(v2Reader.readBatch(v2Work.context())).thenReturn(batch);
-        when(client.completeV2(v2Work,batch)).thenThrow(new ConnectorClientException(ConnectorClientException.Kind.TIMEOUT));
+        byte[] prepared={4,5,6};
+        when(client.prepareV2(v2Work,batch)).thenReturn(prepared);
+        when(client.completePreparedV2(v2Work,prepared)).thenThrow(new ConnectorClientException(ConnectorClientException.Kind.TIMEOUT));
         when(client.result(v2Work)).thenReturn(receipt(v2Work,SyncAttemptStatus.SUCCEEDED));
         try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2),nanos::get)) {
             assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);
@@ -82,7 +108,8 @@ class ConnectorAgentCycleTest {
             assertThat(afterWorkerCleanup(agent)).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
         }
         verify(v2Reader,times(1)).readBatch(any());
-        verify(client,times(1)).completeV2(any(),any());
+        verify(client,times(1)).prepareV2(any(),any());
+        verify(client,times(1)).completePreparedV2(any(),any());
         verify(client).result(v2Work);
         verify(reader,never()).readSnapshot(any());
     }
