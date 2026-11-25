@@ -54,6 +54,7 @@ const COMPANY_PERMISSION_OPTIONS: Array<{
     { value: "ACCOUNT_CLASSIFICATION_MANAGE", label: "Classificação contábil — gerenciar" },
     { value: "MANUAL_ENTRY_MANAGE", label: "Lançamentos manuais" },
     { value: "QUESTOR_SYNC", label: "Sincronização Questor" },
+    { value: "ACCOUNTING_IMPORT_MANAGE", label: "Importar dados contábeis por arquivo" },
     { value: "BANK_ACCOUNT_VIEW", label: "Contas bancárias — visualizar" },
     { value: "BANK_ACCOUNT_MANAGE", label: "Contas bancárias — gerenciar" },
     { value: "BUSINESS_PARTNER_VIEW", label: "Clientes/fornecedores — visualizar" },
