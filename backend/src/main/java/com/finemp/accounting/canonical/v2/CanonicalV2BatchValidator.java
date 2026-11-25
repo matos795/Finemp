@@ -251,9 +251,7 @@ public final class CanonicalV2BatchValidator {
             }
             validateNonNegativeTotal(total.debitTotal());
             validateNonNegativeTotal(total.creditTotal());
-            if (chartDeclared) {
-                requireAccount(accounts, total.sourceAccountId());
-            }
+            requireAccount(accounts, total.sourceAccountId());
 
             var key = new DailyTotalsIdentity(
                     total.establishmentCode(),
@@ -269,8 +267,7 @@ public final class CanonicalV2BatchValidator {
 
     private static void validateMonthlyTotals(
             List<CanonicalAccountMonthlyDebitCreditTotals> totals,
-            Map<String, CanonicalAccountingAccount> accounts,
-            boolean chartDeclared,
+            Map<String, ? extends CanonicalAccountDescriptor> accounts,
             LocalDate start,
             LocalDate end,
             int maxRecords) {
@@ -296,9 +293,7 @@ public final class CanonicalV2BatchValidator {
             }
             validateNonNegativeTotal(total.debitTotal());
             validateNonNegativeTotal(total.creditTotal());
-            if (chartDeclared) {
-                requireAccount(accounts, total.sourceAccountId());
-            }
+            requireAccount(accounts, total.sourceAccountId());
 
             var key = new MonthlyTotalsIdentity(
                     total.establishmentCode(),
