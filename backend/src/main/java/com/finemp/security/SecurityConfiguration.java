@@ -105,6 +105,33 @@ public class SecurityConfiguration {
                                                                 permissionAuthorizationManagerFactory.forPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
 
+                                                // Leitura v2 (#474): plano completo segue a permissão do plano importado;
+                                                // valores (totais D/C) e catálogo técnico seguem a do razão.
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-chart")
+                                                .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
+                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
+                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
+
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-debit-credit-totals",
+                                                                "/api/companies/{companyId}/accounting-origin-catalog")
+                                                .access(permissionAuthorizationManagerFactory.forPermission(
+                                                                CompanyPermission.ACCOUNTING_MOVEMENT_VIEW))
+
+                                                // Cobertura só expõe datas: serve às telas de plano e de razão.
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-dataset-coverage")
+                                                .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
+                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                                CompanyPermission.ACCOUNTING_MOVEMENT_VIEW),
+                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
+                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
+
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-sources")
                                                 .access(permissionAuthorizationManagerFactory.forPermission(
