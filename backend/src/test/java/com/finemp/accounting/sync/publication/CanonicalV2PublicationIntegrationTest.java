@@ -10,6 +10,8 @@ import com.finemp.TestcontainersConfiguration;
 import com.finemp.access.*;
 import com.finemp.accounting.canonical.v2.*;
 import com.finemp.accounting.coverage.AccountingDatasetCoverageService;
+import com.finemp.accounting.reading.AccountingCompanyIdentityReader;
+import com.finemp.accounting.reading.AccountingSourceReaderRegistry;
 import com.finemp.accounting.reading.ExternalCompanyIdentity;
 import com.finemp.accounting.source.*;
 import com.finemp.accounting.sync.*;
@@ -46,6 +48,8 @@ class CanonicalV2PublicationIntegrationTest {
     @Autowired private AccountingDatasetCoverageService coverage;
     @Autowired private JdbcTemplate jdbc;
     @MockitoBean private SyncAgentAuthorization agents;
+    @MockitoBean private AccountingCompanyIdentityReader identities;
+    @MockitoBean private AccountingSourceReaderRegistry readers;
 
     private final LocalDate start=LocalDate.of(2026,7,1);
     private final LocalDate end=LocalDate.of(2026,7,31);
