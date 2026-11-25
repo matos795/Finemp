@@ -137,9 +137,10 @@ public final class ConnectorAgentCycle implements AutoCloseable {
     private <T> T readBounded(LeaseKeeper keeper, Callable<T> action) throws InterruptedException {
         long deadline=nanoTime.getAsLong()+readNanos;
         var task=new FutureTask<T>(action);
+        var workerReleased=new CountDownLatch(1);
         reading.set(true);keeper.attach(task);
-        try {reads.execute(() -> {try{task.run();}finally{reading.set(false);}});}
-        catch(RejectedExecutionException stopped) {reading.set(false);task.cancel(true);throw new CancellationException();}
+        try {reads.execute(() -> {try{task.run();}finally{reading.set(false);workerReleased.countDown();}});}
+        catch(RejectedExecutionException stopped) {reading.set(false);workerReleased.countDown();task.cancel(true);throw new CancellationException();}
         try {
             while(true) {
                 if(closed || !keeper.live()) {task.cancel(true);throw new CancellationException();}
@@ -147,6 +148,8 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                 if(remaining<=0) {task.cancel(true);throw new ReadBudgetExceeded();}
                 try {
                     var result=task.get(Math.min(remaining,keeper.remaining()),TimeUnit.NANOSECONDS);
+                    if(deadline-nanoTime.getAsLong()<=0)throw new ReadBudgetExceeded();
+                    workerReleased.await();
                     if(deadline-nanoTime.getAsLong()<=0)throw new ReadBudgetExceeded();
                     return result;
                 }
