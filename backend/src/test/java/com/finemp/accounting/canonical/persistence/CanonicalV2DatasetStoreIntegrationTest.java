@@ -191,15 +191,14 @@ class CanonicalV2DatasetStoreIntegrationTest {
         assertThatThrownBy(() -> jdbc.update(
                 """
                 INSERT INTO accounting_account_source_attributes(
-                    id, accounting_source_id, source_account_id, classification_code, description,
+                    id, accounting_source_id, source_account_id, classification_code,
                     account_type, calculation_type, balance_nature, balance_control, show_in_balance_sheet)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 UUID.randomUUID(),
                 fixture.source().getId(),
                 "missing-account",
                 "1",
-                "Missing",
                 "ANALYTIC",
                 "NORMAL",
                 "CREDIT",
@@ -214,16 +213,16 @@ class CanonicalV2DatasetStoreIntegrationTest {
         var second = fixture("C2");
 
         store.persistAccountSourceAttributes(first.source().getId(), canonicalAccount("100", "1", "First"));
-        store.persistAccountSourceAttributes(second.source().getId(), canonicalAccount("100", "1", "Second"));
+        store.persistAccountSourceAttributes(second.source().getId(), canonicalAccount("100", "2", "Second"));
         store.persistEntrySourceMetadata(first.source().getId(), metadata("entry-1", "ORIG"));
         store.persistEntrySourceMetadata(second.source().getId(), metadata("entry-1", "ORIG"));
 
         assertThat(accountAttributes.count()).isEqualTo(2);
         assertThat(entryMetadata.count()).isEqualTo(2);
         assertThat(accountAttributes.findByAccountingSourceIdAndSourceAccountId(first.source().getId(), "100"))
-                .get().extracting(AccountingAccountSourceAttributes::getDescription).isEqualTo("First");
+                .get().extracting(AccountingAccountSourceAttributes::getClassificationCode).isEqualTo("1");
         assertThat(accountAttributes.findByAccountingSourceIdAndSourceAccountId(second.source().getId(), "100"))
-                .get().extracting(AccountingAccountSourceAttributes::getDescription).isEqualTo("Second");
+                .get().extracting(AccountingAccountSourceAttributes::getClassificationCode).isEqualTo("2");
     }
 
     private Fixture fixture(String suffix) {
