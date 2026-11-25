@@ -4,6 +4,7 @@ import com.finemp.accounting.reading.AccountingCompanyIdentityReader;
 import com.finemp.accounting.reading.AccountingSourceReaderRegistry;
 import com.finemp.accounting.reading.ExternalCompanyIdentity;
 import com.finemp.accounting.reading.AccountingReadLimitExceededException;
+import com.finemp.accounting.reading.AccountingUnexpectedSourceDataException;
 import com.finemp.accounting.reading.AccountingIdentityMismatchException;
 import com.finemp.accounting.reading.AccountingIdentityConfigurationException;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
@@ -46,6 +47,7 @@ public class SyncRunExecutor {
         try { movements = readers.readMovements(claim.request()); }
         catch (AccountingIdentityMismatchException mismatch) { return fail(claim, SyncFailureCode.IDENTITY_MISMATCH); }
         catch (AccountingIdentityConfigurationException unsupported) { return fail(claim, SyncFailureCode.SOURCE_NOT_AVAILABLE); }
+        catch (AccountingUnexpectedSourceDataException invalidSourceData) { return fail(claim, SyncFailureCode.INVALID_PAYLOAD); }
         catch (AccountingReadLimitExceededException limit) { return fail(claim, SyncFailureCode.RESOURCE_LIMIT); }
         catch (RuntimeException readFailure) { return fail(claim, SyncFailureCode.READ_FAILED); }
         try { publication.publish(claim, movements); }
