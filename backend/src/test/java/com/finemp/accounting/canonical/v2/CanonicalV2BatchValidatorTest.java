@@ -227,6 +227,7 @@ class CanonicalV2BatchValidatorTest {
                 identity(),
                 caps,
                 null,
+                List.of(new CanonicalObservedAccountDescriptor("100", "1", "Observed 100")),
                 entries(entry),
                 List.of(
                         new CanonicalAccountDailyDebitCreditTotals("1", "100", start, "LN", new BigDecimal("10.0"), BigDecimal.ZERO),
