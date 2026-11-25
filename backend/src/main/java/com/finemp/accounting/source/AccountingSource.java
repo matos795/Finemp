@@ -81,7 +81,7 @@ public class AccountingSource {
 
     public void updateExternalReference(String externalReference) {
         if (type == AccountingSourceType.FILE_IMPORT) {
-            throw new IllegalStateException("File import source has no external reference.");
+            throw new IllegalArgumentException("File import source has no external reference.");
         }
         if (externalReference == null || externalReference.isBlank() || externalReference.length() > 255) {
             throw new IllegalArgumentException("Invalid accounting source external reference.");
