@@ -18,7 +18,7 @@ public class ConnectorCanonicalV2Decoder {
     private final ConnectorCanonicalV2Codec codec;
 
     public ConnectorCanonicalV2Decoder(
-            @Value("\${finemp.sync.publication.max-records:25000}") int maxRecords) {
+            @Value("${finemp.sync.publication.max-records:25000}") int maxRecords) {
         this.codec = new ConnectorCanonicalV2Codec(maxRecords);
     }
 
