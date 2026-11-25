@@ -453,9 +453,6 @@ public final class FirebirdQuestorCanonicalV2Reader {
 
             try (ResultSet result = statement.executeQuery()) {
                 int[] columns = catalogColumns(result.getMetaData());
-                if (columns == null) {
-                    return null;
-                }
                 List<CanonicalOriginCatalogEntry> catalog = new ArrayList<>();
                 while (result.next()) {
                     if (catalog.size() >= maxOriginCatalogRecords) {
@@ -477,7 +474,7 @@ public final class FirebirdQuestorCanonicalV2Reader {
 
     private static int[] catalogColumns(ResultSetMetaData metadata) throws SQLException {
         if (metadata.getColumnCount() != 2) {
-            return null;
+            throw new QuestorUnexpectedSourceDataException();
         }
         int code = 0;
         int description = 0;
@@ -488,7 +485,10 @@ public final class FirebirdQuestorCanonicalV2Reader {
                 description = column;
             }
         }
-        return code == 0 || description == 0 ? null : new int[] {code, description};
+        if (code == 0 || description == 0) {
+            throw new QuestorUnexpectedSourceDataException();
+        }
+        return new int[] {code, description};
     }
 
     private static boolean characterColumn(int type) {
