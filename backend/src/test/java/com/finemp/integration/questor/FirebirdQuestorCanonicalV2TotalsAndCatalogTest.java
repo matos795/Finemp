@@ -177,7 +177,7 @@ class FirebirdQuestorCanonicalV2TotalsAndCatalogTest {
     }
 
     @Test
-    void shouldOmitTheCatalogWhenItsShapeIsNotTheConfirmedTwoColumnTable() throws Exception {
+    void shouldFailClosedWhenTheCatalogShapeDriftsFromTheConfirmedContract() throws Exception {
         try (var postgres = start()) {
             seed(postgres, null, null, """
                     CREATE TABLE ORIGEMLCTOCTB(
@@ -186,10 +186,11 @@ class FirebirdQuestorCanonicalV2TotalsAndCatalogTest {
                     INSERT INTO ORIGEMLCTOCTB VALUES ('FI','x','y');
                     """);
 
-            var batch = reader(provider(postgres)).read(request(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31)));
-
-            assertThat(batch.capabilities().datasets()).doesNotContain(AccountingDataset.ORIGIN_CATALOG);
-            assertThat(batch.originCatalog()).isNull();
+            assertThatThrownBy(() -> reader(provider(postgres))
+                    .read(request(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31))))
+                    .isInstanceOf(QuestorUnexpectedSourceDataException.class)
+                    .hasMessage("Unexpected accounting source data.")
+                    .hasNoCause();
         }
     }
 
