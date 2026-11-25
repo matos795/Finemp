@@ -52,3 +52,16 @@
 .ctbp .ctb-src { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
 .ctbp .ctb-src-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ctbp .ctb-src .cf-bar { margin-top: 8px; }
+
+/* C2.9: cobertura importada, metadados da origem e paginação compartilhada (Pager). */
+.ctbp .ctb-cov { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: .88rem; }
+.ctbp .ctb-cov-l { font-weight: 700; color: var(--muted); }
+.ctbp .ctb-cov-v { display: inline; }
+.ctbp .ctb-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px; margin: 4px 0; }
+.ctbp .ctb-meta dt { font-size: .76rem; color: var(--muted); }
+.ctbp .ctb-meta dd { margin: 0; word-break: break-word; }
+.ctbp .ctb-meta-none { margin: 4px 0; }
+.ctbp details.panel > summary { cursor: pointer; }
+.ctbp .mact { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 12px; }
+.ctbp .mact .mut { color: var(--muted); }
+.ctbp .btn.sec.sm { border-radius: 6px; padding: 6px 12px; font-weight: 600; font-size: .86rem; }
