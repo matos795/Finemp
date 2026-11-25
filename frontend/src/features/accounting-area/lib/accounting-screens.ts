@@ -39,6 +39,12 @@ export interface AccountingScreen {
     /** Seção do HANDOFF_CONTABIL que especifica a tela. */
     handoffSection: string
     status: AccountingScreenStatus
+    /**
+     * true = tela do menu do protótipo. false = tela FINEMP ligada a contrato
+     * oficial (#474/#509) que o protótipo não tem; fica na árvore da Contabilidade
+     * para o usuário não depender de rotas antigas.
+     */
+    prototype: boolean
 }
 
 export interface AccountingSubgroup {
@@ -95,6 +101,32 @@ function screen(
         objective,
         handoffSection,
         status: PARTIAL.has(id) ? "partial" : "soon",
+        prototype: true,
+    }
+}
+
+/** Tela FINEMP fora do protótipo, inteira ligada a contrato oficial. */
+function finempScreen(
+    id: string,
+    label: string,
+    path: string,
+    tag: string,
+    title: string,
+    panels: string[],
+    objective: string,
+): AccountingScreen {
+    return {
+        id,
+        label,
+        path,
+        tag,
+        title,
+        competenceBar: false,
+        panels,
+        objective,
+        handoffSection: "C2.9",
+        status: "available",
+        prototype: false,
     }
 }
 
@@ -164,6 +196,9 @@ export const accountingModules: AccountingModule[] = [
             {
                 label: "Qualidade da base",
                 screens: [
+                    finempScreen("plano", "Plano de Contas", `${CF}/qualidade/plano-de-contas`, "Qualidade da base", "Plano de Contas",
+                        ["Plano de Contas"],
+                        "Mostrar o plano de contas completo publicado pela origem contábil; sem ele, as contas importadas/observadas, sem chamá-las de plano completo."),
                     screen("cfcong", "Períodos Congelados", `${CF}/qualidade/periodos-congelados`, "Fechamento", "Períodos Congelados",
                         ["Alterações em meses congelados", "Registro (quem, quando e por quê)"],
                         "Proteger meses fechados e listar mudanças da base nesses meses, que só valem depois de aceitas com motivo.", "6.1"),
@@ -176,6 +211,17 @@ export const accountingModules: AccountingModule[] = [
                     screen("cfvol", "Volumetria do Contrato", `${CF}/qualidade/volumetria`, "Central de Fechamento", "Volumetria do Contrato",
                         ["Ano a ano", "Lançamentos por mês", "Funcionários na folha por mês", "Reajuste de honorários por volume"],
                         "Medir o volume de trabalho do escritório para o cliente e apoiar o reajuste de honorários.", "6.4"),
+                ],
+            },
+            {
+                label: "Base contábil importada",
+                screens: [
+                    finempScreen("ctbmov", "Movimentos Contábeis", `${CF}/base-contabil/movimentos`, "Base contábil", "Movimentos Contábeis",
+                        ["Lançamentos do período"],
+                        "Consultar os lançamentos importados da origem contábil, com os metadados técnicos da origem quando já importados."),
+                    finempScreen("ctbtot", "Totais de Débito e Crédito", `${CF}/base-contabil/totais-debito-credito`, "Base contábil", "Totais de Débito e Crédito",
+                        ["Totais do período"],
+                        "Consultar os totais de débito e crédito por dia ou por mês publicados pela origem contábil, por estabelecimento, conta e tipo de lançamento."),
                 ],
             },
         ],
