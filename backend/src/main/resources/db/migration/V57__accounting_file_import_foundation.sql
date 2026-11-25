@@ -1,3 +1,10 @@
+ALTER TABLE accounting_sources
+    DROP CONSTRAINT accounting_sources_connection_mode_check;
+
+ALTER TABLE accounting_sources
+    ADD CONSTRAINT accounting_sources_connection_mode_check
+    CHECK (connection_mode IN ('DIRECT', 'CONNECTOR', 'UPLOAD'));
+
 CREATE TABLE accounting_file_import_receipts (
     accounting_source_id UUID NOT NULL,
     idempotency_key UUID NOT NULL,
