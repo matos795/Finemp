@@ -1,5 +1,6 @@
 package com.finemp.connector.agent;
 
+import com.finemp.accounting.canonical.v2.CanonicalAccountingBatch;
 import com.finemp.accounting.reading.*;
 import com.finemp.accounting.sync.*;
 import com.finemp.accounting.sync.execution.SyncAttemptStatus;
