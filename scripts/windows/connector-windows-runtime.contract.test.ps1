@@ -40,7 +40,7 @@ $installerRequired = @(
     'connectorJarPath = $runtimeJarPath',
     'connectorPropertiesPath = $runtimePropertiesPath',
     'Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue',
-    'BUILTIN\Administrators:(F)'
+    '*S-1-5-32-544:(F)'
 )
 foreach ($needle in $installerRequired) {
     if (-not $installer.Contains($needle)) {
