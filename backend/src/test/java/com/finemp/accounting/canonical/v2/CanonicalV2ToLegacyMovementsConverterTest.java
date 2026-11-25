@@ -3,6 +3,8 @@ package com.finemp.accounting.canonical.v2;
 import static org.assertj.core.api.Assertions.*;
 
 import com.finemp.accounting.movement.AccountingMovementSide;
+import com.finemp.accounting.sync.SyncFailureCode;
+import com.finemp.accounting.sync.execution.SyncPublicationRejectedException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -101,8 +103,62 @@ class CanonicalV2ToLegacyMovementsConverterTest {
                 null);
 
         assertThatThrownBy(() -> CanonicalV2ToLegacyMovementsConverter.convert(List.of(entry), Map.of()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Canonical account descriptor is missing.");
+                .isInstanceOfSatisfying(
+                        SyncPublicationRejectedException.class,
+                        exception -> assertThat(exception.getCode()).isEqualTo(SyncFailureCode.INVALID_PAYLOAD));
+    }
+
+    @Test
+    void shouldConvertUsingObservedAccountDescriptorsWithoutPretendingTheyAreAChart() {
+        var entry = new CanonicalAccountingEntry(
+                "e-observed",
+                LocalDate.of(2026, 7, 7),
+                "100",
+                null,
+                BigDecimal.ONE,
+                null,
+                null);
+        var observed = new CanonicalObservedAccountDescriptor("100", "1.1", "Observed account");
+
+        var movements = CanonicalV2ToLegacyMovementsConverter.convert(
+                List.of(entry),
+                Map.of("100", observed));
+
+        assertThat(movements).singleElement().satisfies(row -> {
+            assertThat(row.accountKey()).isEqualTo("1.1.100");
+            assertThat(row.accountDescription()).isEqualTo("Observed account");
+        });
+    }
+
+    @Test
+    void shouldAcceptLegacyAccountKeyAt255CodePointsAndReject256WithoutTruncation() {
+        String sourceAccountId = "100";
+        String classification255 = "1".repeat(251);
+        String classification256 = "1".repeat(252);
+        var entry = new CanonicalAccountingEntry(
+                "e-limit",
+                LocalDate.of(2026, 7, 7),
+                sourceAccountId,
+                null,
+                BigDecimal.ONE,
+                null,
+                null);
+
+        var atLimit = CanonicalV2ToLegacyMovementsConverter.convert(
+                List.of(entry),
+                Map.of(sourceAccountId, new CanonicalObservedAccountDescriptor(
+                        sourceAccountId, classification255, "Observed account")));
+
+        assertThat(atLimit).singleElement()
+                .satisfies(row -> assertThat(row.accountKey().codePointCount(0, row.accountKey().length())).isEqualTo(255));
+
+        assertThatThrownBy(() -> CanonicalV2ToLegacyMovementsConverter.convert(
+                List.of(entry),
+                Map.of(sourceAccountId, new CanonicalObservedAccountDescriptor(
+                        sourceAccountId, classification256, "Observed account"))))
+                .isInstanceOfSatisfying(
+                        SyncPublicationRejectedException.class,
+                        exception -> assertThat(exception.getCode()).isEqualTo(SyncFailureCode.INVALID_PAYLOAD));
     }
 
     private CanonicalAccountingAccount account(String id, String classification, String description) {
