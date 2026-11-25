@@ -2,6 +2,7 @@ package com.finemp.connector.agent;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.finemp.accounting.canonical.v2.*;
 import com.finemp.accounting.reading.*;
 import com.finemp.accounting.source.AccountingSourceType;
 import com.finemp.accounting.sync.*;
@@ -17,9 +18,72 @@ import org.junit.jupiter.api.Test;
 class ConnectorAgentCycleTest {
     private final FinempConnectorClient client=mock(FinempConnectorClient.class);
     private final AccountingSourceSnapshotReader reader=mock(AccountingSourceSnapshotReader.class);
+    private final CanonicalAccountingBatchReader v2Reader=mock(CanonicalAccountingBatchReader.class);
     private final Instant server=Instant.parse("2026-07-01T12:00:00Z");
     private final ConnectorWorkResponse work=work(300000);
     private final AccountingSourceSnapshot snapshot=new AccountingSourceSnapshot(new ExternalCompanyIdentity("57","52525252000152"),List.of());
+    @Test void shouldKeepUsingV1WhenTheLeaseDoesNotAdvertiseV2() {
+        prepare(work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
+        when(reader.readSnapshot(work.context())).thenReturn(snapshot);
+        when(client.complete(work,snapshot)).thenReturn(receipt(SyncAttemptStatus.SUCCEEDED));
+        try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2))) {
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
+        }
+        verify(v2Reader,never()).readBatch(any());
+        verify(client,never()).completeV2(any(),any());
+        verify(client).complete(work,snapshot);
+    }
+
+    @Test void shouldUseV2OnlyWhenNegotiatedAndDatasetsAreAccepted() {
+        var v2Work=workV2(Set.of(1,2),Set.of(AccountingDataset.CHART));
+        var batch=canonicalBatch(Set.of(AccountingDataset.CHART));
+        prepare(v2Work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
+        when(v2Reader.readBatch(v2Work.context())).thenReturn(batch);
+        when(client.completeV2(v2Work,batch)).thenReturn(receipt(v2Work,SyncAttemptStatus.SUCCEEDED));
+        try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2))) {
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
+        }
+        var order=inOrder(client,v2Reader);
+        order.verify(client).claim();
+        order.verify(v2Reader).readBatch(v2Work.context());
+        order.verify(client).completeV2(v2Work,batch);
+        verify(reader,never()).readSnapshot(any());
+        verify(client,never()).complete(any(),any());
+    }
+
+    @Test void shouldFallbackWholeBatchToV1WhenV2ProducesAnUnacceptedDataset() {
+        var v2Work=workV2(Set.of(1,2),Set.of(AccountingDataset.MOVEMENTS));
+        var batch=canonicalBatch(Set.of(AccountingDataset.CHART));
+        prepare(v2Work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
+        when(v2Reader.readBatch(v2Work.context())).thenReturn(batch);
+        when(reader.readSnapshot(v2Work.context())).thenReturn(snapshot);
+        when(client.complete(v2Work,snapshot)).thenReturn(receipt(v2Work,SyncAttemptStatus.SUCCEEDED));
+        try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2))) {
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
+        }
+        verify(v2Reader).readBatch(v2Work.context());
+        verify(client,never()).completeV2(any(),any());
+        verify(reader).readSnapshot(v2Work.context());
+        verify(client).complete(v2Work,snapshot);
+    }
+
+    @Test void shouldNeverReplayV2AfterAnUncertainCompletion() {
+        var v2Work=workV2(Set.of(1,2),Set.of(AccountingDataset.CHART));
+        var batch=canonicalBatch(Set.of(AccountingDataset.CHART));
+        prepare(v2Work);when(v2Reader.sourceType()).thenReturn(AccountingSourceType.QUESTOR);
+        when(v2Reader.readBatch(v2Work.context())).thenReturn(batch);
+        when(client.completeV2(v2Work,batch)).thenThrow(new ConnectorClientException(ConnectorClientException.Kind.TIMEOUT));
+        when(client.result(v2Work)).thenReturn(receipt(v2Work,SyncAttemptStatus.SUCCEEDED));
+        try(var agent=new ConnectorAgentCycle(client,reader,v2Reader,Duration.ofSeconds(2))) {
+            assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.PENDING);
+            assertThat(afterWorkerCleanup(agent)).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
+        }
+        verify(v2Reader,times(1)).readBatch(any());
+        verify(client,times(1)).completeV2(any(),any());
+        verify(client).result(v2Work);
+        verify(reader,never()).readSnapshot(any());
+    }
+
     @Test void shouldReadTheClaimedContextAndPublishOnlyTheVerifiedSnapshot() {
         prepare(work);when(reader.readSnapshot(work.context())).thenReturn(snapshot);when(client.complete(work,snapshot)).thenReturn(receipt(SyncAttemptStatus.SUCCEEDED));
         try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2))) {
@@ -152,6 +216,23 @@ class ConnectorAgentCycleTest {
             nanos.set(Duration.ofSeconds(12).toNanos());assertThat(afterWorkerCleanup(agent)).isEqualTo(ConnectorAgentCycle.Outcome.SUCCEEDED);
         }
         verify(client,times(1)).claim();verify(client,times(1)).complete(any(),any());verify(client,never()).fail(any(),any());
+    }
+    private ConnectorWorkResponse workV2(Set<Integer> versions,Set<AccountingDataset> datasets){
+        var base=work(300000);
+        return new ConnectorWorkResponse(base.attemptId(),base.runId(),base.attemptNumber(),base.mode(),
+                base.leaseExpiresAt(),base.serverTime(),base.context(),versions,datasets);
+    }
+    private CanonicalAccountingBatch canonicalBatch(Set<AccountingDataset> datasets){
+        CanonicalChartSnapshot chart=datasets.contains(AccountingDataset.CHART)
+                ? new CanonicalChartSnapshot(server,List.of(new CanonicalAccountingAccount(
+                        "100","1.1","Synthetic account",
+                        new SourceAccountCodes("1","1","D","1","S",null,null))))
+                : null;
+        return new CanonicalAccountingBatch(
+                CanonicalAccountingBatch.VERSION,
+                snapshot.identity(),
+                new SourceCapabilities(datasets,AmountSignPolicy.NON_NEGATIVE_WITH_SIDE,true),
+                chart,null,null,null,null,null,null);
     }
     private ConnectorAgentCycle.Outcome afterWorkerCleanup(ConnectorAgentCycle agent){
         long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
