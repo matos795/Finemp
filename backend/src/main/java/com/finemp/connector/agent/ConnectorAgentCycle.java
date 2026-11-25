@@ -88,7 +88,8 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                     return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);
                 if(batch.capabilities()==null || batch.capabilities().datasets()==null
                         || !work.acceptedDatasets().containsAll(batch.capabilities().datasets())) {
-                    if(!work.acceptsContractVersion(1)) return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);
+                    if(!work.acceptsContractVersion(1) || reader.sourceType()!=work.context().sourceType())
+                        return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);
                     return publishV1(work,keeper);
                 }
                 try {return accept(work,client.completeV2(work,batch),keeper.expires.get());}
@@ -122,7 +123,9 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                 || (shouldTryV2(work) && canonicalV2Reader.sourceType()==work.context().sourceType());
     }
     private boolean shouldTryV2(ConnectorWorkResponse work) {
-        return canonicalV2Reader!=null && work.acceptsContractVersion(CanonicalAccountingBatch.VERSION);
+        return canonicalV2Reader!=null
+                && work.acceptsContractVersion(CanonicalAccountingBatch.VERSION)
+                && canonicalV2Reader.sourceType()==work.context().sourceType();
     }
     private AccountingSourceSnapshot read(ConnectorWorkResponse work,LeaseKeeper keeper) throws InterruptedException {
         return readBounded(keeper, () -> reader.readSnapshot(work.context()));
