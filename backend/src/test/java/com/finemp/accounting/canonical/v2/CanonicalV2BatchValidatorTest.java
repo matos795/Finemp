@@ -83,7 +83,7 @@ class CanonicalV2BatchValidatorTest {
     @Test
     void shouldTolerateIdenticalDuplicateEntriesButRejectDivergentContent() {
         var first = new CanonicalAccountingEntry("e1", start, "100", null, new BigDecimal("10.00"), null, "same");
-        var identical = new CanonicalAccountingEntry("e1", start, "100", null, new BigDecimal("10.00"), null, "same");
+        var identical = new CanonicalAccountingEntry("e1", start, "100", null, new BigDecimal("10.0"), null, "same");
         var divergent = new CanonicalAccountingEntry("e1", start, "100", null, new BigDecimal("11.00"), null, "same");
         var caps = capabilities(Set.of(AccountingDataset.MOVEMENTS), AmountSignPolicy.SIGNED_WITH_SIDE);
 
@@ -120,6 +120,39 @@ class CanonicalV2BatchValidatorTest {
                 capabilities(Set.of(AccountingDataset.MOVEMENTS), AmountSignPolicy.SIGNED_WITH_SIDE),
                 null,
                 new CanonicalEntriesDataset(start, end, List.of(), null));
+
+        assertThatCode(() -> CanonicalV2BatchValidator.validate(batch, start, end, 100))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldCompareDuplicateMoneyNumericallyAcrossCanonicalDatasets() {
+        var entry = new CanonicalAccountingEntry(
+                "e1", start, "100", null, new BigDecimal("10.0"), null, null);
+        var caps = capabilities(
+                Set.of(
+                        AccountingDataset.MOVEMENTS,
+                        AccountingDataset.DAILY_TOTALS,
+                        AccountingDataset.MONTHLY_TOTALS,
+                        AccountingDataset.COST_ALLOCATIONS),
+                AmountSignPolicy.SIGNED_WITH_SIDE);
+        var batch = new CanonicalAccountingBatch(
+                CanonicalAccountingBatch.VERSION,
+                identity(),
+                caps,
+                null,
+                entries(entry),
+                List.of(
+                        new CanonicalAccountDailyDebitCreditTotals("1", "100", start, "LN", new BigDecimal("10.0"), BigDecimal.ZERO),
+                        new CanonicalAccountDailyDebitCreditTotals("1", "100", start, "LN", new BigDecimal("10.00"), new BigDecimal("0.0000"))),
+                List.of(
+                        new CanonicalAccountMonthlyDebitCreditTotals("1", "100", java.time.YearMonth.from(start), "LN", new BigDecimal("10"), BigDecimal.ZERO),
+                        new CanonicalAccountMonthlyDebitCreditTotals("1", "100", java.time.YearMonth.from(start), "LN", new BigDecimal("10.0000"), new BigDecimal("0.00"))),
+                null,
+                null,
+                List.of(
+                        new CanonicalEntryCostAllocation("e1", "100", "CC1", "D", new BigDecimal("10.0")),
+                        new CanonicalEntryCostAllocation("e1", "100", "CC1", "D", new BigDecimal("10.000"))));
 
         assertThatCode(() -> CanonicalV2BatchValidator.validate(batch, start, end, 100))
                 .doesNotThrowAnyException();
