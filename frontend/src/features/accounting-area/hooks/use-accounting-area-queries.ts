@@ -47,7 +47,7 @@ export function useCompanySyncStatus(companyId: string | null) {
             current.state.data?.items.some((source) => isRunActive(source.latestRun)) ? 5_000 : false,
     })
 
-    // Nova sincronização concluída: contas, movimentos e DRE da empresa mudaram no backend.
+    // Nova sincronização concluída: contas, movimentos, DRE e leituras v2 da empresa mudaram no backend.
     const signature = succeededSignature(query.data)
     const previous = useRef<{ companyId: string | null; signature: string | null }>({ companyId, signature: null })
 
@@ -62,7 +62,7 @@ export function useCompanySyncStatus(companyId: string | null) {
             signature !== null &&
             before.signature !== signature
         ) {
-            for (const kind of ["accounts", "movements", "dre"]) {
+            for (const kind of ["accounts", "movements", "dre", "chart", "totals", "coverage", "origin-catalog"]) {
                 void queryClient.invalidateQueries({ queryKey: accountingQueryKey(userId, kind, companyId) })
             }
         }
