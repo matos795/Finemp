@@ -87,7 +87,7 @@ public final class CanonicalV2BatchValidator {
             if (account == null
                     || !identity(account.sourceAccountId())
                     || !identity(account.classificationCode())
-                    || !text(account.description(), 255)
+                    || !identity(account.description())
                     || account.codes() == null
                     || !identity(account.codes().accountType())
                     || !identity(account.codes().calculationType())
@@ -298,7 +298,7 @@ public final class CanonicalV2BatchValidator {
 
         Map<String, CanonicalOriginCatalogEntry> unique = new LinkedHashMap<>();
         for (var item : catalog) {
-            if (item == null || !identity(item.originCode()) || !text(item.description(), 255)) {
+            if (item == null || !identity(item.originCode()) || !identity(item.description())) {
                 throw invalid();
             }
             var previous = unique.putIfAbsent(item.originCode(), item);
