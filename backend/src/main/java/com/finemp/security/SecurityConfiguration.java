@@ -53,9 +53,12 @@ public class SecurityConfiguration {
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
 
+                AccountingFileImportAuthorizationManager realAccountingFileImportAuthorizationManager =
+                                accountingFileImportAuthorizationManagerProvider.getIfAvailable();
                 AuthorizationManager<RequestAuthorizationContext> accountingFileImportAuthorizationManager =
-                                accountingFileImportAuthorizationManagerProvider.getIfAvailable(
-                                                () -> (authentication, context) -> new AuthorizationDecision(false));
+                                realAccountingFileImportAuthorizationManager != null
+                                                ? realAccountingFileImportAuthorizationManager
+                                                : (authentication, context) -> new AuthorizationDecision(false);
 
                 http
                                 .addFilterAfter(new SessionCredentialsFilter(sessionAccountStateValidator),
