@@ -41,6 +41,7 @@ public class SecurityConfiguration {
                         SecurityContextRepository securityContextRepository,
                         SessionAccountStateValidator sessionAccountStateValidator,
                         QuestorImportAuthorizationManager questorImportAuthorizationManager,
+                        AccountingFileImportAuthorizationManager accountingFileImportAuthorizationManager,
                         EntryCommandAuthorizationManager financialCommands,
                         BankTransferCommandAuthorizationManager transferCommands,
                         @org.springframework.beans.factory.annotation.Qualifier("periodCloseAuthorizationManager") PeriodCommandAuthorizationManager periodClose,
@@ -68,6 +69,10 @@ public class SecurityConfiguration {
                                                 .requestMatchers(
                                                                 "/api/accounting-sources/{accountingSourceId}/sync-runs/**")
                                                 .access(questorImportAuthorizationManager)
+
+                                                .requestMatchers(
+                                                                "/api/accounting-sources/{accountingSourceId}/file-imports/**")
+                                                .access(accountingFileImportAuthorizationManager)
 
                                                 .requestMatchers(HttpMethod.PUT,
                                                                 "/api/companies/{companyId}/accounting-accounts/{accountId}/classification")
@@ -348,6 +353,13 @@ public class SecurityConfiguration {
         QuestorImportAuthorizationManager questorImportAuthorizationManager(
                         AccountingSourceRepository sources, CompanyPermissionAuthorizationService permissions) {
                 return new QuestorImportAuthorizationManager(sources, permissions);
+        }
+
+        @Bean
+        AccountingFileImportAuthorizationManager accountingFileImportAuthorizationManager(
+                        AccountingSourceRepository sources,
+                        CompanyPermissionAuthorizationService permissions) {
+                return new AccountingFileImportAuthorizationManager(sources, permissions);
         }
 
         @Bean
