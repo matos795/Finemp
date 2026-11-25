@@ -3,7 +3,6 @@ CREATE TABLE accounting_account_source_attributes (
     accounting_source_id UUID NOT NULL,
     source_account_id VARCHAR(255) NOT NULL,
     classification_code VARCHAR(255) NOT NULL,
-    description VARCHAR(255) NOT NULL,
     account_type VARCHAR(255) NOT NULL,
     calculation_type VARCHAR(255) NOT NULL,
     balance_nature VARCHAR(255) NOT NULL,
