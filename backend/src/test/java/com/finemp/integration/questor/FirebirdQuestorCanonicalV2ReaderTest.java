@@ -151,6 +151,38 @@ class FirebirdQuestorCanonicalV2ReaderTest {
     }
 
     @Test
+    void shouldPreserveQuestorFailClosedInvariantsInTheV2Reader() throws Exception {
+        try (var postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17"))) {
+            postgres.start();
+            try (var connection = connect(postgres); var sql = connection.createStatement()) {
+                schema(sql);
+                sql.executeUpdate("""
+                        INSERT INTO PLANOESPEC VALUES
+                        (57,100,'1.1','Debit account','2','1','1','1','2',1,NULL),
+                        (57,200,'2.1','Credit account','2','1','1','1','2',1,NULL)
+                        """);
+            }
+
+            String[] invalidRows = {
+                    "(57,'negative',1,NULL,DATE '2026-07-05','LN',NULL,'FI',100,200,7,NULL,-1.0000,NULL,NULL,'1',NULL)",
+                    "(57,'no-side',1,NULL,DATE '2026-07-05','LN',NULL,'FI',NULL,NULL,7,NULL,1.0000,NULL,NULL,'1',NULL)",
+                    "(57,'same-account',1,NULL,DATE '2026-07-05','LN',NULL,'FI',100,100,7,NULL,1.0000,NULL,NULL,'1',NULL)"
+            };
+
+            for (String row : invalidRows) {
+                try (var connection = connect(postgres); var sql = connection.createStatement()) {
+                    sql.executeUpdate("DELETE FROM LCTOCTB");
+                    sql.executeUpdate("INSERT INTO LCTOCTB VALUES " + row);
+                }
+
+                assertThatThrownBy(() -> reader(provider(postgres), 10, 10).read(request()))
+                        .isInstanceOf(QuestorUnexpectedSourceDataException.class)
+                        .hasMessage("Unexpected accounting source data.");
+            }
+        }
+    }
+
+    @Test
     void shouldEnforceIndependentChartAndEntryBudgets() throws Exception {
         try (var postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17"))) {
             postgres.start();
@@ -165,6 +197,17 @@ class FirebirdQuestorCanonicalV2ReaderTest {
             var provider = provider(postgres);
 
             assertThatThrownBy(() -> reader(provider, 1, 10).read(request()))
+                    .isInstanceOf(AccountingReadLimitExceededException.class);
+
+            try (var connection = connect(postgres); var sql = connection.createStatement()) {
+                sql.executeUpdate("""
+                        INSERT INTO LCTOCTB VALUES
+                        (57,'entry-1',1,NULL,DATE '2026-07-05','LN',NULL,'FI',100,200,7,NULL,1.0000,NULL,NULL,'1',NULL),
+                        (57,'entry-2',1,NULL,DATE '2026-07-06','LN',NULL,'FI',100,200,7,NULL,2.0000,NULL,NULL,'1',NULL)
+                        """);
+            }
+
+            assertThatThrownBy(() -> reader(provider(postgres), 10, 1).read(request()))
                     .isInstanceOf(AccountingReadLimitExceededException.class);
         }
     }
