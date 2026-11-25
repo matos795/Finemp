@@ -328,7 +328,12 @@ test("the monthly DRE only places backend totals and never computes them", async
   const dre = (groups, until = "2026-09-30") => ({
     unclassifiedAccountCount: 0,
     classifiedTotal: "0.0000",
-    coverage: [{ accountingSourceId: "s1", syncedStartDate: "2026-01-01", syncedEndDate: until }],
+    coverage: [{
+      accountingSourceId: "s1",
+      importedFrom: "2026-01-01",
+      importedTo: until,
+      intervals: [{ importedFrom: "2026-01-01", importedTo: until }],
+    }],
     groups,
   })
   const ebitda = (revenue, energy) => ({
@@ -348,19 +353,17 @@ test("the monthly DRE only places backend totals and never computes them", async
   assert.deepEqual(rows[0].values, ["999.0000", null, "999.0000"])
   assert.deepEqual(rows[4].values, ["-2.0000", null, null])
   assert.equal(dreCoverageUntil(dre([])), "2026-09-30")
-  assert.equal(dreCoverageUntil({ coverage: [{ syncedEndDate: null }] }), null)
+  assert.equal(dreCoverageUntil({ coverage: [{ importedTo: null, intervals: [] }] }), null)
   assert.deepEqual(trailingMonths("2026-02", 3), ["2025-12", "2026-01", "2026-02"])
 })
 
-test("latest-sync coverage only warns about later months and never masks earlier history", async () => {
-  const { monthAfterLatestSync } = await import("../src/features/accounting-area/lib/dre-matrix.ts")
+test("imported coverage only warns beyond the latest known end and never masks totals", async () => {
+  const { monthAfterImportedCoverage } = await import("../src/features/accounting-area/lib/dre-matrix.ts")
 
-  // Coverage is the latest run per source, not cumulative: August imported by an
-  // earlier run stays visible even when the latest run covered only September.
-  assert.equal(monthAfterLatestSync("2026-08", "2026-09-30"), false)
-  assert.equal(monthAfterLatestSync("2026-09", "2026-09-30"), false)
-  assert.equal(monthAfterLatestSync("2026-10", "2026-09-30"), true)
-  assert.equal(monthAfterLatestSync("2026-10", null), false, "unknown coverage is not claimed")
+  assert.equal(monthAfterImportedCoverage("2026-08", "2026-09-30"), false)
+  assert.equal(monthAfterImportedCoverage("2026-09", "2026-09-30"), false)
+  assert.equal(monthAfterImportedCoverage("2026-10", "2026-09-30"), true)
+  assert.equal(monthAfterImportedCoverage("2026-10", null), false, "unknown coverage is not claimed")
 })
 
 test("a new succeeded run changes the sync signature so data queries refresh", async () => {
