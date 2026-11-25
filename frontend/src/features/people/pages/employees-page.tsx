@@ -11,8 +11,8 @@ import { useCompanyAccess } from "../../companies/company-access-context"
 import { listAllResultCenters } from "../../result-centers/api/result-center-api"
 import {
     createEmployee,
+    listAllJobPositions,
     listEmployees,
-    listJobPositions,
     updateEmployee,
 } from "../api/people-api"
 import {
@@ -69,8 +69,7 @@ function EmployeesCompanyPage() {
 
     const positions = useQuery({
         queryKey: ["job-positions", companyId, "options"] as const,
-        queryFn: ({ signal }) =>
-            listJobPositions(companyId!, { search: "", active: "" }, 0, signal, 100),
+        queryFn: () => listAllJobPositions(companyId!, ""),
         enabled: Boolean(companyId),
         retry: false,
     })
@@ -92,7 +91,7 @@ function EmployeesCompanyPage() {
     }, [employees.data?.totalPages, page, setPage])
 
     const items = employees.data?.items ?? []
-    const positionItems = positions.data?.items ?? []
+    const positionItems = positions.data ?? []
 
     return (
         <>
@@ -291,8 +290,7 @@ function EmployeeDialog({
 
     const positions = useQuery({
         queryKey: ["job-positions", companyId, "dialog-options"] as const,
-        queryFn: ({ signal }) =>
-            listJobPositions(companyId, { search: "", active: "true" }, 0, signal, 100),
+        queryFn: () => listAllJobPositions(companyId!, "true"),
         retry: false,
     })
 
@@ -345,7 +343,7 @@ function EmployeeDialog({
     })
 
     // Cargo inativo continua aparecendo para quem já o tem.
-    const positionItems = positions.data?.items ?? []
+    const positionItems = positions.data ?? []
     const keepsCurrentPosition = employee?.jobPositionId
         && !positionItems.some((position) => position.id === employee.jobPositionId)
     const centerItems = centers.data?.filter((center) => center.active || center.id === employee?.resultCenterId) ?? []

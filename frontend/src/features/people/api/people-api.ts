@@ -33,6 +33,21 @@ export function listJobPositions(
     )
 }
 
+/** Opções de cargo para seletores: percorre todas as páginas (máx. 100 por página). */
+export async function listAllJobPositions(
+    companyId: string,
+    active: JobPositionFilter["active"],
+): Promise<JobPosition[]> {
+    const filter: JobPositionFilter = { search: "", active }
+    const first = await listJobPositions(companyId, filter, 0, undefined, 100)
+    const items = [...first.items]
+    for (let page = 1; page < first.totalPages; page += 1) {
+        const next = await listJobPositions(companyId, filter, page, undefined, 100)
+        items.push(...next.items)
+    }
+    return items
+}
+
 export function createJobPosition(companyId: string, values: JobPositionValues): Promise<JobPosition> {
     return apiRequest<JobPosition>(companyPath(companyId, "job-positions"), {
         method: "POST",

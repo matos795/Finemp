@@ -129,3 +129,24 @@ test("people pages use the shared shell patterns and guard writes by company and
     assert.match(source, /invalidateQueries/)
   }
 })
+
+test("position options load every page, not only the first", async () => {
+  const { listAllJobPositions } = await import("../src/features/people/api/people-api.ts")
+  const calls = []
+  globalThis.fetch = async (path) => {
+    calls.push(String(path))
+    const page = Number(new URL(String(path), "http://x").searchParams.get("page"))
+    return Response.json({
+      items: [{ id: `position-${page}`, title: `Cargo ${page}`, description: null, active: true, version: 0 }],
+      page, size: 100, totalItems: 3, totalPages: 3,
+    })
+  }
+
+  const items = await listAllJobPositions("company-1", "true")
+
+  assert.deepEqual(items.map((item) => item.id), ["position-0", "position-1", "position-2"])
+  assert.ok(calls.every((call) => call.includes("size=100") && call.includes("active=true")))
+  const source = readFileSync(new URL("../src/features/people/pages/employees-page.tsx", import.meta.url), "utf8")
+  assert.doesNotMatch(source, /listJobPositions\(/)
+  assert.match(source, /listAllJobPositions\(companyId!?, "true"\)/)
+})
