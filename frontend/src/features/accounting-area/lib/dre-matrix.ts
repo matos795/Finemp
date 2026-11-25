@@ -84,13 +84,13 @@ export function buildDreMatrix(months: (AccountingDre | null)[]): DreMatrixRow[]
     return sorted
 }
 
-/** Maior data sincronizada informada pela própria DRE; null quando nenhuma fonte tem base. */
+/** Maior data importada informada pela própria DRE; null quando nenhuma fonte tem cobertura factual. */
 export function dreCoverageUntil(dre: AccountingDre | null | undefined): string | null {
     let latest: string | null = null
 
     for (const item of dre?.coverage ?? []) {
-        if (item.syncedEndDate && (latest === null || item.syncedEndDate > latest)) {
-            latest = item.syncedEndDate
+        if (item.importedTo && (latest === null || item.importedTo > latest)) {
+            latest = item.importedTo
         }
     }
 
@@ -98,11 +98,11 @@ export function dreCoverageUntil(dre: AccountingDre | null | undefined): string 
 }
 
 /**
- * Competência "AAAA-MM" posterior ao fim da última sincronização concluída.
- * A cobertura da DRE é a da última execução de cada fonte, não cumulativa:
- * serve só para avisar, nunca para esconder totais calculados pelo backend.
+ * Competência "AAAA-MM" posterior ao maior fim de cobertura importada conhecido.
+ * Intervalos e lacunas continuam disponíveis no contrato; este helper serve só
+ * para o aviso simples do pré-fechamento e nunca mascara totais do backend.
  */
-export function monthAfterLatestSync(month: string, latestEnd: string | null): boolean {
+export function monthAfterImportedCoverage(month: string, latestEnd: string | null): boolean {
     return latestEnd !== null && `${month}-01` > latestEnd
 }
 

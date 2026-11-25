@@ -4,7 +4,7 @@ import { useAccountingContext } from "../accounting-context"
 import { getAccountingDre, type AccountingDre } from "../api/accounting-data-api"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { lastDayOf, monthLabel } from "../lib/accounting-period"
-import { buildDreMatrix, dreCoverageUntil, monthAfterLatestSync, trailingMonths } from "../lib/dre-matrix"
+import { buildDreMatrix, dreCoverageUntil, monthAfterImportedCoverage, trailingMonths } from "../lib/dre-matrix"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
 import { accountingQueryKey } from "../lib/query-keys"
 import { InfoButton } from "../components/accounting-info"
@@ -69,8 +69,8 @@ function DrePanel({ competence }: { competence: string }) {
         const data: (AccountingDre | null)[] = results.map((result) => result.data ?? null)
         const coveredUntil = data.map(dreCoverageUntil).find((value) => value !== null) ?? null
         // Falha de cálculo nunca vira zero: a coluna fica "—" e o motivo aparece no aviso.
-        // Totais calculados pelo backend sempre aparecem: a cobertura informada é só a da
-        // última sincronização de cada fonte e não prova ausência de histórico importado.
+        // Totais calculados pelo backend sempre aparecem: a cobertura é factual e cumulativa,
+        // mas o aviso simples abaixo olha apenas o maior fim conhecido; lacunas ficam no contrato.
         const states: CellState[] = months.map((_, index) => (results[index].isError ? "failed" : "ok"))
         const rows = buildDreMatrix(data)
         const current = data[MONTHS - 1]
@@ -87,9 +87,9 @@ function DrePanel({ competence }: { competence: string }) {
                         ))}
                     </div>
                 )}
-                {monthAfterLatestSync(competence, coveredUntil) && (
+                {monthAfterImportedCoverage(competence, coveredUntil) && (
                     <div className="warnbar" role="status">
-                        A competência {monthLabel(competence)} é posterior à última sincronização concluída (até{" "}
+                        A competência {monthLabel(competence)} é posterior ao fim da base contábil importada (até{" "}
                         {monthLabel(coveredUntil as string)}); os valores podem estar incompletos. Lançamentos preparados
                         ainda não existem no FINEMP.
                     </div>
@@ -156,7 +156,7 @@ function DrePanel({ competence }: { competence: string }) {
                 DRE de pré-fechamento
                 <InfoButton title="DRE de pré-fechamento">
                     <p className="info-p">
-                        Totais calculados pelo FINEMP sobre a base sincronizada do Questor, mês a mês, por linha da DRE
+                        Totais calculados pelo FINEMP sobre a base contábil importada, mês a mês, por linha da DRE
                         das contas classificadas no De-Para. Nenhum valor é recalculado na tela.
                     </p>
                     <p className="info-p">
