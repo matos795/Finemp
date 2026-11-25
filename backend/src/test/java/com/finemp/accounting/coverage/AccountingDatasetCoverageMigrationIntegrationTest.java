@@ -63,7 +63,7 @@ class AccountingDatasetCoverageMigrationIntegrationTest {
                     postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
                  var query = connection.prepareStatement(
                          """
-                         SELECT dataset, imported_from, imported_to
+                         SELECT dataset, establishment_code, imported_from, imported_to, published_at
                          FROM accounting_dataset_coverage
                          WHERE accounting_source_id = ?
                          ORDER BY imported_from, imported_to
@@ -72,11 +72,15 @@ class AccountingDatasetCoverageMigrationIntegrationTest {
                 try (var result = query.executeQuery()) {
                     assertThat(result.next()).isTrue();
                     assertThat(result.getString("dataset")).isEqualTo("MOVEMENTS");
+                    assertThat(result.getString("establishment_code")).isNull();
+                    assertThat(result.getObject("published_at")).isNull();
                     assertThat(result.getObject("imported_from", LocalDate.class)).isEqualTo(LocalDate.of(2026, 1, 1));
                     assertThat(result.getObject("imported_to", LocalDate.class)).isEqualTo(LocalDate.of(2026, 1, 20));
 
                     assertThat(result.next()).isTrue();
                     assertThat(result.getString("dataset")).isEqualTo("MOVEMENTS");
+                    assertThat(result.getString("establishment_code")).isNull();
+                    assertThat(result.getObject("published_at")).isNull();
                     assertThat(result.getObject("imported_from", LocalDate.class)).isEqualTo(LocalDate.of(2026, 2, 1));
                     assertThat(result.getObject("imported_to", LocalDate.class)).isEqualTo(LocalDate.of(2026, 2, 28));
 

@@ -12,4 +12,15 @@ public interface AccountingDatasetCoverageRepository
             findAllByAccountingSourceIdAndDatasetOrderByImportedFromAscImportedToAsc(
                     UUID accountingSourceId,
                     AccountingDataset dataset);
+
+    List<AccountingDatasetCoverage>
+            findAllByAccountingSourceIdAndDatasetAndEstablishmentCodeIsNullOrderByImportedFromAscImportedToAsc(
+                    UUID accountingSourceId,
+                    AccountingDataset dataset);
+
+    List<AccountingDatasetCoverage>
+            findAllByAccountingSourceIdAndDatasetAndEstablishmentCodeOrderByImportedFromAscImportedToAsc(
+                    UUID accountingSourceId,
+                    AccountingDataset dataset,
+                    String establishmentCode);
 }
