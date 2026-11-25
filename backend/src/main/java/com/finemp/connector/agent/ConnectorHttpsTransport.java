@@ -43,9 +43,11 @@ public final class ConnectorHttpsTransport implements AutoCloseable {
     }
     Response exchange(String method, String path, byte[] body) {
         boolean get = "GET".equals(method) && ("/session".equals(path) || path != null && path.matches("/work/[0-9a-f-]{36}/result"));
-        boolean post = "POST".equals(method) && ("/work/claim".equals(path) || path != null && path.matches("/work/[0-9a-f-]{36}/(heartbeat|complete|fail)"));
+        boolean post = "POST".equals(method) && ("/work/claim".equals(path) || path != null && path.matches("/work/[0-9a-f-]{36}/(heartbeat|complete|complete-v2|fail)"));
         if (!get && !post || get && body != null) throw error(CONFIGURATION);
-        int limit = path.endsWith("/complete") ? 8 * 1024 * 1024 : 2048;
+        int limit = path.endsWith("/complete") || path.endsWith("/complete-v2")
+                ? 8 * 1024 * 1024
+                : 2048;
         if (body != null && body.length > limit) throw error(RESOURCE_LIMIT);
         String secret;
         try { secret = credential.get(); } catch (RuntimeException unavailable) { throw error(CREDENTIAL); }

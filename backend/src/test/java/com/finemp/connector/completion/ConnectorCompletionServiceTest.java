@@ -2,6 +2,7 @@ package com.finemp.connector.completion;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.finemp.accounting.canonical.v2.CanonicalAccountingBatch;
 import com.finemp.accounting.reading.*;
 import com.finemp.accounting.source.AccountingSourceType;
 import com.finemp.accounting.sync.*;
@@ -17,9 +18,11 @@ import org.junit.jupiter.api.*;
 class ConnectorCompletionServiceTest {
     private final ConnectorCompletionContext context = mock(ConnectorCompletionContext.class);
     private final ConnectorBatchDecoder decoder = mock(ConnectorBatchDecoder.class);
+    private final ConnectorCanonicalV2Decoder v2Decoder = mock(ConnectorCanonicalV2Decoder.class);
     private final AccountingPublicationTransaction publication = mock(AccountingPublicationTransaction.class);
     private final SyncExecutionLifecycle lifecycle = mock(SyncExecutionLifecycle.class);
-    private final ConnectorCompletionService service = new ConnectorCompletionService(context, decoder, publication, lifecycle);
+    private final ConnectorCompletionService service =
+            new ConnectorCompletionService(context, decoder, v2Decoder, publication, lifecycle);
     private final ConnectorIdentity identity = new ConnectorIdentity(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0);
     private final UUID attemptId = UUID.randomUUID(), runId = UUID.randomUUID();
     private final InputStream input = new ByteArrayInputStream(new byte[0]);
@@ -28,9 +31,11 @@ class ConnectorCompletionServiceTest {
                     "synthetic", "47474747000147", LocalDate.of(2026,7,1), LocalDate.of(2026,7,31)),
             new SyncClaimAgent(identity.credentialId(), identity.version()));
     private final ConnectorBatch batch = new ConnectorBatch(new ExternalCompanyIdentity("synthetic", "47474747000147"), List.of());
+    private final CanonicalAccountingBatch v2Batch = mock(CanonicalAccountingBatch.class);
     @BeforeEach void prepare() {
         when(context.currentClaim(identity, attemptId)).thenReturn(claim);
         when(decoder.decode(input)).thenReturn(batch);
+        when(v2Decoder.decode(input)).thenReturn(v2Batch);
         when(context.result(identity, attemptId)).thenReturn(receipt(SyncRunStatus.SUCCEEDED, null));
         when(lifecycle.failIfCurrent(eq(claim), any())).thenReturn(SyncFailureDisposition.TERMINAL_FAILURE);
     }
@@ -41,6 +46,17 @@ class ConnectorCompletionServiceTest {
         order.verify(publication).publishConnector(claim, batch.observedIdentity(), batch.movements());
         order.verify(context).result(identity, attemptId); verifyNoInteractions(lifecycle);
     }
+    @Test void shouldDecodeAndPublishCanonicalV2ThroughTheDedicatedPath() {
+        assertThat(service.completeV2(identity, attemptId, input).httpStatus()).isEqualTo(200);
+        var order = inOrder(context, v2Decoder, publication);
+        order.verify(context).currentClaim(identity, attemptId);
+        order.verify(v2Decoder).decode(input);
+        order.verify(publication).publishConnectorV2(claim, v2Batch);
+        order.verify(context).result(identity, attemptId);
+        verify(decoder, never()).decode(any());
+        verifyNoInteractions(lifecycle);
+    }
+
     @Test void shouldLeaveTheRunUntouchedWhenTheEnvelopeCannotBeParsed() {
         when(decoder.decode(input)).thenThrow(new InvalidConnectorBatchException());
         assertThatThrownBy(() -> service.complete(identity, attemptId, input)).isInstanceOf(InvalidConnectorBatchException.class);

@@ -46,7 +46,7 @@ public final class FinempConnectorClient {
     }
     ConnectorWorkResult completePreparedV2(ConnectorWorkResponse work, byte[] body) {
         validate(work);
-        return submit(work, "complete", body);
+        return submit(work, "complete-v2", body);
     }
     public ConnectorWorkResult fail(ConnectorWorkResponse work, SyncFailureCode code) {
         validate(work);
@@ -64,7 +64,8 @@ public final class FinempConnectorClient {
         if(response.status()==409 || response.status()>=500) return result(work);
         if(response.status()!=200 && response.status()!=202 && response.status()!=422) expect(response,200);
         var receipt=codec.result(response.body(),work);
-        if (operation.equals("complete") && response.status()==200 && receipt.attemptStatus()!=SyncAttemptStatus.SUCCEEDED
+        if ((operation.equals("complete") || operation.equals("complete-v2"))
+                && response.status()==200 && receipt.attemptStatus()!=SyncAttemptStatus.SUCCEEDED
                 || response.status()!=200 && receipt.attemptStatus()!=SyncAttemptStatus.FAILED && receipt.attemptStatus()!=SyncAttemptStatus.EXPIRED)
             throw new ConnectorClientException(PROTOCOL);
         return receipt;

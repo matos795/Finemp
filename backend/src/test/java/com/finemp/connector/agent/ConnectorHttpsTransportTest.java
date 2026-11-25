@@ -64,6 +64,21 @@ class ConnectorHttpsTransportTest {
         assertThatThrownBy(() -> transport(client, Duration.ofSeconds(2)).exchange("GET", "/session", null))
                 .hasMessage("Connector client: TRANSPORT").hasNoCause();
     }
+    @Test void shouldAllowV2CompletionWithTheSameBoundedBatchBudget() {
+        var client = client();
+        respond(client, 200, Map.of("content-type", List.of("application/json")), "{}".getBytes());
+        var attempt = UUID.randomUUID();
+        byte[] body = new byte[4096];
+
+        transport(client, Duration.ofSeconds(2))
+                .exchange("POST", "/work/" + attempt + "/complete-v2", body);
+
+        var request = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(client).sendAsync(request.capture(), any());
+        assertThat(request.getValue().uri()).isEqualTo(
+                URI.create("https://connector.invalid/api/connector/v1/work/" + attempt + "/complete-v2"));
+    }
+
     @Test void shouldBoundOutboundBodyAndEndpointBeforeReadingTheCredential() {
         var client = client(); var supplier = mock(java.util.function.Supplier.class);
         var transport = new ConnectorHttpsTransport(origin, supplier, Duration.ofSeconds(2), client);

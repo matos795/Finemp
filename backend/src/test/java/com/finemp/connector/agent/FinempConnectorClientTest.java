@@ -2,6 +2,7 @@ package com.finemp.connector.agent;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.finemp.accounting.canonical.v2.*;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
 import com.finemp.accounting.movement.AccountingMovementSide;
 import com.finemp.accounting.reading.*;
@@ -71,6 +72,23 @@ class FinempConnectorClientTest {
         verify(transport,times(1)).exchange(eq("POST"),eq(path("complete")),any());
         verify(transport).exchange("GET",path("result"),null);
     }
+    @Test void shouldSubmitCanonicalV2ToDedicatedEndpointAndResolveUncertainResponseThroughReceipt() {
+        var transport=mock(ConnectorHttpsTransport.class);
+        var client=new FinempConnectorClient(transport,source,25000);
+        var v2Work=workV2();
+        var batch=v2Batch(v2Work);
+        when(transport.exchange(eq("POST"),eq(path("complete-v2")),any()))
+                .thenThrow(new ConnectorClientException(ConnectorClientException.Kind.TIMEOUT));
+        when(transport.exchange("GET",path("result"),null))
+                .thenReturn(response(200,receipt(attempt,"SUCCEEDED","SUCCEEDED","2","2","0")));
+
+        assertThat(client.completeV2(v2Work,batch).attemptStatus()).isEqualTo(SyncAttemptStatus.SUCCEEDED);
+
+        verify(transport,times(1)).exchange(eq("POST"),eq(path("complete-v2")),any());
+        verify(transport).exchange("GET",path("result"),null);
+        verify(transport,never()).exchange(eq("POST"),eq(path("complete")),any());
+    }
+
     @Test void shouldDecodeWorkAndRefuseUnknownModeOrMismatchedSourceContext() {
         var mapper=tools.jackson.databind.json.JsonMapper.builder().build();
         byte[] bytes=mapper.writeValueAsBytes(work);
@@ -127,6 +145,46 @@ class FinempConnectorClientTest {
         var result=codec.lease(lease.getBytes(StandardCharsets.UTF_8),attempt);
         assertThat(Duration.between(result.serverTime(),result.leaseExpiresAt())).isEqualTo(Duration.ofSeconds(300));
         assertThatThrownBy(()->codec.lease(lease.getBytes(StandardCharsets.UTF_8),UUID.randomUUID())).isInstanceOf(ConnectorClientException.class);
+    }
+    private ConnectorWorkResponse workV2() {
+        return new ConnectorWorkResponse(
+                work.attemptId(),
+                work.runId(),
+                work.attemptNumber(),
+                work.mode(),
+                work.leaseExpiresAt(),
+                work.serverTime(),
+                work.context(),
+                Set.of(1,2),
+                Set.of(AccountingDataset.CHART,AccountingDataset.MOVEMENTS));
+    }
+    private CanonicalAccountingBatch v2Batch(ConnectorWorkResponse item) {
+        var account=new CanonicalAccountingAccount(
+                "synthetic-account",
+                "1.1",
+                "Synthetic account",
+                new SourceAccountCodes("A","C","D","B","S",null,null));
+        return new CanonicalAccountingBatch(
+                CanonicalAccountingBatch.VERSION,
+                new ExternalCompanyIdentity("57",item.context().expectedCompanyCnpj()),
+                new SourceCapabilities(
+                        Set.of(AccountingDataset.CHART,AccountingDataset.MOVEMENTS),
+                        AmountSignPolicy.NON_NEGATIVE_WITH_SIDE,
+                        true),
+                new CanonicalChartSnapshot(now,List.of(account)),
+                new CanonicalEntriesDataset(
+                        item.context().startDate(),
+                        item.context().endDate(),
+                        List.of(new CanonicalAccountingEntry(
+                                "entry-v2",
+                                LocalDate.of(2026,7,15),
+                                "synthetic-account",
+                                null,
+                                new BigDecimal("10.0000"),
+                                "1",
+                                "Synthetic")),
+                        List.of()),
+                null,null,null,null,null);
     }
     private ImportedAccountingMovement row(String key,BigDecimal amount,String accountKey,String history) {
         return new ImportedAccountingMovement(key,LocalDate.of(2026,7,15),"synthetic-account",accountKey,"Synthetic account",AccountingMovementSide.DEBIT,amount,history);
