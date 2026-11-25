@@ -31,9 +31,13 @@ class FirebirdQuestorReadLimitTest {
         when(statement.executeQuery()).thenReturn(result); when(result.next()).thenReturn(true, overflow, false);
         when(result.getString("SOURCE_ENTRY_KEY")).thenReturn("synthetic");
         when(result.getDate("ACCOUNTING_DATE")).thenReturn(Date.valueOf("2026-07-01"));
-        when(result.getString("EXTERNAL_ACCOUNT_ID")).thenReturn("synthetic-account");
-        when(result.getString("ACCOUNT_KEY")).thenReturn("synthetic-key"); when(result.getString("ACCOUNT_DESCRIPTION")).thenReturn("Synthetic");
-        when(result.getString("SIDE")).thenReturn("DEBIT"); when(result.getBigDecimal("AMOUNT")).thenReturn(new BigDecimal("1.2500"));
+        when(result.getString("CREDIT_SOURCE_ACCOUNT_ID")).thenReturn(null);
+        when(result.getString("DEBIT_SOURCE_ACCOUNT_ID")).thenReturn("synthetic-account");
+        when(result.getString("CREDIT_EXTERNAL_ACCOUNT_ID")).thenReturn(null);
+        when(result.getString("DEBIT_EXTERNAL_ACCOUNT_ID")).thenReturn("synthetic-account");
+        when(result.getString("DEBIT_ACCOUNT_KEY")).thenReturn("synthetic-key");
+        when(result.getString("DEBIT_ACCOUNT_DESCRIPTION")).thenReturn("Synthetic");
+        when(result.getBigDecimal("AMOUNT")).thenReturn(new BigDecimal("1.2500"));
         when(result.getString("HISTORY")).thenReturn("Synthetic");
         return new Fixture(provider, connection, statement, result);
     }

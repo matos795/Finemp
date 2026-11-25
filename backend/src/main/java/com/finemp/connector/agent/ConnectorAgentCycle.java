@@ -62,6 +62,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
             try {snapshot=read(work,keeper);}
             catch(AccountingIdentityConfigurationException invalidLocalMapping) {halted=true;return Outcome.HALTED;}
             catch(AccountingIdentityMismatchException mismatch) {return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);}
+            catch(AccountingUnexpectedSourceDataException invalidSourceData) {return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);}
             catch(AccountingReadLimitExceededException | ReadBudgetExceeded exhausted) {return report(work,keeper,SyncFailureCode.RESOURCE_LIMIT);}
             catch(CancellationException lostLease) {return lostLease();}
             catch(RuntimeException unavailable) {return report(work,keeper,SyncFailureCode.READ_FAILED);}
@@ -96,6 +97,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                 catch(ExecutionException failed) {
                     if(failed.getCause() instanceof AccountingIdentityConfigurationException) throw new AccountingIdentityConfigurationException();
                     if(failed.getCause() instanceof AccountingIdentityMismatchException) throw new AccountingIdentityMismatchException();
+                    if(failed.getCause() instanceof AccountingUnexpectedSourceDataException) throw new AccountingUnexpectedSourceDataException();
                     if(failed.getCause() instanceof AccountingReadLimitExceededException) throw new AccountingReadLimitExceededException();
                     throw new ReadUnavailable(); // Discard all private driver causes, including errors.
                 }
