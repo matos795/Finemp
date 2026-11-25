@@ -34,12 +34,38 @@ $installerRequired = @(
     'Formato não suportado no connector.properties. Use somente chave=valor nesta distribuição Windows.',
     '-ExecutionPolicy Bypass',
     'version "21',
-    'Register-ScheduledTask'
+    'Register-ScheduledTask',
+    'Copy-Item -LiteralPath $jar -Destination $runtimeJarPath -Force',
+    'Copy-Item -LiteralPath $config -Destination $runtimePropertiesPath -Force',
+    'connectorJarPath = $runtimeJarPath',
+    'connectorPropertiesPath = $runtimePropertiesPath',
+    'Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue',
+    'Protect-DirectoryForCurrentAccount $RuntimeRoot $currentIdentity',
+    'Protect-FileForCurrentAccount $runnerPath $currentIdentity',
+    '*S-1-5-32-544:(F)'
 )
 foreach ($needle in $installerRequired) {
     if (-not $installer.Contains($needle)) {
         throw "Installer contract missing: $needle"
     }
+}
+
+
+$distributionCheck = 'Distribuição incompleta: scripts de runtime Windows ausentes.'
+$stopExistingTask = 'Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue'
+if ($installer.IndexOf($distributionCheck, [System.StringComparison]::Ordinal) -lt 0) {
+    throw "Installer contract missing distribution completeness check."
+}
+if ($installer.IndexOf($distributionCheck, [System.StringComparison]::Ordinal) -gt
+    $installer.IndexOf($stopExistingTask, [System.StringComparison]::Ordinal)) {
+    throw "Installer must validate the complete distribution before inspecting/stopping an installed task."
+}
+
+$validateConfig = '& $java -jar $jar --validate $config'
+if ($installer.IndexOf($validateConfig, [System.StringComparison]::Ordinal) -lt 0 -or
+    $installer.IndexOf($validateConfig, [System.StringComparison]::Ordinal) -gt
+    $installer.IndexOf($stopExistingTask, [System.StringComparison]::Ordinal)) {
+    throw "Installer must validate the new connector configuration before inspecting/stopping an installed task."
 }
 
 if ($installer -match '(?i)sc\.exe') {

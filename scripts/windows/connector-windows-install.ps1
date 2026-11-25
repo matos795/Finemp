@@ -48,9 +48,16 @@ function Get-ReferencedSecretNames([string]$PropertiesPath) {
 }
 
 function Protect-FileForCurrentAccount([string]$Path, [string]$Identity) {
-    & icacls.exe $Path "/inheritance:r" "/grant:r" "${Identity}:(F)" "/grant:r" "SYSTEM:(F)" | Out-Null
+    & icacls.exe $Path "/inheritance:r" "/grant:r" "${Identity}:(F)" "/grant:r" "SYSTEM:(F)" "/grant:r" "*S-1-5-32-544:(F)" | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Não foi possível proteger o arquivo local do Connector."
+    }
+}
+
+function Protect-DirectoryForCurrentAccount([string]$Path, [string]$Identity) {
+    & icacls.exe $Path "/inheritance:r" "/grant:r" "${Identity}:(OI)(CI)(F)" "/grant:r" "SYSTEM:(OI)(CI)(F)" "/grant:r" "*S-1-5-32-544:(OI)(CI)(F)" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Não foi possível proteger o diretório local do Connector."
     }
 }
 
@@ -61,6 +68,13 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
 $java = Resolve-FullPath $JavaExePath
 $jar = Resolve-FullPath $ConnectorJarPath
 $config = Resolve-FullPath $ConfigPath
+
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$runnerSource = Join-Path $scriptRoot "connector-windows-run.ps1"
+$controlSource = Join-Path $scriptRoot "connector-windows-control.ps1"
+if (-not (Test-Path -LiteralPath $runnerSource) -or -not (Test-Path -LiteralPath $controlSource)) {
+    throw "Distribuição incompleta: scripts de runtime Windows ausentes."
+}
 
 $javaProbe = New-Object System.Diagnostics.ProcessStartInfo
 $javaProbe.FileName = $java
@@ -113,20 +127,44 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
+Protect-DirectoryForCurrentAccount $RuntimeRoot $currentIdentity
+
 $logRoot = Join-Path $RuntimeRoot "logs"
 New-Item -ItemType Directory -Force -Path $logRoot | Out-Null
+Protect-DirectoryForCurrentAccount $logRoot $currentIdentity
 
-$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$runnerSource = Join-Path $scriptRoot "connector-windows-run.ps1"
-$controlSource = Join-Path $scriptRoot "connector-windows-control.ps1"
-if (-not (Test-Path -LiteralPath $runnerSource) -or -not (Test-Path -LiteralPath $controlSource)) {
-    throw "Distribuição incompleta: scripts de runtime Windows ausentes."
+$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+if ($null -ne $existingTask -and $existingTask.State -eq "Running") {
+    Stop-ScheduledTask -TaskName $TaskName
+    for ($attempt = 0; $attempt -lt 30; $attempt++) {
+        Start-Sleep -Milliseconds 500
+        $existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        if ($null -eq $existingTask -or $existingTask.State -ne "Running") { break }
+    }
+    if ($null -ne $existingTask -and $existingTask.State -eq "Running") {
+        throw "O runtime atual do FINEMP Connector não encerrou com segurança."
+    }
 }
+
+$runtimeJarPath = Join-Path $RuntimeRoot "finemp-connector.jar"
+$runtimePropertiesPath = Join-Path $RuntimeRoot "connector.properties"
+
+if (-not [string]::Equals($jar, $runtimeJarPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Copy-Item -LiteralPath $jar -Destination $runtimeJarPath -Force
+}
+if (-not [string]::Equals($config, $runtimePropertiesPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Copy-Item -LiteralPath $config -Destination $runtimePropertiesPath -Force
+}
+Protect-FileForCurrentAccount $runtimeJarPath $currentIdentity
+Protect-FileForCurrentAccount $runtimePropertiesPath $currentIdentity
+
 
 $runnerPath = Join-Path $RuntimeRoot "connector-windows-run.ps1"
 $controlPath = Join-Path $RuntimeRoot "connector-windows-control.ps1"
 Copy-Item -LiteralPath $runnerSource -Destination $runnerPath -Force
 Copy-Item -LiteralPath $controlSource -Destination $controlPath -Force
+Protect-FileForCurrentAccount $runnerPath $currentIdentity
+Protect-FileForCurrentAccount $controlPath $currentIdentity
 
 $secretPath = Join-Path $RuntimeRoot "connector-secrets.clixml"
 $sealedSecrets | Export-Clixml -LiteralPath $secretPath -Force
@@ -136,8 +174,8 @@ $runtimeConfigPath = Join-Path $RuntimeRoot "connector-windows-runtime.json"
 $runtimeConfig = [ordered]@{
     version = 1
     javaExePath = $java
-    connectorJarPath = $jar
-    connectorPropertiesPath = $config
+    connectorJarPath = $runtimeJarPath
+    connectorPropertiesPath = $runtimePropertiesPath
     secretsPath = $secretPath
     logDirectory = $logRoot
 }
