@@ -48,6 +48,16 @@ class FirebirdQuestorCanonicalV2ReaderTest {
                             100,200,7,'Synthetic history',12.3400,
                             'origin-1','tx-1','1',NULL)
                         """);
+                sql.executeUpdate("""
+                        INSERT INTO SALDOCTB VALUES
+                        (57,1,100,DATE '2026-07-05','LN',12.3400,0.0000),
+                        (57,1,200,DATE '2026-07-05','LN',0.0000,12.3400)
+                        """);
+                sql.executeUpdate("""
+                        INSERT INTO SALDOCTBMENSAL VALUES
+                        (57,1,100,DATE '2026-07-01','LN',12.3400,0.0000),
+                        (57,1,200,DATE '2026-07-01','LN',0.0000,12.3400)
+                        """);
             }
 
             var provider = mock(QuestorConnectionProvider.class);
@@ -61,7 +71,9 @@ class FirebirdQuestorCanonicalV2ReaderTest {
                 String sql = invocation.getArgument(0);
                 if (sql.equals(mapping.sql())
                         || sql.contains("FROM PLANOESPEC")
-                        || sql.contains("FROM LCTOCTB")) {
+                        || sql.contains("FROM LCTOCTB")
+                        || sql.contains("FROM SALDOCTB")
+                        || sql.contains("FROM SALDOCTBMENSAL")) {
                     try (var state = connection.createStatement();
                          var result = state.executeQuery(
                                  "SELECT current_setting('transaction_read_only'), current_setting('transaction_isolation')")) {
@@ -80,7 +92,11 @@ class FirebirdQuestorCanonicalV2ReaderTest {
             assertThat(batch.contractVersion()).isEqualTo(2);
             assertThat(batch.observedIdentity().externalReference()).isEqualTo("57");
             assertThat(batch.capabilities().datasets())
-                    .isEqualTo(Set.of(AccountingDataset.CHART, AccountingDataset.MOVEMENTS));
+                    .isEqualTo(Set.of(
+                            AccountingDataset.CHART,
+                            AccountingDataset.MOVEMENTS,
+                            AccountingDataset.DAILY_TOTALS,
+                            AccountingDataset.MONTHLY_TOTALS));
             assertThat(batch.capabilities().amountSignPolicy())
                     .isEqualTo(AmountSignPolicy.NON_NEGATIVE_WITH_SIDE);
             assertThat(batch.capabilities().entryKeyScopedBySource()).isTrue();
@@ -118,6 +134,27 @@ class FirebirdQuestorCanonicalV2ReaderTest {
                 assertThat(metadata.transactionKey()).isEqualTo("tx-1");
                 assertThat(metadata.originEstablishmentCode()).isNull();
             });
+
+            assertThat(batch.dailyTotals()).hasSize(2);
+            assertThat(batch.dailyTotals())
+                    .anySatisfy(total -> {
+                        assertThat(total.establishmentCode()).isEqualTo("1");
+                        assertThat(total.sourceAccountId()).isEqualTo("100");
+                        assertThat(total.day()).isEqualTo(LocalDate.of(2026, 7, 5));
+                        assertThat(total.entryTypeCode()).isEqualTo("LN");
+                        assertThat(total.debitTotal()).isEqualByComparingTo("12.3400");
+                        assertThat(total.creditTotal()).isEqualByComparingTo("0.0000");
+                    });
+            assertThat(batch.monthlyTotals()).hasSize(2);
+            assertThat(batch.monthlyTotals())
+                    .anySatisfy(total -> {
+                        assertThat(total.establishmentCode()).isEqualTo("1");
+                        assertThat(total.sourceAccountId()).isEqualTo("200");
+                        assertThat(total.month()).isEqualTo(java.time.YearMonth.of(2026, 7));
+                        assertThat(total.entryTypeCode()).isEqualTo("LN");
+                        assertThat(total.debitTotal()).isEqualByComparingTo("0.0000");
+                        assertThat(total.creditTotal()).isEqualByComparingTo("12.3400");
+                    });
 
             assertThat(checked).hasValue(3);
             verify(provider).openConnection();
@@ -226,6 +263,39 @@ class FirebirdQuestorCanonicalV2ReaderTest {
     }
 
     @Test
+    void shouldEnforceIndependentDailyAndMonthlyTotalsBudgets() throws Exception {
+        try (var postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17"))) {
+            postgres.start();
+            try (var connection = connect(postgres); var sql = connection.createStatement()) {
+                schema(sql);
+                sql.executeUpdate("""
+                        INSERT INTO PLANOESPEC VALUES
+                        (57,100,'1.1','A','2','1','1','1','2',1,NULL),
+                        (57,200,'2.1','B','2','1','1','1','2',1,NULL)
+                        """);
+                sql.executeUpdate("""
+                        INSERT INTO SALDOCTB VALUES
+                        (57,1,100,DATE '2026-07-05','LN',1.0000,0.0000),
+                        (57,1,200,DATE '2026-07-05','LN',0.0000,1.0000)
+                        """);
+                sql.executeUpdate("""
+                        INSERT INTO SALDOCTBMENSAL VALUES
+                        (57,1,100,DATE '2026-07-01','LN',1.0000,0.0000),
+                        (57,1,200,DATE '2026-07-01','LN',0.0000,1.0000)
+                        """);
+            }
+
+            var provider = provider(postgres);
+
+            assertThatThrownBy(() -> reader(provider, 10, 10, 1, 10).read(request()))
+                    .isInstanceOf(AccountingReadLimitExceededException.class);
+
+            assertThatThrownBy(() -> reader(provider(postgres), 10, 10, 10, 1).read(request()))
+                    .isInstanceOf(AccountingReadLimitExceededException.class);
+        }
+    }
+
+    @Test
     void shouldEnforceIndependentChartAndEntryBudgets() throws Exception {
         try (var postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17"))) {
             postgres.start();
@@ -265,6 +335,23 @@ class FirebirdQuestorCanonicalV2ReaderTest {
                 clock,
                 maxChart,
                 maxEntries,
+                30);
+    }
+
+    private FirebirdQuestorCanonicalV2Reader reader(
+            QuestorConnectionProvider provider,
+            int maxChart,
+            int maxEntries,
+            int maxDailyTotals,
+            int maxMonthlyTotals) {
+        return new FirebirdQuestorCanonicalV2Reader(
+                provider,
+                new FirebirdQuestorCompanyIdentityReader(provider, mapping, 30),
+                clock,
+                maxChart,
+                maxEntries,
+                maxDailyTotals,
+                maxMonthlyTotals,
                 30);
     }
 
@@ -343,6 +430,28 @@ class FirebirdQuestorCanonicalV2ReaderTest {
                     ORIGEMDADO VARCHAR(10),
                     CODIGOESTABORI INTEGER,
                     PRIMARY KEY(CODIGOEMPRESA, CHAVELCTOCTB))
+                """);
+
+        sql.execute("""
+                CREATE TABLE SALDOCTB(
+                    CODIGOEMPRESA INTEGER NOT NULL,
+                    CODIGOESTAB INTEGER NOT NULL,
+                    CONTACTB INTEGER NOT NULL,
+                    DATASALDO DATE NOT NULL,
+                    TIPOLANCAMENTO VARCHAR(10) NOT NULL,
+                    VALORDEB NUMERIC(19,4) NOT NULL,
+                    VALORCRED NUMERIC(19,4) NOT NULL)
+                """);
+
+        sql.execute("""
+                CREATE TABLE SALDOCTBMENSAL(
+                    CODIGOEMPRESA INTEGER NOT NULL,
+                    CODIGOESTAB INTEGER NOT NULL,
+                    CONTACTB INTEGER NOT NULL,
+                    DATASALDO DATE NOT NULL,
+                    TIPOLANCAMENTO VARCHAR(10) NOT NULL,
+                    VALORDEB NUMERIC(19,4) NOT NULL,
+                    VALORCRED NUMERIC(19,4) NOT NULL)
                 """);
     }
 }
