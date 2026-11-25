@@ -80,6 +80,7 @@ class ConnectorProtocolEndToEndTest {
             jdbc.update("DELETE FROM sync_runs WHERE accounting_source_id=?",source);
             jdbc.update("DELETE FROM connector_credential_events WHERE credential_id IN (SELECT id FROM connector_credentials WHERE accounting_source_id=?)",source);
             jdbc.update("DELETE FROM connector_credentials WHERE accounting_source_id=?",source);
+            jdbc.update("DELETE FROM accounting_dataset_coverage WHERE accounting_source_id=?",source);
             jdbc.update("DELETE FROM accounting_movements WHERE accounting_source_id=?",source);
             jdbc.update("DELETE FROM accounting_accounts WHERE accounting_source_id=?",source);
             jdbc.update("DELETE FROM accounting_sources WHERE id=?",source);

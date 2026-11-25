@@ -80,6 +80,7 @@ class ConnectorWorkIntegrationTest {
     }
     @AfterEach void cleanOnlyOwnSyntheticFixtures() {
         for (var source : ownSources) {
+            jdbc.update("DELETE FROM accounting_dataset_coverage WHERE accounting_source_id = ?", source);
             jdbc.update("DELETE FROM sync_run_events WHERE sync_run_id IN (SELECT id FROM sync_runs WHERE accounting_source_id = ?)", source);
             jdbc.update("DELETE FROM sync_runs WHERE accounting_source_id = ?", source);
             jdbc.update("DELETE FROM connector_credential_events WHERE credential_id IN (SELECT id FROM connector_credentials WHERE accounting_source_id = ?)", source);

@@ -15,7 +15,7 @@ import java.util.UUID;
  * <p>{@code lines} e {@code unclassifiedAccountCount} são o contrato original. {@code groups}
  * e {@code classifiedTotal} são as agregações autoritativas (#446): o cliente apresenta,
  * não soma. Valores agregados são strings decimais exatas na escala armazenada.
- * {@code coverage} traz só fatos de SyncRun por fonte.
+ * {@code coverage} traz fatos de cobertura contábil importada por fonte e dataset MOVEMENTS.
  */
 public record DreCalculationResult(
         List<DreLine> lines,
@@ -54,8 +54,18 @@ public record DreCalculationResult(
 
     public record DreGroupLine(String ebitdaClassification, String total) { }
 
-    /** Última execução SUCCEEDED da fonte; nulos quando não há. */
-    public record SourceCoverage(UUID accountingSourceId, LocalDate syncedStartDate, LocalDate syncedEndDate) { }
+    /** Cobertura cumulativa importada de MOVEMENTS da fonte; lacunas ficam explícitas em intervals. */
+    public record SourceCoverage(
+            UUID accountingSourceId,
+            LocalDate importedFrom,
+            LocalDate importedTo,
+            List<CoverageInterval> intervals) {
+        public SourceCoverage {
+            intervals = List.copyOf(intervals);
+        }
+    }
+
+    public record CoverageInterval(LocalDate importedFrom, LocalDate importedTo) { }
 
     /** Agrupa preservando a ordem das linhas recebidas. */
     static List<DreGroup> group(List<DreLine> lines) {

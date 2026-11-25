@@ -56,6 +56,7 @@ class SyncRetryIntegrationTest {
     @AfterEach void cleanOnlyOwnSyntheticRows() {
         jdbc.update("DELETE FROM sync_run_events WHERE sync_run_id = ?", runId);
         jdbc.update("DELETE FROM sync_runs WHERE id = ?", runId);
+        jdbc.update("DELETE FROM accounting_dataset_coverage WHERE accounting_source_id = ?", sourceId);
         jdbc.update("DELETE FROM accounting_movements WHERE accounting_source_id = ?", sourceId);
         jdbc.update("DELETE FROM accounting_accounts WHERE accounting_source_id = ?", sourceId);
         jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id = ?", grantId);

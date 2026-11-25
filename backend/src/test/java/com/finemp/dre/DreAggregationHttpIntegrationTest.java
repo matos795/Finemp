@@ -24,17 +24,15 @@ import com.finemp.accounting.classification.DreClassificationRepository;
 import com.finemp.accounting.movement.AccountingMovement;
 import com.finemp.accounting.movement.AccountingMovementRepository;
 import com.finemp.accounting.movement.AccountingMovementSide;
+import com.finemp.accounting.canonical.v2.AccountingDataset;
+import com.finemp.accounting.coverage.AccountingDatasetCoverageService;
 import com.finemp.accounting.source.AccountingSource;
 import com.finemp.accounting.source.AccountingSourceRepository;
 import com.finemp.accounting.source.AccountingSourceType;
-import com.finemp.accounting.sync.SyncRun;
-import com.finemp.accounting.sync.SyncRunMode;
-import com.finemp.accounting.sync.SyncRunRepository;
 import com.finemp.company.Company;
 import com.finemp.company.CompanyRepository;
 import com.finemp.security.UserAccountPrincipal;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -69,7 +67,7 @@ class DreAggregationHttpIntegrationTest {
     @Autowired private DreClassificationRepository catalog;
     @Autowired private AccountingAccountClassificationRepository classifications;
     @Autowired private CompanyAccessGrantRepository grants;
-    @Autowired private SyncRunRepository runs;
+    @Autowired private AccountingDatasetCoverageService coverage;
 
     private Company company;
     private AccountingSource sourceA;
@@ -110,11 +108,16 @@ class DreAggregationHttpIntegrationTest {
         movement(pending, "P1", AccountingMovementSide.CREDIT, "777.0000");
         movement(foreignRevenue, "X1", AccountingMovementSide.CREDIT, "9999.0000");
 
-        SyncRun covered = new SyncRun(sourceA, UUID.randomUUID(), UUID.randomUUID(), SyncRunMode.INITIAL,
-                LocalDate.parse("2026-01-01"), LocalDate.parse("2026-06-30"), Instant.parse("2026-07-01T10:00:00Z"));
-        covered.start(Instant.parse("2026-07-01T10:01:00Z"));
-        covered.succeed(9, 9, 0, Instant.parse("2026-07-01T10:02:00Z"));
-        runs.saveAndFlush(covered);
+        coverage.record(
+                sourceA.getId(),
+                AccountingDataset.MOVEMENTS,
+                LocalDate.parse("2026-01-01"),
+                LocalDate.parse("2026-03-31"));
+        coverage.record(
+                sourceA.getId(),
+                AccountingDataset.MOVEMENTS,
+                LocalDate.parse("2026-05-01"),
+                LocalDate.parse("2026-06-30"));
 
         viewer = users.saveAndFlush(new UserAccount("Synthetic DRE Viewer", UUID.randomUUID() + "@example.invalid", "hash"));
         grants.saveAndFlush(new CompanyAccessGrant(viewer, company, CompanyAccessRole.CUSTOM, CostCenterScope.ALL,
@@ -157,9 +160,15 @@ class DreAggregationHttpIntegrationTest {
         mvc.perform(june().with(user(new UserAccountPrincipal(viewer))))
                 .andExpect(jsonPath("$.coverage", hasSize(2)))
                 .andExpect(jsonPath("$.coverage[" + indexA + "].accountingSourceId").value(sourceA.getId().toString()))
-                .andExpect(jsonPath("$.coverage[" + indexA + "].syncedStartDate").value("2026-01-01"))
-                .andExpect(jsonPath("$.coverage[" + indexA + "].syncedEndDate").value("2026-06-30"))
-                .andExpect(jsonPath("$.coverage[" + indexB + "].syncedStartDate").isEmpty());
+                .andExpect(jsonPath("$.coverage[" + indexA + "].importedFrom").value("2026-01-01"))
+                .andExpect(jsonPath("$.coverage[" + indexA + "].importedTo").value("2026-06-30"))
+                .andExpect(jsonPath("$.coverage[" + indexA + "].intervals", hasSize(2)))
+                .andExpect(jsonPath("$.coverage[" + indexA + "].intervals[0].importedFrom").value("2026-01-01"))
+                .andExpect(jsonPath("$.coverage[" + indexA + "].intervals[0].importedTo").value("2026-03-31"))
+                .andExpect(jsonPath("$.coverage[" + indexA + "].intervals[1].importedFrom").value("2026-05-01"))
+                .andExpect(jsonPath("$.coverage[" + indexA + "].intervals[1].importedTo").value("2026-06-30"))
+                .andExpect(jsonPath("$.coverage[" + indexB + "].importedFrom").isEmpty())
+                .andExpect(jsonPath("$.coverage[" + indexB + "].intervals", hasSize(0)));
     }
 
     @Test

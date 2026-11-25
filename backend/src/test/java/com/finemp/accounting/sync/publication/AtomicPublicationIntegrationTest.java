@@ -5,6 +5,8 @@ import static org.mockito.Mockito.*;
 import com.finemp.TestcontainersConfiguration;
 import com.finemp.access.*;
 import com.finemp.accounting.account.*;
+import com.finemp.accounting.canonical.v2.AccountingDataset;
+import com.finemp.accounting.coverage.AccountingDatasetCoverageService;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
 import com.finemp.accounting.movement.*;
 import com.finemp.accounting.reading.*;
@@ -37,6 +39,7 @@ class AtomicPublicationIntegrationTest {
     @Autowired private AccountingSourceRepository sources;
     @Autowired private CompanyAccessGrantRepository grants;
     @Autowired private AccountingAccountRepository accounts;
+    @Autowired private AccountingDatasetCoverageService coverage;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
     @MockitoBean private AccountingCompanyIdentityReader identities;
@@ -56,6 +59,7 @@ class AtomicPublicationIntegrationTest {
     }
     @AfterEach void cleanOnlyOwnSyntheticRows() {
         for (var source : ownedSources) {
+            jdbc.update("DELETE FROM accounting_dataset_coverage WHERE accounting_source_id = ?", source);
             jdbc.update("DELETE FROM sync_run_events WHERE sync_run_id IN (SELECT id FROM sync_runs WHERE accounting_source_id = ?)", source);
             jdbc.update("DELETE FROM sync_runs WHERE accounting_source_id = ?", source);
             jdbc.update("DELETE FROM accounting_movements WHERE accounting_source_id = ?", source);
@@ -77,6 +81,8 @@ class AtomicPublicationIntegrationTest {
         var replay = execute(sourceId);
         assertThat(replay.getImportedCount()).isZero(); assertThat(replay.getSkippedCount()).isEqualTo(3);
         assertThat(movementCount(sourceId)).isEqualTo(2); assertThat(accountCount(sourceId)).isEqualTo(2);
+        assertThat(coverage.read(sourceId, AccountingDataset.MOVEMENTS).intervals())
+                .containsExactly(new com.finemp.accounting.coverage.AccountingDatasetCoverageSnapshot.Interval(start, end));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM accounting_movements movement JOIN accounting_accounts account ON account.id = movement.account_id"
                 + " WHERE movement.accounting_source_id = ? AND movement.accounting_source_id <> account.accounting_source_id", Long.class, sourceId)).isZero();
     }
@@ -132,6 +138,7 @@ class AtomicPublicationIntegrationTest {
             assertThat(result.getFailureCode()).isEqualTo(SyncFailureCode.PUBLICATION_FAILED);
             assertThat(result.getReadCount()).isNull();
             assertThat(movementCount(sourceId)).isZero(); assertThat(accountCount(sourceId)).isZero();
+            assertThat(coverage.read(sourceId, AccountingDataset.MOVEMENTS).intervals()).isEmpty();
         } finally {
             jdbc.execute("DROP TRIGGER " + trigger + " ON sync_run_events");
             jdbc.execute("DROP FUNCTION " + function + "()");
