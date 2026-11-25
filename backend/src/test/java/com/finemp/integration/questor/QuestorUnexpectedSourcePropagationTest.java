@@ -41,9 +41,17 @@ class QuestorUnexpectedSourcePropagationTest {
 
         var reader = new VerifiedQuestorSnapshotReader(provider, identities, movements);
 
+        doThrow(new java.sql.SQLException("synthetic private cleanup detail"))
+                .when(connection).close();
+
         assertThatThrownBy(() -> reader.readSnapshot(request))
                 .isInstanceOf(QuestorUnexpectedSourceDataException.class)
-                .hasMessage("Unexpected accounting source data.");
+                .hasMessage("Unexpected accounting source data.")
+                .satisfies(error -> {
+                    assertThat(error.getCause()).isNull();
+                    assertThat(error.getSuppressed()).isEmpty();
+                    assertThat(error.toString()).doesNotContain("synthetic private cleanup detail");
+                });
 
         verify(connection).rollback();
         verify(connection).close();
