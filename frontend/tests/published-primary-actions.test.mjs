@@ -138,3 +138,15 @@ test("company-scoped mutation actions require an active company independently of
     assert.ok(source.includes(guard), path)
   }
 })
+
+test("untyped inputs and modal headers get the shell styles", () => {
+  const css = readFileSync(new URL("../src/styles/finemp-theme.css", import.meta.url), "utf8")
+  // Inputs without type (browser default "text") were rendered as bare text
+  // in published dialogs (Nova dívida, Preparar nota fiscal).
+  const fieldRule = css.match(/([^}]*)\{background:var\(--fd\);border:1px solid var\(--bd\)/)
+  assert.ok(fieldRule)
+  assert.match(fieldRule[1], /\.fin input:not\(\[type\]\)/)
+  // Dialog header with title and close button side by side.
+  assert.match(css, /\.fin \.mbox \.mh\{[^}]*display:flex/)
+  assert.match(css, /\.fin \.mbox \.mh \.x\{/)
+})
