@@ -4,7 +4,7 @@ import com.finemp.accounting.canonical.v2.CanonicalAccountingBatch;
 import com.finemp.connector.completion.ConnectorBatchResourceLimitException;
 import com.finemp.connector.completion.InvalidConnectorBatchException;
 import java.io.ByteArrayOutputStream;
-import tools.jackson.core.JsonFactory;
+import tools.jackson.core.json.JsonFactory;
 import tools.jackson.core.StreamReadConstraints;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.DeserializationFeature;
