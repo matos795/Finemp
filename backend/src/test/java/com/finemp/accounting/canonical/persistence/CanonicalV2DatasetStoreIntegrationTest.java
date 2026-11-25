@@ -141,8 +141,8 @@ class CanonicalV2DatasetStoreIntegrationTest {
     }
 
     @Test
-    void shouldEnforceCanonicalV2DatabaseConstraints() {
-        var fixture = fixture("D");
+    void shouldRejectNegativeDebitCreditTotalsAtTheDatabaseBoundary() {
+        var fixture = fixture("D1");
 
         assertThatThrownBy(() -> jdbc.update(
                 """
@@ -160,6 +160,11 @@ class CanonicalV2DatasetStoreIntegrationTest {
                 new BigDecimal("-0.0001"),
                 BigDecimal.ZERO))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void shouldRejectMonthlyTotalsOutsideTheFirstDayOfTheMonth() {
+        var fixture = fixture("D2");
 
         assertThatThrownBy(() -> jdbc.update(
                 """
@@ -177,6 +182,11 @@ class CanonicalV2DatasetStoreIntegrationTest {
                 BigDecimal.ONE,
                 BigDecimal.ZERO))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void shouldRejectAccountAttributesWithoutAnAccountInTheSameSource() {
+        var fixture = fixture("D3");
 
         assertThatThrownBy(() -> jdbc.update(
                 """
