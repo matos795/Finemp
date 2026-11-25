@@ -1,6 +1,7 @@
 package com.finemp.accounting.coverage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.finemp.TestcontainersConfiguration;
 import com.finemp.accounting.canonical.v2.AccountingDataset;
@@ -9,6 +10,7 @@ import com.finemp.accounting.source.AccountingSourceRepository;
 import com.finemp.accounting.source.AccountingSourceType;
 import com.finemp.company.Company;
 import com.finemp.company.CompanyRepository;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -73,13 +75,63 @@ class AccountingDatasetCoverageServiceIntegrationTest {
 
         coverage.record(first.getId(), AccountingDataset.MOVEMENTS, from, to);
         coverage.record(first.getId(), AccountingDataset.MOVEMENTS, from, to);
-        coverage.record(first.getId(), AccountingDataset.CHART, from, to);
         coverage.record(second.getId(), AccountingDataset.MOVEMENTS, from, to);
 
         assertThat(repository.findAllByAccountingSourceIdAndDatasetOrderByImportedFromAscImportedToAsc(
                 first.getId(), AccountingDataset.MOVEMENTS)).hasSize(1);
-        assertThat(coverage.read(first.getId(), AccountingDataset.CHART).intervals()).hasSize(1);
         assertThat(coverage.read(second.getId(), AccountingDataset.MOVEMENTS).intervals()).hasSize(1);
+    }
+
+    @Test
+    @Transactional
+    void shouldRepresentChartAsSnapshotAndRejectArtificialIntervals() {
+        var source = source("76000000000176");
+        var publishedAt = Instant.parse("2026-04-10T12:30:00Z");
+
+        assertThatThrownBy(() -> coverage.record(
+                source.getId(),
+                AccountingDataset.CHART,
+                LocalDate.of(2026, 4, 1),
+                LocalDate.of(2026, 4, 30)))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        coverage.recordSnapshot(
+                source.getId(),
+                AccountingDataset.CHART,
+                null,
+                publishedAt);
+
+        var snapshot = coverage.read(source.getId(), AccountingDataset.CHART);
+        assertThat(snapshot.importedFrom()).isNull();
+        assertThat(snapshot.importedTo()).isNull();
+        assertThat(snapshot.intervals()).isEmpty();
+        assertThat(snapshot.establishmentCode()).isNull();
+        assertThat(snapshot.publishedAt()).isEqualTo(publishedAt);
+    }
+
+    @Test
+    @Transactional
+    void shouldRejectSnapshotForTemporalDatasetAndKeepEstablishmentScopesIsolated() {
+        var source = source("77000000000177");
+        var from = LocalDate.of(2026, 5, 1);
+        var to = LocalDate.of(2026, 5, 31);
+
+        assertThatThrownBy(() -> coverage.recordSnapshot(
+                source.getId(),
+                AccountingDataset.MOVEMENTS,
+                null,
+                Instant.parse("2026-05-31T12:00:00Z")))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        coverage.recordInterval(source.getId(), AccountingDataset.DAILY_TOTALS, "1", from, to);
+        coverage.recordInterval(source.getId(), AccountingDataset.DAILY_TOTALS, "2", from, to);
+
+        assertThat(coverage.read(source.getId(), AccountingDataset.DAILY_TOTALS, "1").intervals())
+                .containsExactly(interval("2026-05-01", "2026-05-31"));
+        assertThat(coverage.read(source.getId(), AccountingDataset.DAILY_TOTALS, "2").intervals())
+                .containsExactly(interval("2026-05-01", "2026-05-31"));
+        assertThat(coverage.read(source.getId(), AccountingDataset.DAILY_TOTALS).intervals())
+                .isEmpty();
     }
 
     @Test
