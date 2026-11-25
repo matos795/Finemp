@@ -15,6 +15,12 @@ import com.finemp.accounting.reading.AccountingSourceReaderRegistry;
 import com.finemp.accounting.reading.ExternalCompanyIdentity;
 import com.finemp.accounting.source.*;
 import com.finemp.accounting.sync.*;
+import com.finemp.accountingfirm.AccountingFirm;
+import com.finemp.accountingfirm.AccountingFirmRepository;
+import com.finemp.client.Client;
+import com.finemp.client.ClientRepository;
+import com.finemp.connector.ConnectorCredential;
+import com.finemp.connector.ConnectorCredentialRepository;
 import com.finemp.accounting.sync.control.*;
 import com.finemp.accounting.sync.execution.*;
 import com.finemp.company.*;
@@ -43,6 +49,9 @@ class CanonicalV2PublicationIntegrationTest {
     @Autowired private SyncRunRepository runs;
     @Autowired private UserAccountRepository users;
     @Autowired private CompanyRepository companies;
+    @Autowired private AccountingFirmRepository firms;
+    @Autowired private ClientRepository clients;
+    @Autowired private ConnectorCredentialRepository credentials;
     @Autowired private AccountingSourceRepository sources;
     @Autowired private CompanyAccessGrantRepository grants;
     @Autowired private AccountingDatasetCoverageService coverage;
@@ -53,8 +62,8 @@ class CanonicalV2PublicationIntegrationTest {
 
     private final LocalDate start=LocalDate.of(2026,7,1);
     private final LocalDate end=LocalDate.of(2026,7,31);
-    private final SyncClaimAgent connector=new SyncClaimAgent(UUID.randomUUID(),1L);
-    private UUID actor,companyId,sourceId,grantId;
+    private SyncClaimAgent connector;
+    private UUID actor,firmId,clientId,companyId,sourceId,grantId,credentialId;
 
     @BeforeEach
     void prepare(){
@@ -62,7 +71,10 @@ class CanonicalV2PublicationIntegrationTest {
                 "Synthetic V2 Publisher",
                 UUID.randomUUID()+"@example.invalid",
                 "hash"));
+        var firm=firms.saveAndFlush(new AccountingFirm("Synthetic V2 Firm",true));
+        var client=clients.saveAndFlush(new Client(firm,"Synthetic V2 Client",true));
         var company=companies.saveAndFlush(new Company(
+                client,
                 "Synthetic V2 Publisher",
                 "41414141000141"));
         var source=new AccountingSource(company,AccountingSourceType.QUESTOR,"synthetic-v2",true);
@@ -74,7 +86,18 @@ class CanonicalV2PublicationIntegrationTest {
                 CompanyAccessRole.CUSTOM,
                 CostCenterScope.ALL,
                 Set.of(CompanyPermission.QUESTOR_SYNC)));
-        actor=user.getId(); companyId=company.getId(); sourceId=source.getId(); grantId=grant.getId();
+        var now=Instant.parse("2026-07-01T10:00:00Z");
+        var credential=credentials.saveAndFlush(new ConnectorCredential(
+                firm.getId(),
+                source.getId(),
+                "Synthetic V2 Connector",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                user.getId(),
+                now,
+                now.plusSeconds(86400)));
+        actor=user.getId(); firmId=firm.getId(); clientId=client.getId(); companyId=company.getId();
+        sourceId=source.getId(); grantId=grant.getId(); credentialId=credential.getId();
+        connector=new SyncClaimAgent(credential.getId(),credential.getVersion());
         when(agents.isCurrent(any(),eq(sourceId))).thenReturn(true);
     }
 
@@ -90,10 +113,13 @@ class CanonicalV2PublicationIntegrationTest {
         jdbc.update("DELETE FROM sync_runs WHERE accounting_source_id = ?",sourceId);
         jdbc.update("DELETE FROM accounting_movements WHERE accounting_source_id = ?",sourceId);
         jdbc.update("DELETE FROM accounting_accounts WHERE accounting_source_id = ?",sourceId);
+        jdbc.update("DELETE FROM connector_credentials WHERE id = ?",credentialId);
         jdbc.update("DELETE FROM accounting_sources WHERE id = ?",sourceId);
         jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id = ?",grantId);
         jdbc.update("DELETE FROM company_access_grants WHERE id = ?",grantId);
         jdbc.update("DELETE FROM companies WHERE id = ?",companyId);
+        jdbc.update("DELETE FROM clients WHERE id = ?",clientId);
+        jdbc.update("DELETE FROM accounting_firms WHERE id = ?",firmId);
         jdbc.update("DELETE FROM user_accounts WHERE id = ?",actor);
     }
 
