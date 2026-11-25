@@ -206,11 +206,8 @@ test("availability batch routes are published with their real permission boundar
   )
 })
 
-test("accounting read routes are published with distinct permissions", () => {
-  assert.equal(
-    findNavigationByPath(navigationModules, "/accounting-accounts").item.id,
-    "cadCtb",
-  )
+test("imported accounting accounts are no longer published in the company sidebar", () => {
+  assert.equal(findNavigationByPath(navigationModules, "/accounting-accounts"), null)
   assert.equal(
     findNavigationByPath(navigationModules, "/accounting-movements").item.id,
     "ctb",
@@ -222,7 +219,7 @@ test("accounting read routes are published with distinct permissions", () => {
       can("ACCOUNT_CLASSIFICATION_VIEW"),
       none,
     )),
-    ["cad:empresas,cadEmp,cadCtb", "ajuda:faq,tutor"],
+    ["cad:empresas,cadEmp", "ajuda:faq,tutor"],
   )
 
   assert.deepEqual(
@@ -309,6 +306,7 @@ test("roadmap mode preserves module order and declares every reference screen", 
   const declared = new Set(navigationModules.flatMap((module) => module.items.map((item) => item.id)))
 
   for (const screen of reference.screens) {
+    if (screen.id === "cadCtb") continue // #493: legacy company-sidebar entry intentionally retired.
     assert.ok(declared.has(screen.id), `missing reference screen: ${screen.id}`)
   }
 })

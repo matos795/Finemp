@@ -449,15 +449,6 @@ export const navigationModules: NavigationModule[] = [
                 ],
             },
             {
-                id: "cadCtb",
-                label: "Plano de contas da contabilidade",
-                path: "/accounting-accounts",
-                permissions: [
-                    "ACCOUNT_CLASSIFICATION_VIEW",
-                    "ACCOUNT_CLASSIFICATION_MANAGE",
-                ],
-            },
-            {
                 id: "cr",
                 label: "Centros de resultado",
                 path: "/result-centers",
