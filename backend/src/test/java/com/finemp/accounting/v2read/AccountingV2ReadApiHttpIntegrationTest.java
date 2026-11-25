@@ -144,6 +144,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
                 .andExpect(jsonPath("$.items[1].sourceCodes.balanceNature").value("D"))
                 .andExpect(jsonPath("$.items[1].sourceCodes.balanceControl").value("ctl-10"))
                 .andExpect(jsonPath("$.items[1].sourceCodes.showInBalanceSheet").value("S"))
+                .andExpect(jsonPath("$.items[1].sourceCodes.nativeDreCode").hasJsonPath())
                 .andExpect(jsonPath("$.items[1].sourceCodes.nativeDreCode").value(nullValue()))
                 .andExpect(jsonPath("$.items[1].sourceCodes.nativeDreAccount").value(nullValue()));
     }
@@ -157,6 +158,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
         mvc.perform(chart(unpublishedSource).with(as(chartReader)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.availability").value("IMPORTED_ACCOUNTS_ONLY"))
+                .andExpect(jsonPath("$.coverage.publishedAt").hasJsonPath())
                 .andExpect(jsonPath("$.coverage.publishedAt").value(nullValue()))
                 .andExpect(jsonPath("$.items", empty()))
                 .andExpect(jsonPath("$.totalItems").value(0));
@@ -215,7 +217,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
                 .andExpect(jsonPath("$.items[0].sourceMetadata.entryTypeCode").value("LN"))
                 .andExpect(jsonPath("$.items[0].sourceMetadata.dataOriginCode").value("DO1"))
                 .andExpect(jsonPath("$.items[0].sourceMetadata.batchCode").value("L42"))
-                .andExpect(jsonPath("$.items[0].sourceMetadata.documentNumber").exists())
+                .andExpect(jsonPath("$.items[0].sourceMetadata.documentNumber").hasJsonPath())
                 .andExpect(jsonPath("$.items[0].sourceMetadata.documentNumber").value(nullValue()))
                 .andExpect(jsonPath("$.items[0].sourceMetadata.operationGroupKey").value("GRP-1"))
                 .andExpect(jsonPath("$.items[0].sourceMetadata.transactionKey").value("TX-9"))
@@ -239,6 +241,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
                 .andExpect(jsonPath("$.items[0].side").value("DEBIT"))
                 .andExpect(jsonPath("$.items[0].history").value("Synthetic history LEG"))
                 .andExpect(jsonPath("$.items[0].sourceMetadataStatus").value("NOT_SYNCHRONIZED"))
+                .andExpect(jsonPath("$.items[0].sourceMetadata").hasJsonPath())
                 .andExpect(jsonPath("$.items[0].sourceMetadata").value(nullValue()))
                 .andExpect(jsonPath("$.totals.debit").value("5.0000"))
                 .andExpect(jsonPath("$.notSynchronized",
@@ -388,6 +391,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
                 .andExpect(jsonPath("$.kind").value("SNAPSHOT"))
                 .andExpect(jsonPath("$.available").value(true))
                 .andExpect(jsonPath("$.publishedAt").value("2026-03-31T12:00:00Z"))
+                .andExpect(jsonPath("$.importedFrom").hasJsonPath())
                 .andExpect(jsonPath("$.importedFrom").value(nullValue()))
                 .andExpect(jsonPath("$.importedTo").value(nullValue()))
                 .andExpect(jsonPath("$.intervals", empty()));
