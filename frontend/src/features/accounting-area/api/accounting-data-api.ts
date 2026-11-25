@@ -107,7 +107,12 @@ export interface AccountingDre {
         }[]
     }[]
     classifiedTotal: string
-    coverage: { accountingSourceId: string; syncedStartDate: string | null; syncedEndDate: string | null }[]
+    coverage: {
+        accountingSourceId: string
+        importedFrom: string | null
+        importedTo: string | null
+        intervals: { importedFrom: string; importedTo: string }[]
+    }[]
 }
 
 export function getAccountingDre(companyId: string, startDate: string, endDate: string) {
