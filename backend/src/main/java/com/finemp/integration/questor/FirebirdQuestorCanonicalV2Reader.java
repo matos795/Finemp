@@ -15,6 +15,8 @@ import com.finemp.accounting.reading.AccountingIdentityConfigurationException;
 import com.finemp.accounting.reading.AccountingIdentityMismatchException;
 import com.finemp.accounting.reading.AccountingReadLimitExceededException;
 import com.finemp.accounting.reading.AccountingReadRequest;
+import com.finemp.accounting.reading.CanonicalAccountingBatchReader;
+import com.finemp.accounting.source.AccountingSourceType;
 import com.finemp.accounting.sync.execution.SyncPublicationRejectedException;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -30,7 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public final class FirebirdQuestorCanonicalV2Reader {
+public final class FirebirdQuestorCanonicalV2Reader implements CanonicalAccountingBatchReader {
     private static final String CHART_SQL = """
             SELECT
                 CONTACTB AS SOURCE_ACCOUNT_ID,
@@ -106,6 +108,16 @@ public final class FirebirdQuestorCanonicalV2Reader {
         this.maxChartRecords = maxChartRecords;
         this.maxEntryRecords = maxEntryRecords;
         this.timeoutSeconds = timeoutSeconds;
+    }
+
+    @Override
+    public AccountingSourceType sourceType() {
+        return AccountingSourceType.QUESTOR;
+    }
+
+    @Override
+    public CanonicalAccountingBatch readBatch(AccountingReadRequest request) {
+        return read(request);
     }
 
     public CanonicalAccountingBatch read(AccountingReadRequest request) {
