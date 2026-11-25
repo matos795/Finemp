@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -42,6 +44,7 @@ class CanonicalV2DatasetStoreIntegrationTest {
     @Autowired private AccountingAccountRepository accounts;
     @Autowired private AccountingSourceRepository sources;
     @Autowired private CompanyRepository companies;
+    @Autowired private JdbcTemplate jdbc;
 
     @Test
     void shouldPersistCanonicalV2RowsIdempotentlyWithExactDecimals() {
@@ -135,6 +138,64 @@ class CanonicalV2DatasetStoreIntegrationTest {
                 fixture.source().getId(),
                 new CanonicalOriginCatalogEntry("ORIG", "Changed")))
                 .isInstanceOf(CanonicalPersistenceConflictException.class);
+    }
+
+    @Test
+    void shouldEnforceCanonicalV2DatabaseConstraints() {
+        var fixture = fixture("D");
+
+        assertThatThrownBy(() -> jdbc.update(
+                """
+                INSERT INTO accounting_daily_debit_credit_totals(
+                    id, accounting_source_id, establishment_code, source_account_id,
+                    day, entry_type_code, debit_total, credit_total)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                UUID.randomUUID(),
+                fixture.source().getId(),
+                "1",
+                "100",
+                LocalDate.of(2026, 7, 10),
+                "NORMAL",
+                new BigDecimal("-0.0001"),
+                BigDecimal.ZERO))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbc.update(
+                """
+                INSERT INTO accounting_monthly_debit_credit_totals(
+                    id, accounting_source_id, establishment_code, source_account_id,
+                    month_start, entry_type_code, debit_total, credit_total)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                UUID.randomUUID(),
+                fixture.source().getId(),
+                "1",
+                "100",
+                LocalDate.of(2026, 7, 2),
+                "NORMAL",
+                BigDecimal.ONE,
+                BigDecimal.ZERO))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbc.update(
+                """
+                INSERT INTO accounting_account_source_attributes(
+                    id, accounting_source_id, source_account_id, classification_code, description,
+                    account_type, calculation_type, balance_nature, balance_control, show_in_balance_sheet)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                UUID.randomUUID(),
+                fixture.source().getId(),
+                "missing-account",
+                "1",
+                "Missing",
+                "ANALYTIC",
+                "NORMAL",
+                "CREDIT",
+                "STANDARD",
+                "YES"))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
