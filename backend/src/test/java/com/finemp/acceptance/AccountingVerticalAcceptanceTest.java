@@ -140,6 +140,7 @@ class AccountingVerticalAcceptanceTest {
             jdbc.update("DELETE FROM sync_attempts WHERE sync_run_id IN (SELECT id FROM sync_runs WHERE accounting_source_id = ?)", sourceId);
             jdbc.update("DELETE FROM sync_run_events WHERE sync_run_id IN (SELECT id FROM sync_runs WHERE accounting_source_id = ?)", sourceId);
             jdbc.update("DELETE FROM sync_runs WHERE accounting_source_id = ?", sourceId);
+            jdbc.update("DELETE FROM accounting_dataset_coverage WHERE accounting_source_id = ?", sourceId);
             jdbc.update("DELETE FROM accounting_movements WHERE accounting_source_id = ?", sourceId);
             jdbc.update("DELETE FROM accounting_account_classifications WHERE accounting_account_id IN "
                     + "(SELECT id FROM accounting_accounts WHERE accounting_source_id = ?)", sourceId);
@@ -282,8 +283,11 @@ class AccountingVerticalAcceptanceTest {
                 .andExpect(jsonPath("$.groups[0].total").value("1250.5000"))
                 .andExpect(jsonPath("$.classifiedTotal").value("1250.5000"))
                 .andExpect(jsonPath("$.unclassifiedAccountCount").value(1))
-                .andExpect(jsonPath("$.coverage[0].syncedStartDate").value(START.toString()))
-                .andExpect(jsonPath("$.coverage[0].syncedEndDate").value(END.toString()));
+                .andExpect(jsonPath("$.coverage[0].importedFrom").value(START.toString()))
+                .andExpect(jsonPath("$.coverage[0].importedTo").value(END.toString()))
+                .andExpect(jsonPath("$.coverage[0].intervals", hasSize(1)))
+                .andExpect(jsonPath("$.coverage[0].intervals[0].importedFrom").value(START.toString()))
+                .andExpect(jsonPath("$.coverage[0].intervals[0].importedTo").value(END.toString()));
     }
 
     private UUID requestSync(MockHttpSession session, UUID key) throws Exception {
