@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.math.BigDecimal;
 
 public final class CanonicalV2ToLegacyMovementsConverter {
     private CanonicalV2ToLegacyMovementsConverter() {
@@ -26,7 +27,7 @@ public final class CanonicalV2ToLegacyMovementsConverter {
                 throw new IllegalArgumentException("Canonical entry is invalid.");
             }
             var previous = uniqueEntries.putIfAbsent(entry.sourceEntryKey(), entry);
-            if (previous != null && !previous.equals(entry)) {
+            if (previous != null && !sameEntry(previous, entry)) {
                 throw new SyncPublicationRejectedException(SyncFailureCode.DATA_CONFLICT);
             }
         }
@@ -41,6 +42,19 @@ public final class CanonicalV2ToLegacyMovementsConverter {
             }
         }
         return List.copyOf(movements);
+    }
+
+    private static boolean sameEntry(CanonicalAccountingEntry first, CanonicalAccountingEntry second) {
+        return Objects.equals(first.accountingDate(), second.accountingDate())
+                && Objects.equals(first.debitAccountId(), second.debitAccountId())
+                && Objects.equals(first.creditAccountId(), second.creditAccountId())
+                && sameAmount(first.amount(), second.amount())
+                && Objects.equals(first.establishmentCode(), second.establishmentCode())
+                && Objects.equals(first.historyText(), second.historyText());
+    }
+
+    private static boolean sameAmount(BigDecimal first, BigDecimal second) {
+        return first == null ? second == null : second != null && first.compareTo(second) == 0;
     }
 
     private static ImportedAccountingMovement toMovement(
