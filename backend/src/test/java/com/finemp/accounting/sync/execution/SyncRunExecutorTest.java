@@ -66,6 +66,12 @@ class SyncRunExecutorTest {
         assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
         verify(lifecycle).failIfCurrent(claim, SyncFailureCode.DATA_CONFLICT);
     }
+    @Test void shouldNeverPublishUnexpectedSourceDataAndClassifyItAsInvalidPayload() {
+        when(readers.readMovements(request)).thenThrow(new AccountingUnexpectedSourceDataException());
+        assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
+        verify(lifecycle).failIfCurrent(claim, SyncFailureCode.INVALID_PAYLOAD);
+        verifyNoInteractions(publication);
+    }
     @Test void shouldNeverPublishOrRetryAnOversizedReadAsIfItWereComplete() {
         when(readers.readMovements(request)).thenThrow(new AccountingReadLimitExceededException());
         assertThat(executor.execute(runId)).isEqualTo(SyncExecutionOutcome.FAILED);
