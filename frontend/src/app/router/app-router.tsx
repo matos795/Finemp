@@ -60,6 +60,8 @@ import { SalesActivitiesPage } from "../../features/sales/pages/sales-activities
 import { SalesPortfolioPage } from "../../features/sales/pages/sales-portfolio-page"
 import { SalesIndicatorsPage } from "../../features/sales/pages/sales-indicators-page"
 import { AssetsPage } from "../../features/assets/pages/assets-page"
+import { EmployeesPage } from "../../features/people/pages/employees-page"
+import { JobPositionsPage } from "../../features/people/pages/job-positions-page"
 import { AreaHomeRedirect } from "../../features/accounting-area/components/area-home-redirect"
 import { RequireAccountingArea } from "../../features/accounting-area/components/require-accounting-area"
 import { ACCOUNTING_AREA_BASE_PATH } from "../../features/accounting-area/lib/accounting-screens"
@@ -218,6 +220,24 @@ export function AppRouter() {
                         element={
                             <RequirePermission permission={["ASSET_VIEW", "ASSET_MANAGE"]}>
                                 <AssetsPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/people/employees"
+                        element={
+                            <RequirePermission permission={["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE"]}>
+                                <EmployeesPage />
+                            </RequirePermission>
+                        }
+                    />
+
+                    <Route
+                        path="/people/job-positions"
+                        element={
+                            <RequirePermission permission={["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE"]}>
+                                <JobPositionsPage />
                             </RequirePermission>
                         }
                     />
