@@ -50,6 +50,24 @@ foreach ($needle in $installerRequired) {
     }
 }
 
+
+$distributionCheck = 'Distribuição incompleta: scripts de runtime Windows ausentes.'
+$stopExistingTask = 'Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue'
+if ($installer.IndexOf($distributionCheck, [System.StringComparison]::Ordinal) -lt 0) {
+    throw "Installer contract missing distribution completeness check."
+}
+if ($installer.IndexOf($distributionCheck, [System.StringComparison]::Ordinal) -gt
+    $installer.IndexOf($stopExistingTask, [System.StringComparison]::Ordinal)) {
+    throw "Installer must validate the complete distribution before inspecting/stopping an installed task."
+}
+
+$validateConfig = '& $java -jar $jar --validate $config'
+if ($installer.IndexOf($validateConfig, [System.StringComparison]::Ordinal) -lt 0 -or
+    $installer.IndexOf($validateConfig, [System.StringComparison]::Ordinal) -gt
+    $installer.IndexOf($stopExistingTask, [System.StringComparison]::Ordinal)) {
+    throw "Installer must validate the new connector configuration before inspecting/stopping an installed task."
+}
+
 if ($installer -match '(?i)sc\.exe') {
     throw "Installer must not register java.exe directly with sc.exe."
 }
