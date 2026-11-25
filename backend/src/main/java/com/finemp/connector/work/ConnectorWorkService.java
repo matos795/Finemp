@@ -1,5 +1,6 @@
 package com.finemp.connector.work;
 
+import com.finemp.accounting.canonical.v2.AccountingDataset;
 import com.finemp.accounting.reading.AccountingReadRequest;
 import com.finemp.accounting.source.*;
 import com.finemp.accounting.sync.*;
@@ -39,8 +40,16 @@ public class ConnectorWorkService {
         var claim = lifecycle.claimConnector(pending.get().getId(), agent(identity));
         if (claim.isEmpty()) return Optional.empty();
         var attempt = attempts.findBySyncRunIdAndFenceVersion(claim.get().runId(), claim.get().version()).orElseThrow(ConnectorWorkNotCurrentException::new);
-        return Optional.of(new ConnectorWorkResponse(attempt.getId(), claim.get().runId(), attempt.getAttemptNumber(),
-                claim.get().mode(), attempt.getLeaseExpiresAt(), clock.instant(), claim.get().request()));
+        return Optional.of(new ConnectorWorkResponse(
+                attempt.getId(),
+                claim.get().runId(),
+                attempt.getAttemptNumber(),
+                claim.get().mode(),
+                attempt.getLeaseExpiresAt(),
+                clock.instant(),
+                claim.get().request(),
+                Set.of(1),
+                Set.of(AccountingDataset.MOVEMENTS)));
     }
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ConnectorLeaseResponse renew(ConnectorIdentity identity, UUID attemptId) {
