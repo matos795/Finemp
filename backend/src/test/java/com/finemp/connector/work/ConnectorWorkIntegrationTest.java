@@ -105,6 +105,13 @@ class ConnectorWorkIntegrationTest {
         assertThat(result.context().accountingSourceId()).isEqualTo(sourceId);
         assertThat(result.context().expectedCompanyCnpj()).isEqualTo("47474747000147");
         assertThat(result.context().startDate()).isEqualTo(LocalDate.of(2026,7,1));
+        assertThat(result.acceptedContractVersions()).containsExactlyInAnyOrder(1, 2);
+        assertThat(result.acceptedDatasets()).containsExactlyInAnyOrder(
+                com.finemp.accounting.canonical.v2.AccountingDataset.CHART,
+                com.finemp.accounting.canonical.v2.AccountingDataset.MOVEMENTS,
+                com.finemp.accounting.canonical.v2.AccountingDataset.DAILY_TOTALS,
+                com.finemp.accounting.canonical.v2.AccountingDataset.MONTHLY_TOTALS,
+                com.finemp.accounting.canonical.v2.AccountingDataset.ORIGIN_CATALOG);
         assertThat(attempts.findById(result.attemptId()).orElseThrow().getAgent())
                 .isEqualTo(new SyncClaimAgent(identity.credentialId(), identity.version()));
         assertThat(work.claim(identity)).isEmpty();
