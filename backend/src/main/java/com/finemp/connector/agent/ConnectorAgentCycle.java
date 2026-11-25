@@ -93,7 +93,14 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                         return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);
                     return publishV1(work,keeper);
                 }
-                try {return accept(work,client.completeV2(work,batch),keeper.expires.get());}
+                byte[] body;
+                try {body=client.prepareV2(work,batch);}
+                catch(ConnectorClientException localFailure) {
+                    if(localFailure.kind()==ConnectorClientException.Kind.RESOURCE_LIMIT)
+                        return report(work,keeper,SyncFailureCode.RESOURCE_LIMIT);
+                    return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);
+                }
+                try {return accept(work,client.completePreparedV2(work,body),keeper.expires.get());}
                 catch(ConnectorClientException uncertain) {
                     pending=new Pending(work,keeper.expires.get());delay(uncertain);return halted?Outcome.HALTED:Outcome.PENDING;
                 }
