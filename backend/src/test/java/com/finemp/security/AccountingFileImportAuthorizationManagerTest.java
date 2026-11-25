@@ -29,15 +29,18 @@ class AccountingFileImportAuthorizationManagerTest {
     void shouldRequireFileImportSourceAndFreshCompanyPermission() {
         UUID userId = UUID.randomUUID();
         UUID sourceId = UUID.randomUUID();
-        var company = new Company("Synthetic File Import", "81818181000181");
-        var source = new AccountingSource(company, AccountingSourceType.FILE_IMPORT, null, true);
-        setId(company, UUID.randomUUID());
+        var company = mock(Company.class);
+        UUID companyId = UUID.randomUUID();
+        when(company.getId()).thenReturn(companyId);
+        var source = mock(AccountingSource.class);
+        when(source.getType()).thenReturn(AccountingSourceType.FILE_IMPORT);
+        when(source.getCompany()).thenReturn(company);
         var principal = mock(UserAccountPrincipal.class);
         when(principal.getUserAccountId()).thenReturn(userId);
         when(sources.findForReadingById(sourceId)).thenReturn(Optional.of(source));
         when(permissions.hasFreshPermission(
                 userId,
-                company.getId(),
+                companyId,
                 CompanyPermission.ACCOUNTING_IMPORT_MANAGE)).thenReturn(true);
 
         var authentication = UsernamePasswordAuthenticationToken.authenticated(
@@ -49,15 +52,15 @@ class AccountingFileImportAuthorizationManagerTest {
                 .isTrue();
         verify(permissions).hasFreshPermission(
                 userId,
-                company.getId(),
+                companyId,
                 CompanyPermission.ACCOUNTING_IMPORT_MANAGE);
     }
 
     @Test
     void shouldRejectQuestorSourceEvenWhenTheUserHasImportPermission() {
         UUID sourceId = UUID.randomUUID();
-        var company = new Company("Synthetic Questor", "82828282000182");
-        var source = new AccountingSource(company, AccountingSourceType.QUESTOR, "57", true);
+        var source = mock(AccountingSource.class);
+        when(source.getType()).thenReturn(AccountingSourceType.QUESTOR);
         when(sources.findForReadingById(sourceId)).thenReturn(Optional.of(source));
         var principal = mock(UserAccountPrincipal.class);
         var authentication = UsernamePasswordAuthenticationToken.authenticated(
@@ -94,13 +97,6 @@ class AccountingFileImportAuthorizationManagerTest {
                 Map.of("accountingSourceId", sourceId));
     }
 
-    private void setId(Company company, UUID id) {
-        try {
-            var field = Company.class.getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(company, id);
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException(exception);
-        }
-    }
+
+}
 }
