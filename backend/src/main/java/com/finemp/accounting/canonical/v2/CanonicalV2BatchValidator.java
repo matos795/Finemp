@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
@@ -154,7 +155,7 @@ public final class CanonicalV2BatchValidator {
             }
 
             var previous = entries.putIfAbsent(entry.sourceEntryKey(), entry);
-            if (previous != null && !previous.equals(entry)) {
+            if (previous != null && !sameEntry(previous, entry)) {
                 throw conflict();
             }
         }
@@ -235,7 +236,7 @@ public final class CanonicalV2BatchValidator {
                     total.day(),
                     total.entryTypeCode());
             var previous = unique.putIfAbsent(key, total);
-            if (previous != null && !previous.equals(total)) {
+            if (previous != null && !sameDailyTotals(previous, total)) {
                 throw conflict();
             }
         }
@@ -280,7 +281,7 @@ public final class CanonicalV2BatchValidator {
                     total.month(),
                     total.entryTypeCode());
             var previous = unique.putIfAbsent(key, total);
-            if (previous != null && !previous.equals(total)) {
+            if (previous != null && !sameMonthlyTotals(previous, total)) {
                 throw conflict();
             }
         }
@@ -369,10 +370,43 @@ public final class CanonicalV2BatchValidator {
                     item.costCenterCode(),
                     item.natureCode());
             var previous = unique.putIfAbsent(key, item);
-            if (previous != null && !previous.equals(item)) {
+            if (previous != null && !sameCostAllocation(previous, item)) {
                 throw conflict();
             }
         }
+    }
+
+    private static boolean sameEntry(CanonicalAccountingEntry first, CanonicalAccountingEntry second) {
+        return Objects.equals(first.accountingDate(), second.accountingDate())
+                && Objects.equals(first.debitAccountId(), second.debitAccountId())
+                && Objects.equals(first.creditAccountId(), second.creditAccountId())
+                && sameAmount(first.amount(), second.amount())
+                && Objects.equals(first.establishmentCode(), second.establishmentCode())
+                && Objects.equals(first.historyText(), second.historyText());
+    }
+
+    private static boolean sameDailyTotals(
+            CanonicalAccountDailyDebitCreditTotals first,
+            CanonicalAccountDailyDebitCreditTotals second) {
+        return sameAmount(first.debitTotal(), second.debitTotal())
+                && sameAmount(first.creditTotal(), second.creditTotal());
+    }
+
+    private static boolean sameMonthlyTotals(
+            CanonicalAccountMonthlyDebitCreditTotals first,
+            CanonicalAccountMonthlyDebitCreditTotals second) {
+        return sameAmount(first.debitTotal(), second.debitTotal())
+                && sameAmount(first.creditTotal(), second.creditTotal());
+    }
+
+    private static boolean sameCostAllocation(
+            CanonicalEntryCostAllocation first,
+            CanonicalEntryCostAllocation second) {
+        return sameAmount(first.amount(), second.amount());
+    }
+
+    private static boolean sameAmount(BigDecimal first, BigDecimal second) {
+        return first == null ? second == null : second != null && first.compareTo(second) == 0;
     }
 
     private static void requireDatasetPresence(
