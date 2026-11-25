@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 import {
   accountingV2Access,
   chartUniverse,
+  defaultMonthRange,
   describeCoverage,
   knownSourceIds,
   movementMetadataView,
@@ -292,5 +293,25 @@ test("no primary action is a button without a handler", () => {
     for (const match of source.matchAll(/<button\b[\s\S]*?>/g)) {
       assert.match(match[0], /onClick=|type="submit"|disabled(?!=\{false\})/, `${path}: ${match[0]}`)
     }
+  }
+})
+
+test("period screens open on the last imported month, never on a sync run", () => {
+  const coverage = {
+    kind: "INTERVALS",
+    available: true,
+    importedFrom: "2026-01-01",
+    importedTo: "2026-03-31",
+    intervals: [{ importedFrom: "2026-01-01", importedTo: "2026-03-31" }],
+  }
+
+  assert.deepEqual(defaultMonthRange(coverage, "2026-11"), { from: "2026-03", to: "2026-03" })
+  assert.deepEqual(defaultMonthRange({ kind: "INTERVALS", available: false, intervals: [] }, "2026-11"), { from: "2026-11", to: "2026-11" })
+  assert.deepEqual(defaultMonthRange(undefined, "2026-11"), { from: "2026-11", to: "2026-11" })
+
+  for (const path of ["features/accounting-area/pages/movements-screen.tsx", "features/accounting-area/pages/debit-credit-totals-screen.tsx"]) {
+    const source = read(path)
+    assert.match(source, /defaultMonthRange\(/, path)
+    assert.doesNotMatch(source, /syncedUntil|latestSucceededRun/, path)
   }
 })

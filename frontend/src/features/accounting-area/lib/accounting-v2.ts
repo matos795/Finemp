@@ -227,3 +227,14 @@ export function formatDay(iso: string): string {
 
     return day ? `${day}/${month}/${year}` : `${month}/${year}`
 }
+
+/**
+ * Período inicial das telas por mês: o último mês com dado importado segundo a
+ * cobertura do dataset; sem cobertura, o mês de referência. Nunca vem da SyncRun.
+ */
+export function defaultMonthRange(coverage: DatasetCoverage | null | undefined, fallbackMonth: string) {
+    const lastImported = coverage?.kind === "INTERVALS" && coverage.available ? coverage.importedTo?.slice(0, 7) : null
+    const month = lastImported ?? fallbackMonth
+
+    return { from: month, to: month }
+}

@@ -3,14 +3,14 @@ import { useQuery } from "@tanstack/react-query"
 import { Pager } from "../../../components/finemp/pager"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
 import { useAccountingContext } from "../accounting-context"
-import { getDebitCreditTotals, type DebitCreditGranularity } from "../api/accounting-data-api"
+import { getDatasetCoverage, getDebitCreditTotals, type DebitCreditGranularity } from "../api/accounting-data-api"
 import { CoverageStatus } from "../components/coverage-status"
 import { SourcePicker } from "../components/source-picker"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { effectiveSource, useAccountingSources } from "../hooks/use-accounting-sources"
 import { useDebounced } from "../hooks/use-debounced"
 import type { AccountingScreen } from "../lib/accounting-screens"
-import { accountingV2Access, formatDay, totalsPeriod } from "../lib/accounting-v2"
+import { accountingV2Access, defaultMonthRange, formatDay, totalsPeriod } from "../lib/accounting-v2"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
 import { accountingQueryKey } from "../lib/query-keys"
 import { ScreenHeader } from "./accounting-screen-page"
@@ -52,12 +52,21 @@ export function DebitCreditTotalsScreen(props: TotalsScreenProps) {
     const [chosenSource, setChosenSource] = useState<string | null>(null)
     const sourceId = effectiveSource(sources.options, chosenSource)
     const [granularity, setGranularity] = useState<DebitCreditGranularity>("DAILY")
-    const [range, setRange] = useState(() => ({ from: currentMonth(), to: currentMonth() }))
+    const [chosenRange, setRange] = useState<{ from: string; to: string } | null>(null)
     const [establishmentInput, setEstablishmentInput] = useState("")
     const [accountInput, setAccountInput] = useState("")
     const establishmentCode = useDebounced(establishmentInput.trim(), 300)
     const sourceAccountId = useDebounced(accountInput.trim(), 300)
     const [page, setPage] = useState(0)
+    const dataset = granularity === "MONTHLY" ? "MONTHLY_TOTALS" : "DAILY_TOTALS"
+    // Mesma chave do CoverageStatus: uma só consulta para a faixa e o período inicial.
+    const coverage = useQuery({
+        queryKey: accountingQueryKey(userId, "coverage", companyId, sourceId, dataset, ""),
+        queryFn: () => getDatasetCoverage(companyId as string, { accountingSourceId: sourceId as string, dataset }),
+        enabled: companyId !== null && sourceId !== null && access.ledger,
+        retry: false,
+    })
+    const range = chosenRange ?? defaultMonthRange(coverage.data, currentMonth())
     const period = totalsPeriod(range.from, range.to)
 
     const totals = useQuery({
@@ -76,7 +85,7 @@ export function DebitCreditTotalsScreen(props: TotalsScreenProps) {
                 page,
                 size: PAGE_SIZE,
             }),
-        enabled: companyId !== null && sourceId !== null && access.ledger && period.valid,
+        enabled: companyId !== null && sourceId !== null && access.ledger && period.valid && !coverage.isLoading,
         placeholderData: (previous) => previous,
         retry: false,
     })
@@ -106,7 +115,7 @@ export function DebitCreditTotalsScreen(props: TotalsScreenProps) {
         )
     } else if (!period.valid) {
         body = <div className="empty">O início deve ser anterior ao fim.</div>
-    } else if (totals.isLoading) {
+    } else if (totals.isLoading || coverage.isLoading) {
         body = <div className="empty">Carregando…</div>
     } else if (totals.isError) {
         body = (
@@ -259,7 +268,7 @@ export function DebitCreditTotalsScreen(props: TotalsScreenProps) {
                     <CoverageStatus
                         companyId={company.companyId}
                         accountingSourceId={sourceId}
-                        dataset={granularity === "MONTHLY" ? "MONTHLY_TOTALS" : "DAILY_TOTALS"}
+                        dataset={dataset}
                     />
                 )}
 

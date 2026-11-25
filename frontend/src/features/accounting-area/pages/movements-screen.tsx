@@ -3,14 +3,14 @@ import { useQuery } from "@tanstack/react-query"
 import { Pager } from "../../../components/finemp/pager"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
 import { useAccountingContext } from "../accounting-context"
-import { getOriginCatalog, searchMovements } from "../api/accounting-data-api"
+import { getDatasetCoverage, getOriginCatalog, searchMovements } from "../api/accounting-data-api"
 import { CoverageStatus } from "../components/coverage-status"
 import { MovementMetadataDetail } from "../components/movement-metadata-detail"
 import { SourcePicker } from "../components/source-picker"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { effectiveSource, useAccountingSources } from "../hooks/use-accounting-sources"
 import type { AccountingScreen } from "../lib/accounting-screens"
-import { accountingV2Access, formatDay, formatInstant, totalsPeriod } from "../lib/accounting-v2"
+import { accountingV2Access, defaultMonthRange, formatDay, formatInstant, totalsPeriod } from "../lib/accounting-v2"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
 import { accountingQueryKey } from "../lib/query-keys"
 import { ScreenHeader } from "./accounting-screen-page"
@@ -46,9 +46,17 @@ export function MovementsScreen(props: MovementsScreenProps) {
     const sources = useAccountingSources(companyId, companyGrant?.permissions ?? [])
     const [chosenSource, setChosenSource] = useState<string | null>(null)
     const sourceId = effectiveSource(sources.options, chosenSource)
-    const [range, setRange] = useState(() => ({ from: currentMonth(), to: currentMonth() }))
+    const [chosenRange, setRange] = useState<{ from: string; to: string } | null>(null)
     const [page, setPage] = useState(0)
     const [open, setOpen] = useState<string | null>(null)
+    // Mesma chave do CoverageStatus: uma só consulta para a faixa e o período inicial.
+    const coverage = useQuery({
+        queryKey: accountingQueryKey(userId, "coverage", companyId, sourceId, "MOVEMENTS", ""),
+        queryFn: () => getDatasetCoverage(companyId as string, { accountingSourceId: sourceId as string, dataset: "MOVEMENTS" }),
+        enabled: companyId !== null && sourceId !== null && access.ledger,
+        retry: false,
+    })
+    const range = chosenRange ?? defaultMonthRange(coverage.data, currentMonth())
     const period = totalsPeriod(range.from, range.to)
 
     const movements = useQuery({
@@ -61,7 +69,7 @@ export function MovementsScreen(props: MovementsScreenProps) {
                 page,
                 size: PAGE_SIZE,
             }),
-        enabled: companyId !== null && access.ledger && period.valid && !sources.loading,
+        enabled: companyId !== null && access.ledger && period.valid && !sources.loading && !coverage.isLoading,
         placeholderData: (previous) => previous,
         retry: false,
     })
@@ -99,7 +107,7 @@ export function MovementsScreen(props: MovementsScreenProps) {
         )
     } else if (!period.valid) {
         body = <div className="empty">O início deve ser anterior ao fim.</div>
-    } else if (movements.isLoading || sources.loading) {
+    } else if (movements.isLoading || sources.loading || coverage.isLoading) {
         body = <div className="empty">Carregando…</div>
     } else if (movements.isError) {
         body = (
