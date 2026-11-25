@@ -37,7 +37,7 @@ public final class FinempConnectorClient {
     public ConnectorWorkResult complete(ConnectorWorkResponse work, AccountingSourceSnapshot snapshot) {
         validate(work); byte[] body=codec.batch(work,snapshot); return submit(work,"complete",body);
     }
-    public ConnectorWorkResult complete(ConnectorWorkResponse work, CanonicalAccountingBatch batch) {
+    public ConnectorWorkResult completeV2(ConnectorWorkResponse work, CanonicalAccountingBatch batch) {
         validate(work); byte[] body=codec.batchV2(work,batch); return submit(work,"complete",body);
     }
     public ConnectorWorkResult fail(ConnectorWorkResponse work, SyncFailureCode code) {
