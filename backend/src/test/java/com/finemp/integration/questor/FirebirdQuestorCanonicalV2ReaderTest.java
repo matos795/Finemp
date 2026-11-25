@@ -79,8 +79,17 @@ class FirebirdQuestorCanonicalV2ReaderTest {
 
             assertThat(batch.contractVersion()).isEqualTo(2);
             assertThat(batch.observedIdentity().externalReference()).isEqualTo("57");
+            // C2.5: totais D/C diário e mensal (julho completo); sem tabela de catálogo,
+            // o catálogo de origem opcional fica ausente.
             assertThat(batch.capabilities().datasets())
-                    .isEqualTo(Set.of(AccountingDataset.CHART, AccountingDataset.MOVEMENTS));
+                    .isEqualTo(Set.of(
+                            AccountingDataset.CHART,
+                            AccountingDataset.MOVEMENTS,
+                            AccountingDataset.DAILY_TOTALS,
+                            AccountingDataset.MONTHLY_TOTALS));
+            assertThat(batch.dailyTotals()).isEmpty();
+            assertThat(batch.monthlyTotals()).isEmpty();
+            assertThat(batch.originCatalog()).isNull();
             assertThat(batch.capabilities().amountSignPolicy())
                     .isEqualTo(AmountSignPolicy.NON_NEGATIVE_WITH_SIDE);
             assertThat(batch.capabilities().entryKeyScopedBySource()).isTrue();
@@ -343,6 +352,19 @@ class FirebirdQuestorCanonicalV2ReaderTest {
                     ORIGEMDADO VARCHAR(10),
                     CODIGOESTABORI INTEGER,
                     PRIMARY KEY(CODIGOEMPRESA, CHAVELCTOCTB))
+                """);
+
+        sql.execute("""
+                CREATE TABLE SALDOCTB(
+                    CODIGOEMPRESA INTEGER NOT NULL, CODIGOESTAB INTEGER NOT NULL,
+                    CONTACTB INTEGER NOT NULL, DATASALDO DATE NOT NULL, TIPOLANCAMENTO CHAR(2),
+                    VALORDEB NUMERIC(19,4), VALORCRED NUMERIC(19,4))
+                """);
+        sql.execute("""
+                CREATE TABLE SALDOCTBMENSAL(
+                    CODIGOEMPRESA INTEGER NOT NULL, CODIGOESTAB INTEGER NOT NULL,
+                    CONTACTB INTEGER NOT NULL, DATASALDO DATE NOT NULL, TIPOLANCAMENTO CHAR(2),
+                    VALORDEB NUMERIC(19,4), VALORCRED NUMERIC(19,4))
                 """);
     }
 }
