@@ -47,5 +47,8 @@ public enum CompanyPermission {
     CRM_MANAGE,
 
     ASSET_VIEW,
-    ASSET_MANAGE
+    ASSET_MANAGE,
+
+    EMPLOYEE_VIEW,
+    EMPLOYEE_MANAGE
 }
