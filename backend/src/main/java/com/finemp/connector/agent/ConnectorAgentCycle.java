@@ -1,5 +1,6 @@
 package com.finemp.connector.agent;
 
+import com.finemp.accounting.canonical.v2.CanonicalAccountingBatch;
 import com.finemp.accounting.reading.*;
 import com.finemp.accounting.sync.*;
 import com.finemp.accounting.sync.execution.SyncAttemptStatus;
@@ -16,6 +17,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
     public enum Outcome { IDLE, BUSY, SUCCEEDED, FAILED, PENDING, RETRY_LATER, HALTED, STOPPED }
     private final FinempConnectorClient client;
     private final AccountingSourceSnapshotReader reader;
+    private final CanonicalAccountingBatchReader canonicalV2Reader;
     private final long readNanos;
     private final LongSupplier nanoTime;
     private final ExecutorService reads;
@@ -28,10 +30,25 @@ public final class ConnectorAgentCycle implements AutoCloseable {
     private boolean backoff;
     private long nextTry;
     public ConnectorAgentCycle(FinempConnectorClient client, AccountingSourceSnapshotReader reader, Duration readBudget) {
-        this(client,reader,readBudget,System::nanoTime);
+        this(client,reader,null,readBudget,System::nanoTime);
+    }
+    public ConnectorAgentCycle(
+            FinempConnectorClient client,
+            AccountingSourceSnapshotReader reader,
+            CanonicalAccountingBatchReader canonicalV2Reader,
+            Duration readBudget) {
+        this(client,reader,canonicalV2Reader,readBudget,System::nanoTime);
     }
     ConnectorAgentCycle(FinempConnectorClient client, AccountingSourceSnapshotReader reader, Duration readBudget, LongSupplier nanoTime) {
-        this.client=Objects.requireNonNull(client); this.reader=Objects.requireNonNull(reader); this.nanoTime=Objects.requireNonNull(nanoTime);
+        this(client,reader,null,readBudget,nanoTime);
+    }
+    ConnectorAgentCycle(
+            FinempConnectorClient client,
+            AccountingSourceSnapshotReader reader,
+            CanonicalAccountingBatchReader canonicalV2Reader,
+            Duration readBudget,
+            LongSupplier nanoTime) {
+        this.client=Objects.requireNonNull(client); this.reader=Objects.requireNonNull(reader); this.canonicalV2Reader=canonicalV2Reader; this.nanoTime=Objects.requireNonNull(nanoTime);
         if(readBudget==null || readBudget.compareTo(Duration.ofMillis(1))<0 || readBudget.compareTo(Duration.ofMinutes(10))>0)
             throw new ConnectorClientException(ConnectorClientException.Kind.CONFIGURATION);
         readNanos=readBudget.toNanos();
@@ -53,36 +70,84 @@ public final class ConnectorAgentCycle implements AutoCloseable {
             long requested=nanoTime.getAsLong();var claim=client.claim();
             if(claim.isEmpty()) return Outcome.IDLE;
             var work=claim.get();
-            if(work.mode()!=SyncRunMode.INITIAL || reader.sourceType()!=work.context().sourceType()) {halted=true;return Outcome.HALTED;}
+            if(work.mode()!=SyncRunMode.INITIAL || !hasCompatibleReader(work)) {halted=true;return Outcome.HALTED;}
             keeper=new LeaseKeeper(work,requested); activeLease=keeper;
             if(closed) return Outcome.STOPPED;
             if(!keeper.live()) return lostLease();
             keeper.arm();
-            AccountingSourceSnapshot snapshot;
-            try {snapshot=read(work,keeper);}
-            catch(AccountingIdentityConfigurationException invalidLocalMapping) {halted=true;return Outcome.HALTED;}
-            catch(AccountingIdentityMismatchException mismatch) {return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);}
-            catch(AccountingUnexpectedSourceDataException invalidSourceData) {return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);}
-            catch(AccountingReadLimitExceededException | ReadBudgetExceeded exhausted) {return report(work,keeper,SyncFailureCode.RESOURCE_LIMIT);}
-            catch(CancellationException lostLease) {return lostLease();}
-            catch(RuntimeException unavailable) {return report(work,keeper,SyncFailureCode.READ_FAILED);}
-            if(!keeper.live()) return lostLease();
-            if(snapshot==null || !snapshot.identity().matches(work.context())) return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);
-            try {return accept(work,client.complete(work,snapshot),keeper.expires.get());}
-            catch(ConnectorClientException uncertain) {
-                // Any error after starting complete is uncertain. Never turn it into a conflicting fail POST or automatic replay.
-                pending=new Pending(work,keeper.expires.get());delay(uncertain);return halted?Outcome.HALTED:Outcome.PENDING;
+            if (shouldTryV2(work)) {
+                CanonicalAccountingBatch batch;
+                try {batch=readV2(work,keeper);}
+                catch(AccountingIdentityConfigurationException invalidLocalMapping) {halted=true;return Outcome.HALTED;}
+                catch(AccountingIdentityMismatchException mismatch) {return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);}
+                catch(AccountingUnexpectedSourceDataException invalidSourceData) {return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);}
+                catch(AccountingReadLimitExceededException | ReadBudgetExceeded exhausted) {return report(work,keeper,SyncFailureCode.RESOURCE_LIMIT);}
+                catch(CancellationException lostLease) {return lostLease();}
+                catch(RuntimeException unavailable) {return report(work,keeper,SyncFailureCode.READ_FAILED);}
+                if(!keeper.live()) return lostLease();
+                if(batch==null || batch.observedIdentity()==null || !batch.observedIdentity().matches(work.context()))
+                    return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);
+                if(batch.capabilities()==null || batch.capabilities().datasets()==null
+                        || !work.acceptedDatasets().containsAll(batch.capabilities().datasets())) {
+                    if(!work.acceptsContractVersion(1) || reader.sourceType()!=work.context().sourceType())
+                        return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);
+                    return publishV1(work,keeper);
+                }
+                byte[] body;
+                try {body=client.prepareV2(work,batch);}
+                catch(ConnectorClientException localFailure) {
+                    if(localFailure.kind()==ConnectorClientException.Kind.RESOURCE_LIMIT)
+                        return report(work,keeper,SyncFailureCode.RESOURCE_LIMIT);
+                    return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);
+                }
+                try {return accept(work,client.completePreparedV2(work,body),keeper.expires.get());}
+                catch(ConnectorClientException uncertain) {
+                    pending=new Pending(work,keeper.expires.get());delay(uncertain);return halted?Outcome.HALTED:Outcome.PENDING;
+                }
             }
+            return publishV1(work,keeper);
         } catch(InterruptedException interrupted) {Thread.currentThread().interrupt();return closed?Outcome.STOPPED:Outcome.RETRY_LATER;}
         catch(ConnectorClientException unavailable) {delay(unavailable);return halted?Outcome.HALTED:Outcome.RETRY_LATER;}
         finally {if(keeper!=null)keeper.close();drainHeartbeatPolicy();activeLease=null;cycling.set(false);}
     }
+    private Outcome publishV1(ConnectorWorkResponse work, LeaseKeeper keeper) throws InterruptedException {
+        AccountingSourceSnapshot snapshot;
+        try {snapshot=read(work,keeper);}
+        catch(AccountingIdentityConfigurationException invalidLocalMapping) {halted=true;return Outcome.HALTED;}
+        catch(AccountingIdentityMismatchException mismatch) {return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);}
+        catch(AccountingUnexpectedSourceDataException invalidSourceData) {return report(work,keeper,SyncFailureCode.INVALID_PAYLOAD);}
+        catch(AccountingReadLimitExceededException | ReadBudgetExceeded exhausted) {return report(work,keeper,SyncFailureCode.RESOURCE_LIMIT);}
+        catch(CancellationException lostLease) {return lostLease();}
+        catch(RuntimeException unavailable) {return report(work,keeper,SyncFailureCode.READ_FAILED);}
+        if(!keeper.live()) return lostLease();
+        if(snapshot==null || !snapshot.identity().matches(work.context())) return report(work,keeper,SyncFailureCode.IDENTITY_MISMATCH);
+        try {return accept(work,client.complete(work,snapshot),keeper.expires.get());}
+        catch(ConnectorClientException uncertain) {
+            pending=new Pending(work,keeper.expires.get());delay(uncertain);return halted?Outcome.HALTED:Outcome.PENDING;
+        }
+    }
+    private boolean hasCompatibleReader(ConnectorWorkResponse work) {
+        return reader.sourceType()==work.context().sourceType()
+                || (shouldTryV2(work) && canonicalV2Reader.sourceType()==work.context().sourceType());
+    }
+    private boolean shouldTryV2(ConnectorWorkResponse work) {
+        return canonicalV2Reader!=null
+                && work.acceptsContractVersion(CanonicalAccountingBatch.VERSION)
+                && canonicalV2Reader.sourceType()==work.context().sourceType();
+    }
     private AccountingSourceSnapshot read(ConnectorWorkResponse work,LeaseKeeper keeper) throws InterruptedException {
+        return readBounded(keeper, () -> reader.readSnapshot(work.context()));
+    }
+    private CanonicalAccountingBatch readV2(ConnectorWorkResponse work,LeaseKeeper keeper) throws InterruptedException {
+        return readBounded(keeper, () -> canonicalV2Reader.readBatch(work.context()));
+    }
+    private <T> T readBounded(LeaseKeeper keeper, Callable<T> action) throws InterruptedException {
         long deadline=nanoTime.getAsLong()+readNanos;
-        var task=new FutureTask<AccountingSourceSnapshot>(() -> reader.readSnapshot(work.context()));
+        var task=new FutureTask<T>(action);
+        var workerReleased=new CountDownLatch(1);
         reading.set(true);keeper.attach(task);
-        try {reads.execute(() -> {try{task.run();}finally{reading.set(false);}});}
-        catch(RejectedExecutionException stopped) {reading.set(false);task.cancel(true);throw new CancellationException();}
+        try {reads.execute(() -> {try{task.run();}finally{reading.set(false);workerReleased.countDown();}});}
+        catch(RejectedExecutionException stopped) {reading.set(false);workerReleased.countDown();task.cancel(true);throw new CancellationException();}
         try {
             while(true) {
                 if(closed || !keeper.live()) {task.cancel(true);throw new CancellationException();}
@@ -90,6 +155,8 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                 if(remaining<=0) {task.cancel(true);throw new ReadBudgetExceeded();}
                 try {
                     var result=task.get(Math.min(remaining,keeper.remaining()),TimeUnit.NANOSECONDS);
+                    if(deadline-nanoTime.getAsLong()<=0)throw new ReadBudgetExceeded();
+                    workerReleased.await();
                     if(deadline-nanoTime.getAsLong()<=0)throw new ReadBudgetExceeded();
                     return result;
                 }
@@ -99,7 +166,7 @@ public final class ConnectorAgentCycle implements AutoCloseable {
                     if(failed.getCause() instanceof AccountingIdentityMismatchException) throw new AccountingIdentityMismatchException();
                     if(failed.getCause() instanceof AccountingUnexpectedSourceDataException) throw new AccountingUnexpectedSourceDataException();
                     if(failed.getCause() instanceof AccountingReadLimitExceededException) throw new AccountingReadLimitExceededException();
-                    throw new ReadUnavailable(); // Discard all private driver causes, including errors.
+                    throw new ReadUnavailable();
                 }
             }
         } finally {if(!task.isDone())task.cancel(true);}

@@ -2,6 +2,7 @@ package com.finemp.connector.agent;
 
 import com.finemp.integration.questor.*;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -19,7 +20,12 @@ final class ConnectorLocalProfile implements AutoCloseable {
             transport=new ConnectorHttpsTransport(profile.origin(),()->token(profile,secrets),Duration.ofSeconds(profile.httpSeconds()));
             var provider=new QuestorConnectionProvider(()->connection(profile,secrets));
             var reader=questorReader(profile,provider);
-            cycle=new ConnectorAgentCycle(new FinempConnectorClient(transport,profile.sourceId(),profile.maxRecords()),reader,Duration.ofSeconds(profile.readSeconds()));
+            var canonicalV2Reader=questorV2Reader(profile,provider);
+            cycle=new ConnectorAgentCycle(
+                    new FinempConnectorClient(transport,profile.sourceId(),profile.maxRecords()),
+                    reader,
+                    canonicalV2Reader,
+                    Duration.ofSeconds(profile.readSeconds()));
             return new ConnectorLocalProfile(lock,transport,cycle);
         }catch(RuntimeException failure){
             if(cycle!=null)cycle.close();if(transport!=null)transport.close();if(lock!=null)lock.close();
@@ -34,6 +40,18 @@ final class ConnectorLocalProfile implements AutoCloseable {
         var identities=new FirebirdQuestorCompanyIdentityReader(provider,profile.identity(),profile.querySeconds());
         var movements=new FirebirdQuestorAccountingReader(provider,profile.maxRecords(),profile.querySeconds());
         return new VerifiedQuestorSnapshotReader(provider,identities,movements);
+    }
+    static FirebirdQuestorCanonicalV2Reader questorV2Reader(
+            ConnectorLocalConfiguration.Profile profile,
+            QuestorConnectionProvider provider) {
+        var identities=new FirebirdQuestorCompanyIdentityReader(provider,profile.identity(),profile.querySeconds());
+        return new FirebirdQuestorCanonicalV2Reader(
+                provider,
+                identities,
+                Clock.systemUTC(),
+                profile.maxRecords(),
+                profile.maxRecords(),
+                profile.querySeconds());
     }
     private static String token(ConnectorLocalConfiguration.Profile profile,ConnectorSecretSource secrets){
         String value=secret(secrets,profile.credentialEnv(),43);if(!value.matches("[A-Za-z0-9_-]{43}"))throw invalid();return value;
