@@ -10,6 +10,7 @@ import com.finemp.TestcontainersConfiguration;
 import com.finemp.access.*;
 import com.finemp.accounting.canonical.v2.*;
 import com.finemp.accounting.coverage.AccountingDatasetCoverageService;
+import com.finemp.accounting.reading.ExternalCompanyIdentity;
 import com.finemp.accounting.source.*;
 import com.finemp.accounting.sync.*;
 import com.finemp.accounting.sync.control.*;
