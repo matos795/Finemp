@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.UUID;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,6 +46,7 @@ class CanonicalV2DatasetStoreIntegrationTest {
     @Autowired private AccountingSourceRepository sources;
     @Autowired private CompanyRepository companies;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private EntityManager entityManager;
 
     @Test
     void shouldPersistCanonicalV2RowsIdempotentlyWithExactDecimals() {
@@ -88,6 +90,36 @@ class CanonicalV2DatasetStoreIntegrationTest {
                 .orElseThrow();
         assertThat(storedMonthly.getDebitTotal()).isEqualByComparingTo("100.1000");
         assertThat(storedMonthly.getCreditTotal()).isEqualByComparingTo("20.0001");
+    }
+
+    @Test
+    void shouldReplayNanosecondSourceTimestampAfterDatabaseRoundTrip() {
+        var fixture = fixture("NANO");
+        var metadata = new CanonicalEntrySourceMetadata(
+                "entry-nano",
+                Instant.parse("2026-07-10T12:00:00.123456789Z"),
+                "H1",
+                "ORIG",
+                "NORMAL",
+                "QUESTOR",
+                "B1",
+                "DOC1",
+                "OG1",
+                "TX1",
+                "1");
+
+        store.persistEntrySourceMetadata(fixture.source().getId(), metadata);
+        entityManager.flush();
+        entityManager.clear();
+
+        store.persistEntrySourceMetadata(fixture.source().getId(), metadata);
+
+        var stored = entryMetadata
+                .findByAccountingSourceIdAndSourceEntryKey(fixture.source().getId(), "entry-nano")
+                .orElseThrow();
+        assertThat(stored.getSourceRecordedAt())
+                .isEqualTo(Instant.parse("2026-07-10T12:00:00.123456Z"));
+        assertThat(entryMetadata.count()).isEqualTo(1);
     }
 
     @Test
