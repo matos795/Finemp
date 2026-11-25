@@ -19,9 +19,6 @@ public class AccountingAccountSourceAttributes {
     @Column(name = "classification_code", nullable = false)
     private String classificationCode;
 
-    @Column(name = "description", nullable = false)
-    private String description;
-
     @Column(name = "account_type", nullable = false)
     private String accountType;
 
@@ -49,7 +46,6 @@ public class AccountingAccountSourceAttributes {
             UUID accountingSourceId,
             String sourceAccountId,
             String classificationCode,
-            String description,
             String accountType,
             String calculationType,
             String balanceNature,
@@ -60,7 +56,6 @@ public class AccountingAccountSourceAttributes {
         this.accountingSourceId = accountingSourceId;
         this.sourceAccountId = sourceAccountId;
         this.classificationCode = classificationCode;
-        this.description = description;
         this.accountType = accountType;
         this.calculationType = calculationType;
         this.balanceNature = balanceNature;
@@ -74,7 +69,6 @@ public class AccountingAccountSourceAttributes {
     public UUID getAccountingSourceId() { return accountingSourceId; }
     public String getSourceAccountId() { return sourceAccountId; }
     public String getClassificationCode() { return classificationCode; }
-    public String getDescription() { return description; }
     public String getAccountType() { return accountType; }
     public String getCalculationType() { return calculationType; }
     public String getBalanceNature() { return balanceNature; }
