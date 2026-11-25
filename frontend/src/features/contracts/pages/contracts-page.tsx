@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Modal } from "../../../components/finemp/modal"
+import { parseMoneyInput } from "../../../lib/formatters/money-input"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -36,11 +37,11 @@ function canManageContract(
 }
 
 function normalizeMoney(value: string) {
-    return value.trim().replace(",", ".")
+    return parseMoneyInput(value) ?? ""
 }
 
 function validMoney(value: string) {
-    return /^\d+(?:[.,]\d{1,2})?$/.test(value.trim())
+    return parseMoneyInput(value) !== null
 }
 
 export function ContractsPage() {

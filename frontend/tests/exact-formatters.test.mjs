@@ -1,4 +1,5 @@
 import { test } from 'node:test'
+import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import {
   formatExactCurrency,
@@ -44,4 +45,32 @@ test('aging bands follow the contract codes in prototype order', () => {
   assert.equal(agingBands.length, 8)
   assert.equal(new Set(agingBands.map(band => band.code)).size, 8)
   for (const band of agingBands) assert.equal(isOverdueBand(band.code), band.overdue)
+})
+
+test("money inputs accept Brazilian thousands separators without Number conversion", async () => {
+  const { parseMoneyInput } = await import("../src/lib/formatters/money-input.ts")
+  assert.equal(parseMoneyInput("1.500,00"), "1500.00")
+  assert.equal(parseMoneyInput("R$ 12.000,5"), "12000.5")
+  assert.equal(parseMoneyInput("1500"), "1500")
+  assert.equal(parseMoneyInput("1500,75"), "1500.75")
+  assert.equal(parseMoneyInput("1500.75"), "1500.75")
+  assert.equal(parseMoneyInput("1.234"), "1234", "dot groups of three are thousands")
+  assert.equal(parseMoneyInput("99999999999999999,98"), "99999999999999999.98")
+  for (const invalid of ["", "abc", "1,234", "1.2.3", "-10", "10,", ",5"]) {
+    assert.equal(parseMoneyInput(invalid), null, invalid)
+  }
+})
+
+test("published money fields use the shared parser instead of a digits-only pattern", () => {
+  for (const path of [
+    "../src/features/contracts/pages/contracts-page.tsx",
+    "../src/features/sales/pages/sales-pipeline-page.tsx",
+    "../src/features/assets/pages/assets-page.tsx",
+    "../src/features/debt/pages/debt-origin-page.tsx",
+    "../src/features/billing/pages/service-invoices-page.tsx",
+  ]) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8")
+    assert.match(source, /parseMoneyInput/, path)
+    assert.doesNotMatch(source, /\/\^\\d\+\(\?:\[\.,\]\\d\{1,2\}\)\?\$\//, path)
+  }
 })
