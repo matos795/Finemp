@@ -1,6 +1,7 @@
 package com.finemp.security;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -8,6 +9,8 @@ import org.springframework.http.HttpMethod;
 import com.finemp.accounting.source.AccountingSourceRepository;
 import com.finemp.access.CompanyPermissionAuthorizationService;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,6 +24,7 @@ import org.springframework.security.web.authentication.logout.HttpStatusReturnin
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
 import com.finemp.access.CompanyPermission;
 import com.finemp.finance.entry.EntryCommandAuthorizationManager;
@@ -41,13 +45,17 @@ public class SecurityConfiguration {
                         SecurityContextRepository securityContextRepository,
                         SessionAccountStateValidator sessionAccountStateValidator,
                         QuestorImportAuthorizationManager questorImportAuthorizationManager,
-                        AccountingFileImportAuthorizationManager accountingFileImportAuthorizationManager,
+                        ObjectProvider<AccountingFileImportAuthorizationManager> accountingFileImportAuthorizationManagerProvider,
                         EntryCommandAuthorizationManager financialCommands,
                         BankTransferCommandAuthorizationManager transferCommands,
                         @org.springframework.beans.factory.annotation.Qualifier("periodCloseAuthorizationManager") PeriodCommandAuthorizationManager periodClose,
                         @org.springframework.beans.factory.annotation.Qualifier("periodReopenAuthorizationManager") PeriodCommandAuthorizationManager periodReopen,
                         CompanyPermissionAuthorizationManagerFactory permissionAuthorizationManagerFactory)
                         throws Exception {
+
+                AuthorizationManager<RequestAuthorizationContext> accountingFileImportAuthorizationManager =
+                                accountingFileImportAuthorizationManagerProvider.getIfAvailable(
+                                                () -> (authentication, context) -> new AuthorizationDecision(false));
 
                 http
                                 .addFilterAfter(new SessionCredentialsFilter(sessionAccountStateValidator),
@@ -353,13 +361,6 @@ public class SecurityConfiguration {
         QuestorImportAuthorizationManager questorImportAuthorizationManager(
                         AccountingSourceRepository sources, CompanyPermissionAuthorizationService permissions) {
                 return new QuestorImportAuthorizationManager(sources, permissions);
-        }
-
-        @Bean
-        AccountingFileImportAuthorizationManager accountingFileImportAuthorizationManager(
-                        AccountingSourceRepository sources,
-                        CompanyPermissionAuthorizationService permissions) {
-                return new AccountingFileImportAuthorizationManager(sources, permissions);
         }
 
         @Bean
