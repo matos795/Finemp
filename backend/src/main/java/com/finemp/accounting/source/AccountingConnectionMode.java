@@ -1,2 +1,2 @@
 package com.finemp.accounting.source;
-public enum AccountingConnectionMode { DIRECT, CONNECTOR }
+public enum AccountingConnectionMode { DIRECT, CONNECTOR, UPLOAD }

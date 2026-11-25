@@ -44,10 +44,10 @@ export interface PlatformUser {
 export interface AccountingSource {
     id: string
     companyId: string
-    type: "QUESTOR"
+    type: "QUESTOR" | "FILE_IMPORT"
     externalReference: string | null
     active: boolean
-    connectionMode: "DIRECT" | "CONNECTOR"
+    connectionMode: "DIRECT" | "CONNECTOR" | "UPLOAD"
 }
 
 export interface ConnectorCredential {

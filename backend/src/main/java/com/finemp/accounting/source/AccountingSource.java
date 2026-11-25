@@ -50,7 +50,16 @@ public class AccountingSource {
             boolean active) {
         this.company = company;
         this.type = type;
-        this.externalReference = externalReference;
+        if (type == AccountingSourceType.FILE_IMPORT) {
+            if (externalReference != null && !externalReference.isBlank()) {
+                throw new IllegalArgumentException("File import source must not have an external reference.");
+            }
+            this.externalReference = null;
+            this.connectionMode = AccountingConnectionMode.UPLOAD;
+        } else {
+            this.externalReference = externalReference;
+            this.connectionMode = AccountingConnectionMode.DIRECT;
+        }
         this.active = active;
     }
 
@@ -71,6 +80,9 @@ public class AccountingSource {
     }
 
     public void updateExternalReference(String externalReference) {
+        if (type == AccountingSourceType.FILE_IMPORT) {
+            throw new IllegalArgumentException("File import source has no external reference.");
+        }
         if (externalReference == null || externalReference.isBlank() || externalReference.length() > 255) {
             throw new IllegalArgumentException("Invalid accounting source external reference.");
         }
@@ -81,5 +93,10 @@ public class AccountingSource {
         return active;
     }
     public AccountingConnectionMode getConnectionMode() { return connectionMode; }
-    public void reserveConnectorRoute() { connectionMode = AccountingConnectionMode.CONNECTOR; }
+    public void reserveConnectorRoute() {
+        if (type != AccountingSourceType.QUESTOR) {
+            throw new IllegalStateException("Only Questor sources can use the Connector route.");
+        }
+        connectionMode = AccountingConnectionMode.CONNECTOR;
+    }
 }
