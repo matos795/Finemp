@@ -2,7 +2,11 @@ package com.finemp.accounting.movement;
 
 import org.springframework.stereotype.Service;
 
+import com.finemp.accounting.canonical.persistence.AccountingEntrySourceMetadata;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.UUID;
 
@@ -10,10 +14,13 @@ import java.util.UUID;
 public class AccountingMovementQueryService {
 
     private final AccountingMovementRepository accountingMovementRepository;
+    private final AccountingMovementSourceMetadataRepository sourceMetadataRepository;
 
     public AccountingMovementQueryService(
-            AccountingMovementRepository accountingMovementRepository) {
+            AccountingMovementRepository accountingMovementRepository,
+            AccountingMovementSourceMetadataRepository sourceMetadataRepository) {
         this.accountingMovementRepository = accountingMovementRepository;
+        this.sourceMetadataRepository = sourceMetadataRepository;
     }
 
     public List<AccountingMovementResponse> findByCompanyAndPeriod(
@@ -69,8 +76,13 @@ public class AccountingMovementQueryService {
         var totals = accountingMovementRepository.totalsByCompanyAndPeriod(companyId, startDate, endDate,
                 allSources, sourceId, allAccounts, account);
 
+        var metadata = sourceMetadataFor(result.getContent());
+
         return new AccountingMovementSearchResponse(
-                result.getContent().stream().map(AccountingMovementSearchResponse.Item::from).toList(),
+                result.getContent().stream()
+                        .map(movement -> AccountingMovementSearchResponse.Item.from(movement, metadata.get(
+                                new SourceEntry(movement.getAccountingSourceId(), movement.getSourceEntryKey()))))
+                        .toList(),
                 result.getNumber(),
                 result.getSize(),
                 result.getTotalElements(),
@@ -78,4 +90,25 @@ public class AccountingMovementQueryService {
                 AccountingMovementSearchResponse.Totals.from(totals),
                 AccountingMovementSearchResponse.NOT_SYNCHRONIZED);
     }
+
+    private Map<SourceEntry, AccountingEntrySourceMetadata> sourceMetadataFor(List<AccountingMovement> page) {
+        if (page.isEmpty()) {
+            return Map.of();
+        }
+        var sourceIds = page.stream().map(AccountingMovement::getAccountingSourceId).collect(Collectors.toSet());
+        var entryKeys = page.stream().map(AccountingMovement::getSourceEntryKey).collect(Collectors.toSet());
+        var wanted = page.stream()
+                .map(movement -> new SourceEntry(movement.getAccountingSourceId(), movement.getSourceEntryKey()))
+                .collect(Collectors.toSet());
+        var bySourceEntry = new HashMap<SourceEntry, AccountingEntrySourceMetadata>();
+        for (var candidate : sourceMetadataRepository.findCandidates(sourceIds, entryKeys)) {
+            var key = new SourceEntry(candidate.getAccountingSourceId(), candidate.getSourceEntryKey());
+            if (wanted.contains(key)) {
+                bySourceEntry.put(key, candidate);
+            }
+        }
+        return bySourceEntry;
+    }
+
+    private record SourceEntry(UUID accountingSourceId, String sourceEntryKey) {}
 }
