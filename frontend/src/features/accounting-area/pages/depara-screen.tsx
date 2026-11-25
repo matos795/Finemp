@@ -10,9 +10,13 @@ import {
     type DreCatalogEntry,
     type ImportedAccount,
 } from "../api/accounting-data-api"
+import { useNavigate } from "react-router"
 import { InfoButton } from "../components/accounting-info"
+import { ChartUniverseNotice } from "../components/chart-universe-notice"
 import { MovementDrilldownModal } from "../components/movement-drilldown-modal"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
+import { useAccountingSources } from "../hooks/use-accounting-sources"
+import { findAccountingScreenById } from "../lib/accounting-screens"
 import { accountingQueryKey } from "../lib/query-keys"
 import { SoonPanel } from "./accounting-screen-page"
 
@@ -162,6 +166,9 @@ export function DeparaScreen() {
         permissions.includes("ACCOUNT_CLASSIFICATION_VIEW") || permissions.includes("ACCOUNT_CLASSIFICATION_MANAGE")
     const canClassify = permissions.includes("ACCOUNT_CLASSIFICATION_MANAGE")
     const canSeeMovements = permissions.includes("ACCOUNTING_MOVEMENT_VIEW")
+    const navigate = useNavigate()
+    const sources = useAccountingSources(companyId, permissions)
+    const chartScreen = findAccountingScreenById("plano")
 
     const accounts = useInfiniteQuery({
         queryKey: accountingQueryKey(userId, "accounts", companyId, filter, search),
@@ -302,7 +309,7 @@ export function DeparaScreen() {
                 <Card
                     label="Contas importadas"
                     value={summary ? String(summary.total) : "—"}
-                    note="vindas dos movimentos sincronizados (não é o plano completo)"
+                    note="contas conhecidas pelo FINEMP (veja o universo abaixo)"
                     alert="info"
                 />
                 <Card
@@ -332,10 +339,12 @@ export function DeparaScreen() {
                                         : "Escolha uma empresa com acesso à classificação."}
                                 </p>
                                 <p className="info-p">
-                                    Contas que vieram nos movimentos sincronizados do Questor; contas sem movimento
-                                    ainda não aparecem, então esta lista não é o plano de contas completo. Toda conta
-                                    precisa dizer em que linha da DRE ela entra. A classificação do balanço e as regras
-                                    por grupo de contas chegam em uma próxima etapa.
+                                    Contas conhecidas pelo FINEMP para a empresa. Sem o plano completo publicado, só
+                                    aparecem as contas que vieram nos movimentos importados (não é o plano completo);
+                                    com o plano publicado, aparecem também as contas sem movimento. O aviso "Universo
+                                    de contas" diz qual é o caso. Toda conta precisa dizer em que linha da DRE ela
+                                    entra. A classificação do balanço e as regras por grupo de contas chegam em uma
+                                    próxima etapa.
                                 </p>
                             </InfoButton>
                         </h3>
@@ -372,6 +381,13 @@ export function DeparaScreen() {
                         />
                     </div>
                 </div>
+                {company && canRead && (
+                    <ChartUniverseNotice
+                        companyId={company.companyId}
+                        sources={sources.options}
+                        onOpenChart={chartScreen ? () => navigate(chartScreen.path) : undefined}
+                    />
+                )}
                 {body}
             </div>
 

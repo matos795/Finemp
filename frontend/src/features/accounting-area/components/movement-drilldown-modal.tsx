@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
 import { searchMovements, type ImportedAccount } from "../api/accounting-data-api"
@@ -6,6 +6,7 @@ import { useCompanySyncStatus, useSessionUserId } from "../hooks/use-accounting-
 import { accountingQueryKey } from "../lib/query-keys"
 import { lastDayOf, monthWindow, syncedUntil } from "../lib/accounting-period"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
+import { MovementMetadataDetail } from "./movement-metadata-detail"
 
 const PAGE_SIZE = 100
 
@@ -47,6 +48,7 @@ export function MovementDrilldownModal({ companyId, account, onClose }: Movement
     const fallbackMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
     const initial = monthWindow((base ?? fallbackMonth).slice(0, 7), 12)
     const [range, setRange] = useState<{ from: string; to: string } | null>(null)
+    const [open, setOpen] = useState<string | null>(null)
     const from = range?.from ?? initial.startDate.slice(0, 7)
     const to = range?.to ?? initial.endDate.slice(0, 7)
     const startDate = `${from}-01`
@@ -147,13 +149,32 @@ export function MovementDrilldownModal({ companyId, account, onClose }: Movement
                             </thead>
                             <tbody>
                                 {rows.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="mono">{brDate(item.accountingDate)}</td>
-                                        <td className="mono">{item.sourceEntryKey}</td>
-                                        <td className="wrapcell">{item.history ?? ""}</td>
-                                        {item.side === "DEBIT" ? <Amount value={item.amount} /> : <td className="n" />}
-                                        {item.side === "CREDIT" ? <Amount value={item.amount} /> : <td className="n" />}
-                                    </tr>
+                                    <Fragment key={item.id}>
+                                        <tr>
+                                            <td className="mono">{brDate(item.accountingDate)}</td>
+                                            <td className="mono">
+                                                <button
+                                                    type="button"
+                                                    className="lnk"
+                                                    aria-expanded={open === item.id}
+                                                    title="Metadados da origem"
+                                                    onClick={() => setOpen(open === item.id ? null : item.id)}
+                                                >
+                                                    {item.sourceEntryKey}
+                                                </button>
+                                            </td>
+                                            <td className="wrapcell">{item.history ?? ""}</td>
+                                            {item.side === "DEBIT" ? <Amount value={item.amount} /> : <td className="n" />}
+                                            {item.side === "CREDIT" ? <Amount value={item.amount} /> : <td className="n" />}
+                                        </tr>
+                                        {open === item.id && (
+                                            <tr className="dp-ed">
+                                                <td colSpan={5}>
+                                                    <MovementMetadataDetail item={item} />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </Fragment>
                                 ))}
                                 {rows.length === 0 && (
                                     <tr>
