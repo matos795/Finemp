@@ -81,6 +81,92 @@ class CanonicalV2BatchValidatorTest {
     }
 
     @Test
+    void shouldRequireObservedAccountDescriptorWhenMovementsAreDeclaredWithoutChart() {
+        var entry = new CanonicalAccountingEntry(
+                "e-observed-missing", start, "100", null, BigDecimal.ONE, null, null);
+        var batch = new CanonicalAccountingBatch(
+                CanonicalAccountingBatch.VERSION,
+                identity(),
+                capabilities(Set.of(AccountingDataset.MOVEMENTS), AmountSignPolicy.SIGNED_WITH_SIDE),
+                null,
+                null,
+                entries(entry),
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        assertInvalid(batch);
+    }
+
+    @Test
+    void shouldAcceptObservedAccountDescriptorsWhenChartIsNotDeclared() {
+        var entry = new CanonicalAccountingEntry(
+                "e-observed-ok", start, "100", null, BigDecimal.ONE, null, null);
+        var batch = new CanonicalAccountingBatch(
+                CanonicalAccountingBatch.VERSION,
+                identity(),
+                capabilities(Set.of(AccountingDataset.MOVEMENTS), AmountSignPolicy.SIGNED_WITH_SIDE),
+                null,
+                List.of(new CanonicalObservedAccountDescriptor("100", "1.1", "Observed")),
+                entries(entry),
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        assertThatCode(() -> CanonicalV2BatchValidator.validate(batch, start, end, 100))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldRejectDivergentObservedAccountDescriptorsAsDataConflict() {
+        var entry = new CanonicalAccountingEntry(
+                "e-observed-conflict", start, "100", null, BigDecimal.ONE, null, null);
+        var batch = new CanonicalAccountingBatch(
+                CanonicalAccountingBatch.VERSION,
+                identity(),
+                capabilities(Set.of(AccountingDataset.MOVEMENTS), AmountSignPolicy.SIGNED_WITH_SIDE),
+                null,
+                List.of(
+                        new CanonicalObservedAccountDescriptor("100", "1.1", "Observed"),
+                        new CanonicalObservedAccountDescriptor("100", "1.1", "Changed")),
+                entries(entry),
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        assertConflict(batch);
+    }
+
+    @Test
+    void shouldUseChartAsAuthorityWithoutRequiringObservedDescriptors() {
+        var entry = new CanonicalAccountingEntry(
+                "e-chart-authority", start, "100", null, BigDecimal.ONE, null, null);
+        var batch = new CanonicalAccountingBatch(
+                CanonicalAccountingBatch.VERSION,
+                identity(),
+                capabilities(
+                        Set.of(AccountingDataset.CHART, AccountingDataset.MOVEMENTS),
+                        AmountSignPolicy.SIGNED_WITH_SIDE),
+                chart(account("100", "1.1", "Chart account")),
+                null,
+                entries(entry),
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        assertThatCode(() -> CanonicalV2BatchValidator.validate(batch, start, end, 100))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     void shouldTolerateIdenticalDuplicateEntriesButRejectDivergentContent() {
         var first = new CanonicalAccountingEntry("e1", start, "100", null, new BigDecimal("10.00"), null, "same");
         var identical = new CanonicalAccountingEntry("e1", start, "100", null, new BigDecimal("10.0"), null, "same");
@@ -141,6 +227,7 @@ class CanonicalV2BatchValidatorTest {
                 identity(),
                 caps,
                 null,
+                List.of(new CanonicalObservedAccountDescriptor("100", "1", "Observed 100")),
                 entries(entry),
                 List.of(
                         new CanonicalAccountDailyDebitCreditTotals("1", "100", start, "LN", new BigDecimal("10.0"), BigDecimal.ZERO),
@@ -181,11 +268,32 @@ class CanonicalV2BatchValidatorTest {
             SourceCapabilities capabilities,
             CanonicalChartSnapshot chart,
             CanonicalEntriesDataset entries) {
+        List<CanonicalObservedAccountDescriptor> observed = null;
+        if (chart == null && entries != null && entries.entries() != null) {
+            var byId = new java.util.LinkedHashMap<String, CanonicalObservedAccountDescriptor>();
+            for (var entry : entries.entries()) {
+                if (entry != null && entry.debitAccountId() != null) {
+                    byId.putIfAbsent(
+                            entry.debitAccountId(),
+                            new CanonicalObservedAccountDescriptor(
+                                    entry.debitAccountId(), "1", "Observed " + entry.debitAccountId()));
+                }
+                if (entry != null && entry.creditAccountId() != null) {
+                    byId.putIfAbsent(
+                            entry.creditAccountId(),
+                            new CanonicalObservedAccountDescriptor(
+                                    entry.creditAccountId(), "1", "Observed " + entry.creditAccountId()));
+                }
+            }
+            observed = List.copyOf(byId.values());
+        }
+
         return new CanonicalAccountingBatch(
                 CanonicalAccountingBatch.VERSION,
                 identity(),
                 capabilities,
                 chart,
+                observed,
                 entries,
                 null,
                 null,
