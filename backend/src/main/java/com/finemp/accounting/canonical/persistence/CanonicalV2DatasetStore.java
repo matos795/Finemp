@@ -51,7 +51,6 @@ public class CanonicalV2DatasetStore {
                 accountingSourceId,
                 account.sourceAccountId(),
                 account.classificationCode(),
-                account.description(),
                 codes.accountType(),
                 codes.calculationType(),
                 codes.balanceNature(),
@@ -180,7 +179,6 @@ public class CanonicalV2DatasetStore {
             CanonicalAccountingAccount incoming) {
         var codes = incoming.codes();
         return Objects.equals(stored.getClassificationCode(), incoming.classificationCode())
-                && Objects.equals(stored.getDescription(), incoming.description())
                 && Objects.equals(stored.getAccountType(), codes.accountType())
                 && Objects.equals(stored.getCalculationType(), codes.calculationType())
                 && Objects.equals(stored.getBalanceNature(), codes.balanceNature())
