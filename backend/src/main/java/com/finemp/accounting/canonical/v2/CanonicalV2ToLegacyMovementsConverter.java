@@ -17,7 +17,7 @@ public final class CanonicalV2ToLegacyMovementsConverter {
 
     public static List<ImportedAccountingMovement> convert(
             List<CanonicalAccountingEntry> entries,
-            Map<String, CanonicalAccountingAccount> accountsById) {
+            Map<String, ? extends CanonicalAccountDescriptor> accountsById) {
         Objects.requireNonNull(entries, "entries");
         Objects.requireNonNull(accountsById, "accountsById");
 
@@ -61,17 +61,22 @@ public final class CanonicalV2ToLegacyMovementsConverter {
             CanonicalAccountingEntry entry,
             String sourceAccountId,
             AccountingMovementSide side,
-            Map<String, CanonicalAccountingAccount> accountsById) {
+            Map<String, ? extends CanonicalAccountDescriptor> accountsById) {
         var account = accountsById.get(sourceAccountId);
         if (account == null) {
-            throw new IllegalArgumentException("Canonical account descriptor is missing.");
+            throw new SyncPublicationRejectedException(SyncFailureCode.INVALID_PAYLOAD);
+        }
+
+        String accountKey = account.classificationCode() + "." + sourceAccountId;
+        if (accountKey.codePointCount(0, accountKey.length()) > 255) {
+            throw new SyncPublicationRejectedException(SyncFailureCode.INVALID_PAYLOAD);
         }
 
         return new ImportedAccountingMovement(
                 entry.sourceEntryKey(),
                 entry.accountingDate(),
                 sourceAccountId,
-                account.classificationCode() + "." + sourceAccountId,
+                accountKey,
                 account.description(),
                 side,
                 entry.amount(),
