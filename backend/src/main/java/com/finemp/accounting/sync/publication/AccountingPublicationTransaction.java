@@ -3,6 +3,8 @@ package com.finemp.accounting.sync.publication;
 import com.finemp.access.CompanyPermission;
 import com.finemp.access.CompanyPermissionAuthorizationService;
 import com.finemp.accounting.account.*;
+import com.finemp.accounting.canonical.v2.AccountingDataset;
+import com.finemp.accounting.coverage.AccountingDatasetCoverageService;
 import com.finemp.accounting.ingestion.ImportedAccountingMovement;
 import com.finemp.accounting.reading.ExternalCompanyIdentity;
 import com.finemp.accounting.movement.*;
@@ -34,17 +36,18 @@ public class AccountingPublicationTransaction {
     private final int maxRecords;
     private final SyncAttemptRepository attempts;
     private final ObjectProvider<SyncAgentAuthorization> agents;
+    private final AccountingDatasetCoverageService coverage;
 
     public AccountingPublicationTransaction(SyncRunRepository runs, AccountingSourceRepository sources,
             AccountingAccountRepository accounts, AccountingMovementRepository movements, SyncRunEventRepository events,
             CompanyPermissionAuthorizationService permissions, SyncControlTransactionGuard transactions,
             Clock clock, @Value("${finemp.sync.publication.max-records:25000}") int maxRecords, SyncAttemptRepository attempts,
-            ObjectProvider<SyncAgentAuthorization> agents) {
+            ObjectProvider<SyncAgentAuthorization> agents, AccountingDatasetCoverageService coverage) {
         if (maxRecords < 1) throw new IllegalArgumentException("Invalid publication resource limit.");
         this.runs = runs; this.sources = sources; this.accounts = accounts; this.movements = movements;
         this.events = events; this.permissions = permissions; this.transactions = transactions;
         this.clock = clock; this.maxRecords = maxRecords; this.attempts = attempts;
-        this.agents = agents;
+        this.agents = agents; this.coverage = coverage;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -104,6 +107,11 @@ public class AccountingPublicationTransaction {
         var inserts = toInsert.stream().map(row -> new AccountingMovement(knownAccounts.get(row.externalAccountId()),
                 row.sourceEntryKey(), row.side(), row.accountingDate(), row.amount(), row.history())).toList();
         movements.saveAll(inserts);
+        coverage.record(
+                sourceId,
+                AccountingDataset.MOVEMENTS,
+                run.getStartDate(),
+                run.getEndDate());
         var completedAt = clock.instant();
         if (!attempt.isLive(completedAt)) throw new StaleSyncClaimException();
         attempt.succeed(completedAt);
