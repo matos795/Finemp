@@ -63,6 +63,33 @@ class CanonicalV2ToLegacyMovementsConverterTest {
     }
 
     @Test
+    void shouldDeduplicateScaleOnlyDifferencesInCanonicalAmounts() {
+        var first = new CanonicalAccountingEntry(
+                "e-scale",
+                LocalDate.of(2026, 7, 6),
+                "100",
+                null,
+                new BigDecimal("10.0"),
+                null,
+                null);
+        var sameValue = new CanonicalAccountingEntry(
+                "e-scale",
+                LocalDate.of(2026, 7, 6),
+                "100",
+                null,
+                new BigDecimal("10.00"),
+                null,
+                null);
+
+        var movements = CanonicalV2ToLegacyMovementsConverter.convert(
+                List.of(first, sameValue),
+                Map.of("100", debit));
+
+        assertThat(movements).singleElement()
+                .satisfies(row -> assertThat(row.amount()).isEqualByComparingTo("10"));
+    }
+
+    @Test
     void shouldRejectMissingAccountDescriptorsInsteadOfInventingLegacyData() {
         var entry = new CanonicalAccountingEntry(
                 "e3",
