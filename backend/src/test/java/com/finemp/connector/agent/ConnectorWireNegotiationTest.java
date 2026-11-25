@@ -78,16 +78,28 @@ class ConnectorWireNegotiationTest {
     void shouldRejectUnknownDuplicateOrEmptyNegotiationOffers() {
         var codec = new ConnectorProtocolCodec(100);
         var mapper = JsonMapper.builder().build();
-        String json = mapper.writeValueAsString(work(
+        ObjectNode valid = (ObjectNode) mapper.valueToTree(work(
                 Set.of(1, 2),
                 Set.of(AccountingDataset.CHART, AccountingDataset.MOVEMENTS)));
 
-        for (String invalid : List.of(
-                json.replace("[1,2]", "[1,2,2]"),
-                json.replace("[1,2]", "[]"),
-                json.replace("[1,2]", "[1,3]"),
-                json.replace("[\"CHART\",\"MOVEMENTS\"]", "[\"CHART\",\"UNKNOWN\"]"))) {
-            assertThatThrownBy(() -> codec.work(invalid.getBytes(java.nio.charset.StandardCharsets.UTF_8), source))
+        var duplicateVersion = valid.deepCopy();
+        duplicateVersion.putArray("acceptedContractVersions").add(1).add(2).add(2);
+
+        var emptyVersions = valid.deepCopy();
+        emptyVersions.putArray("acceptedContractVersions");
+
+        var unknownVersion = valid.deepCopy();
+        unknownVersion.putArray("acceptedContractVersions").add(1).add(3);
+
+        var unknownDataset = valid.deepCopy();
+        unknownDataset.putArray("acceptedDatasets").add("CHART").add("UNKNOWN");
+
+        for (ObjectNode invalid : List.of(
+                duplicateVersion,
+                emptyVersions,
+                unknownVersion,
+                unknownDataset)) {
+            assertThatThrownBy(() -> codec.work(mapper.writeValueAsBytes(invalid), source))
                     .isInstanceOf(ConnectorClientException.class)
                     .hasMessage("Connector client: PROTOCOL");
         }
