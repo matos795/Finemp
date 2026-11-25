@@ -219,10 +219,15 @@ Em PowerShell elevado, com as variáveis `FINEMP_CONNECTOR_*` já carregadas na 
 
 O instalador:
 1. confirma Windows e Java 21;
-2. executa `--validate`;
-3. sela as referências de ambiente por DPAPI;
-4. registra o task `FINEMP Connector` em `AtStartup`;
-5. inicia o task.
+2. executa `--validate` **antes de interromper um runtime já instalado**;
+3. se o task já existir, interrompe a execução atual e confirma que ela encerrou;
+4. copia o JAR validado, o `connector.properties` e os scripts de runtime para `C:\ProgramData\FINEMP\Connector`;
+5. aplica ACL explícita à conta operacional, SYSTEM e ao grupo Administradores pelo SID conhecido do Windows;
+6. sela as referências de ambiente por DPAPI;
+7. registra/atualiza o task `FINEMP Connector` em `AtStartup`;
+8. inicia o task.
+
+O task referencia somente as cópias protegidas em `ProgramData`; depois de uma instalação validada ele não depende de Downloads, Desktop, pasta temporária ou do local onde o artifact foi extraído.
 
 A senha solicitada é a senha da conta Windows atual para o Task Scheduler armazenar a credencial de logon; ela não é escrita em arquivo nem passada para o Java.
 
@@ -237,11 +242,23 @@ C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Stop
 C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Restart
 ```
 
-Uninstall remove apenas o task e preserva configuração runtime, secrets DPAPI e logs para rollback/auditoria:
+Uninstall remove apenas o task e preserva JAR, configuração runtime, secrets DPAPI e logs para rollback/auditoria:
 
 ```powershell
 C:\ProgramData\FINEMP\Connector\connector-windows-control.ps1 -Action Uninstall
 ```
+
+### Rotação de credencial ou atualização do JAR/configuração
+
+Para atualizar segredo, JAR ou configuração sem editar arquivos protegidos manualmente:
+
+1. carregar os novos valores `FINEMP_CONNECTOR_*` somente na sessão PowerShell atual;
+2. manter um JAR/configuração de origem já verificados;
+3. executar novamente `connector-windows-install.ps1` com os novos caminhos;
+4. o instalador valida a nova configuração antes de parar a execução instalada;
+5. após a validação, substitui as cópias protegidas e atualiza o task.
+
+Nunca editar `connector-secrets.clixml` nem inserir segredo no `connector.properties`.
 
 ### Homologação obrigatória no Windows real
 
