@@ -2,6 +2,8 @@ package com.finemp.integration.questor;
 
 import com.finemp.accounting.canonical.v2.AccountingDataset;
 import com.finemp.accounting.canonical.v2.AmountSignPolicy;
+import com.finemp.accounting.canonical.v2.CanonicalAccountDailyDebitCreditTotals;
+import com.finemp.accounting.canonical.v2.CanonicalAccountMonthlyDebitCreditTotals;
 import com.finemp.accounting.canonical.v2.CanonicalAccountingAccount;
 import com.finemp.accounting.canonical.v2.CanonicalAccountingBatch;
 import com.finemp.accounting.canonical.v2.CanonicalAccountingEntry;
@@ -24,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +49,34 @@ public final class FirebirdQuestorCanonicalV2Reader {
             FROM PLANOESPEC
             WHERE CODIGOEMPRESA = ?
             ORDER BY CONTACTB
+            """;
+
+    private static final String DAILY_TOTALS_SQL = """
+            SELECT
+                CODIGOESTAB AS ESTABLISHMENT_CODE,
+                CONTACTB AS SOURCE_ACCOUNT_ID,
+                DATASALDO AS TOTAL_DATE,
+                TIPOLANCAMENTO AS ENTRY_TYPE_CODE,
+                VALORDEB AS DEBIT_TOTAL,
+                VALORCRED AS CREDIT_TOTAL
+            FROM SALDOCTB
+            WHERE CODIGOEMPRESA = ?
+              AND DATASALDO BETWEEN ? AND ?
+            ORDER BY DATASALDO, CODIGOESTAB, CONTACTB, TIPOLANCAMENTO
+            """;
+
+    private static final String MONTHLY_TOTALS_SQL = """
+            SELECT
+                CODIGOESTAB AS ESTABLISHMENT_CODE,
+                CONTACTB AS SOURCE_ACCOUNT_ID,
+                DATASALDO AS MONTH_START,
+                TIPOLANCAMENTO AS ENTRY_TYPE_CODE,
+                VALORDEB AS DEBIT_TOTAL,
+                VALORCRED AS CREDIT_TOTAL
+            FROM SALDOCTBMENSAL
+            WHERE CODIGOEMPRESA = ?
+              AND DATASALDO BETWEEN ? AND ?
+            ORDER BY DATASALDO, CODIGOESTAB, CONTACTB, TIPOLANCAMENTO
             """;
 
     private static final String ENTRIES_SQL = """
@@ -77,13 +108,15 @@ public final class FirebirdQuestorCanonicalV2Reader {
     private final Clock clock;
     private final int maxChartRecords;
     private final int maxEntryRecords;
+    private final int maxDailyTotalRecords;
+    private final int maxMonthlyTotalRecords;
     private final int timeoutSeconds;
 
     public FirebirdQuestorCanonicalV2Reader(
             QuestorConnectionProvider provider,
             FirebirdQuestorCompanyIdentityReader identities,
             Clock clock) {
-        this(provider, identities, clock, 25000, 25000, 30);
+        this(provider, identities, clock, 25000, 25000, 25000, 25000, 30);
     }
 
     public FirebirdQuestorCanonicalV2Reader(
@@ -93,8 +126,30 @@ public final class FirebirdQuestorCanonicalV2Reader {
             int maxChartRecords,
             int maxEntryRecords,
             int timeoutSeconds) {
+        this(
+                provider,
+                identities,
+                clock,
+                maxChartRecords,
+                maxEntryRecords,
+                maxEntryRecords,
+                maxEntryRecords,
+                timeoutSeconds);
+    }
+
+    public FirebirdQuestorCanonicalV2Reader(
+            QuestorConnectionProvider provider,
+            FirebirdQuestorCompanyIdentityReader identities,
+            Clock clock,
+            int maxChartRecords,
+            int maxEntryRecords,
+            int maxDailyTotalRecords,
+            int maxMonthlyTotalRecords,
+            int timeoutSeconds) {
         if (maxChartRecords < 1 || maxChartRecords == Integer.MAX_VALUE
-                || maxEntryRecords < 1 || maxEntryRecords == Integer.MAX_VALUE) {
+                || maxEntryRecords < 1 || maxEntryRecords == Integer.MAX_VALUE
+                || maxDailyTotalRecords < 1 || maxDailyTotalRecords == Integer.MAX_VALUE
+                || maxMonthlyTotalRecords < 1 || maxMonthlyTotalRecords == Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Invalid Questor v2 reader resource limit.");
         }
         if (timeoutSeconds < 1 || timeoutSeconds > 120) {
@@ -105,6 +160,8 @@ public final class FirebirdQuestorCanonicalV2Reader {
         this.clock = Objects.requireNonNull(clock);
         this.maxChartRecords = maxChartRecords;
         this.maxEntryRecords = maxEntryRecords;
+        this.maxDailyTotalRecords = maxDailyTotalRecords;
+        this.maxMonthlyTotalRecords = maxMonthlyTotalRecords;
         this.timeoutSeconds = timeoutSeconds;
     }
 
@@ -122,6 +179,15 @@ public final class FirebirdQuestorCanonicalV2Reader {
             var accountIds = new LinkedHashSet<String>();
             chart.accounts().forEach(account -> accountIds.add(account.sourceAccountId()));
 
+            var dailyTotals = readDailyTotalsOn(
+                    session.connection(),
+                    companyCode,
+                    request);
+            var monthlyTotals = readMonthlyTotalsOn(
+                    session.connection(),
+                    companyCode,
+                    request);
+
             var entries = readEntriesOn(
                     session.connection(),
                     companyCode,
@@ -132,13 +198,17 @@ public final class FirebirdQuestorCanonicalV2Reader {
                     CanonicalAccountingBatch.VERSION,
                     identity,
                     new SourceCapabilities(
-                            Set.of(AccountingDataset.CHART, AccountingDataset.MOVEMENTS),
+                            Set.of(
+                                    AccountingDataset.CHART,
+                                    AccountingDataset.MOVEMENTS,
+                                    AccountingDataset.DAILY_TOTALS,
+                                    AccountingDataset.MONTHLY_TOTALS),
                             AmountSignPolicy.NON_NEGATIVE_WITH_SIDE,
                             true),
                     chart,
                     entries,
-                    null,
-                    null,
+                    dailyTotals,
+                    monthlyTotals,
                     null,
                     null,
                     null);
@@ -148,7 +218,9 @@ public final class FirebirdQuestorCanonicalV2Reader {
                         batch,
                         request.startDate(),
                         request.endDate(),
-                        Math.max(maxChartRecords, maxEntryRecords));
+                        Math.max(
+                                Math.max(maxChartRecords, maxEntryRecords),
+                                Math.max(maxDailyTotalRecords, maxMonthlyTotalRecords)));
             } catch (SyncPublicationRejectedException unexpectedSourceShape) {
                 throw new QuestorUnexpectedSourceDataException();
             }
@@ -199,6 +271,78 @@ public final class FirebirdQuestorCanonicalV2Reader {
         }
 
         return new CanonicalChartSnapshot(observedAt, accounts);
+    }
+
+    List<CanonicalAccountDailyDebitCreditTotals> readDailyTotalsOn(
+            Connection connection,
+            int companyCode,
+            AccountingReadRequest request) throws SQLException {
+        List<CanonicalAccountDailyDebitCreditTotals> totals = new ArrayList<>();
+
+        try (PreparedStatement statement = connection.prepareStatement(DAILY_TOTALS_SQL)) {
+            statement.setInt(1, companyCode);
+            statement.setDate(2, Date.valueOf(request.startDate()));
+            statement.setDate(3, Date.valueOf(request.endDate()));
+            statement.setMaxRows(maxDailyTotalRecords + 1);
+            statement.setQueryTimeout(timeoutSeconds);
+
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    if (totals.size() >= maxDailyTotalRecords) {
+                        throw new AccountingReadLimitExceededException();
+                    }
+                    Date day = result.getDate("TOTAL_DATE");
+                    if (day == null) {
+                        throw new QuestorUnexpectedSourceDataException();
+                    }
+                    totals.add(new CanonicalAccountDailyDebitCreditTotals(
+                            required(result.getString("ESTABLISHMENT_CODE")),
+                            required(result.getString("SOURCE_ACCOUNT_ID")),
+                            day.toLocalDate(),
+                            required(result.getString("ENTRY_TYPE_CODE")),
+                            result.getBigDecimal("DEBIT_TOTAL"),
+                            result.getBigDecimal("CREDIT_TOTAL")));
+                }
+            }
+        }
+        return totals;
+    }
+
+    List<CanonicalAccountMonthlyDebitCreditTotals> readMonthlyTotalsOn(
+            Connection connection,
+            int companyCode,
+            AccountingReadRequest request) throws SQLException {
+        List<CanonicalAccountMonthlyDebitCreditTotals> totals = new ArrayList<>();
+        LocalDate firstMonth = YearMonth.from(request.startDate()).atDay(1);
+        LocalDate lastMonth = YearMonth.from(request.endDate()).atDay(1);
+
+        try (PreparedStatement statement = connection.prepareStatement(MONTHLY_TOTALS_SQL)) {
+            statement.setInt(1, companyCode);
+            statement.setDate(2, Date.valueOf(firstMonth));
+            statement.setDate(3, Date.valueOf(lastMonth));
+            statement.setMaxRows(maxMonthlyTotalRecords + 1);
+            statement.setQueryTimeout(timeoutSeconds);
+
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    if (totals.size() >= maxMonthlyTotalRecords) {
+                        throw new AccountingReadLimitExceededException();
+                    }
+                    Date monthStart = result.getDate("MONTH_START");
+                    if (monthStart == null) {
+                        throw new QuestorUnexpectedSourceDataException();
+                    }
+                    totals.add(new CanonicalAccountMonthlyDebitCreditTotals(
+                            required(result.getString("ESTABLISHMENT_CODE")),
+                            required(result.getString("SOURCE_ACCOUNT_ID")),
+                            YearMonth.from(monthStart.toLocalDate()),
+                            required(result.getString("ENTRY_TYPE_CODE")),
+                            result.getBigDecimal("DEBIT_TOTAL"),
+                            result.getBigDecimal("CREDIT_TOTAL")));
+                }
+            }
+        }
+        return totals;
     }
 
     CanonicalEntriesDataset readEntriesOn(
