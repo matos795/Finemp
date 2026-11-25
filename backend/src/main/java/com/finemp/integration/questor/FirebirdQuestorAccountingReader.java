@@ -82,7 +82,7 @@ public class FirebirdQuestorAccountingReader
         } catch (AccountingReadLimitExceededException overflow) {
             throw new AccountingReadLimitExceededException();
         } catch (QuestorUnexpectedSourceDataException unexpected) {
-            throw unexpected;
+            throw new QuestorUnexpectedSourceDataException();
         } catch (SQLException | RuntimeException exception) {
             throw new QuestorReadException("Failed to read accounting movements from Questor", null);
         }
