@@ -27,7 +27,7 @@ public class VerifiedQuestorSnapshotReader implements AccountingSourceSnapshotRe
                     request.startDate(), request.endDate()));
         } catch (AccountingIdentityMismatchException mismatch) { throw new AccountingIdentityMismatchException(); }
         catch (AccountingIdentityConfigurationException unsupported) { throw new AccountingIdentityConfigurationException(); }
-        catch (AccountingUnexpectedSourceDataException unexpected) { throw unexpected; }
+        catch (AccountingUnexpectedSourceDataException unexpected) { throw new QuestorUnexpectedSourceDataException(); }
         catch (AccountingReadLimitExceededException overflow) { throw new AccountingReadLimitExceededException(); }
         catch (SQLException | RuntimeException unavailable) { throw new QuestorReadException("Questor snapshot read unavailable.", null); }
     }
