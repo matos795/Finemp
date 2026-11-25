@@ -2,6 +2,8 @@ package com.finemp.accounting.canonical.persistence;
 
 import com.finemp.accounting.canonical.v2.*;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -79,7 +81,7 @@ public class CanonicalV2DatasetStore {
         return entryMetadata.saveAndFlush(new AccountingEntrySourceMetadata(
                 accountingSourceId,
                 metadata.sourceEntryKey(),
-                metadata.sourceRecordedAt(),
+                normalizeSourceRecordedAt(metadata.sourceRecordedAt()),
                 metadata.historyCode(),
                 metadata.originCode(),
                 metadata.entryTypeCode(),
@@ -191,7 +193,9 @@ public class CanonicalV2DatasetStore {
     private boolean sameEntryMetadata(
             AccountingEntrySourceMetadata stored,
             CanonicalEntrySourceMetadata incoming) {
-        return Objects.equals(stored.getSourceRecordedAt(), incoming.sourceRecordedAt())
+        return Objects.equals(
+                        stored.getSourceRecordedAt(),
+                        normalizeSourceRecordedAt(incoming.sourceRecordedAt()))
                 && Objects.equals(stored.getHistoryCode(), incoming.historyCode())
                 && Objects.equals(stored.getOriginCode(), incoming.originCode())
                 && Objects.equals(stored.getEntryTypeCode(), incoming.entryTypeCode())
@@ -215,6 +219,10 @@ public class CanonicalV2DatasetStore {
             CanonicalAccountMonthlyDebitCreditTotals incoming) {
         return sameMoney(stored.getDebitTotal(), incoming.debitTotal())
                 && sameMoney(stored.getCreditTotal(), incoming.creditTotal());
+    }
+
+    private Instant normalizeSourceRecordedAt(Instant sourceRecordedAt) {
+        return sourceRecordedAt == null ? null : sourceRecordedAt.truncatedTo(ChronoUnit.MICROS);
     }
 
     private boolean sameMoney(BigDecimal first, BigDecimal second) {
