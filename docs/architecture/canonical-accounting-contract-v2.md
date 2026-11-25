@@ -221,7 +221,7 @@ Colunas: campo canônico | origem Questor | obrigatório? | semântica confirmad
 | `codes.balanceControl` | `CTRLSALDO` | Sim | Código cru | — | Sim (cru) | Significado |
 | `codes.showInBalanceSheet` | `EMITIRBALANCO` | Sim | Código cru | — | Sim (cru) | Significado |
 | `codes.nativeDreCode/Account` | `CODIGODRE`/`CONTADRE` (FK → `DRE`) | Não | Vínculo à DRE nativa do Questor | — | Sim (cru, nullable) | Relação com a DRE FINEMP (O2/O21). **Não** substitui o De-Para |
-| `accountKey` (legado) | `CLASSIFCONTA || '.' || CONTACTB` | Sim (compat.) | Chave de exibição/ordenação usada hoje pela DRE (prefixo `1`) | Não é identidade | Mantido derivado no servidor | Substituição futura pela natureza confirmada |
+| `accountKey` (legado) | `CLASSIFCONTA || '.' || CONTACTB` | Sim (compat.) | Chave usada hoje pela DRE para o **sinal** (prefixo `1`) | Não é identidade | **Congelado** na primeira publicação da conta; nunca recalculado por snapshot posterior (ver 8.6) | Substituição futura pela natureza confirmada |
 | `parentSourceAccountId` | **Derivado** no servidor a partir de `classificationCode` | Não | Hierarquia **INFERRED**; só preenchido quando há exatamente um pai | — | Sim, com marcador de derivação | Regra para pai ambíguo (não observado) |
 
 ### 6.2 `CanonicalAccountingEntry` (núcleo) e `CanonicalEntrySourceMetadata`
@@ -396,6 +396,12 @@ A correção mínima de #449 **não** faz parte desta fase. É a primeira PR do 
    - Fontes sem `CHART` mantêm o aviso.
 5. **Dados antigos.** Linhas v1 não são reinterpretadas. Metadados chegam por re-sync, usando o anexo único (6.8). Sem backfill silencioso.
 6. **DRE.** Sem mudança no C2. O prefixo `1` continua.
+   - **Base histórica do sinal preservada.** Hoje a DRE lê o `accountKey` atual da conta para o sinal (`DreMovementValueCalculator`). Se um snapshot posterior pudesse mudar a classificação, totais de meses já publicados mudariam de sinal sem aviso.
+   - Por isso, no C2:
+     - o `accountKey` de uma conta já publicada é **congelado**;
+     - uma **mudança de `classificationCode`** em conta existente vinda do `CHART` é `DATA_CONFLICT` (falha fechada, com a conta identificada no evento de SyncRun), não atualização silenciosa;
+     - mudanças de `description` e dos códigos crus continuam permitidas e auditadas, porque não alteram o cálculo.
+   - Aceitar reclassificação na origem exige decisão de produto e uma base de sinal versionada por período (por exemplo, classificação vigente por data). Fica fora do C2.
    - Substituir por `NATURSALDO` exige confirmar o significado do código e é decisão de produto.
    - A DRE nativa do Questor **não** substitui a classificação FINEMP.
 
@@ -408,7 +414,7 @@ A correção mínima de #449 **não** faz parte desta fase. É a primeira PR do 
 | **Transporte** | Decoder v2 estrito (campos conhecidos por dataset); limites de tokens/bytes recalculados; v1 aceito em paralelo; resposta de lease com versões/datasets |
 | **Validação** | Validador v2 com as invariantes 7.1 e a capability de sinal; conversão v2 → linhas por lado |
 | **Persistência (PostgreSQL/Flyway)** | Tabelas: `accounting_account_source_attributes`, `accounting_entry_source_metadata`, `accounting_daily_debit_credit_totals`, `accounting_monthly_debit_credit_totals`, `accounting_origin_catalog`, `accounting_dataset_coverage`; coluna `establishment_code` nullable em `accounting_movements`; tudo escopado por `accounting_source_id` → Company, com constraints de identidade da seção 6 |
-| **Publicação** | Datasets e cobertura na mesma transação atômica; anexo único de metadados; `CHART` como upsert de atributos por `sourceAccountId` (descrição/classificação podem mudar no Questor; mudança vira evento auditável, não conflito, porque o plano é snapshot) |
+| **Publicação** | Datasets e cobertura na mesma transação atômica; anexo único de metadados; `CHART` como upsert de atributos por `sourceAccountId`: descrição e códigos crus atualizam com evento auditável; **mudança de classificação em conta já publicada é `DATA_CONFLICT`**, e o `accountKey` legado fica congelado (8.6) |
 | **API** | Plano completo com códigos crus + interpretação `INFERRED`; metadados na busca de movimentos/Composição; totais D/C por conta/mês; cobertura por dataset (`importedFrom`/`importedTo`, intervalos) |
 | **Frontend** | De-Para com plano completo e indicação sintética/analítica marcada "inferida"; Composição com origem, lote, documento, `CHAVEORIGEM`; DRE distinguindo "sem histórico importado" de "sem movimento" pela cobertura acumulada; nenhuma tela de saldo |
 
@@ -439,5 +445,6 @@ A correção mínima de #449 **não** faz parte desta fase. É a primeira PR do 
 - **Contrapartida:** `CHAVEORIGEM`/`TRANSCTB` agrupam operações que fecham, mas não definem par débito ↔ crédito em grupos com várias linhas.
 - **Participante e centro de custo/rateio:** cobertura zero; nomes de coluna de valor de `LCTOGER` não confirmados; dados pessoais do participante (O14); vínculo CC ↔ `ResultCenter` (O7).
 - **DRE nativa do Questor:** existe (`DRE`, `DREDETALHE`, `CFGDRE`) mas sem vínculo para a empresa. A relação com a DRE FINEMP é decisão de produto (O2/O21).
+- **Reclassificação de conta na origem:** hoje falha fechada (8.6). Aceitá-la exige decisão de produto e base de sinal da DRE versionada por período.
 - **Unicidade da origem para os totais D/C:** PK de `SALDOCTB`/`SALDOCTBMENSAL` não registrada.
 - **Generalização:** tudo foi observado em **uma** empresa de **uma** instalação. Nenhuma regra nova vira obrigatória sem falha fechada e mensagem clara quando a evidência não se repetir.
