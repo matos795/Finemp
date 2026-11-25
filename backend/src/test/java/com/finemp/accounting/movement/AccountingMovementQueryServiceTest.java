@@ -23,7 +23,9 @@ class AccountingMovementQueryServiceTest {
             mock(AccountingMovementRepository.class);
 
     private final AccountingMovementQueryService service =
-            new AccountingMovementQueryService(accountingMovementRepository);
+            new AccountingMovementQueryService(
+                    accountingMovementRepository,
+                    mock(AccountingMovementSourceMetadataRepository.class));
 
     @Test
     void shouldReturnMovementResponsesForCompanyAndPeriod() {
