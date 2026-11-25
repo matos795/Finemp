@@ -291,9 +291,21 @@ export const navigationModules: NavigationModule[] = [
         label: "Gestão de pessoas",
         icon: "pes",
         items: [
-            { id: "func", label: "Funcionários" },
+            {
+                // #462: cadastro operacional mínimo (sem salário, documentos
+                // ou regra trabalhista). Custo por funcionário segue roadmap (#45).
+                id: "func",
+                label: "Funcionários",
+                path: "/people/employees",
+                permissions: ["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE"],
+            },
             { id: "pesCusto", label: "Custo por funcionário" },
-            { id: "pesCargo", label: "Cargos e descrições (DRC)" },
+            {
+                id: "pesCargo",
+                label: "Cargos e descrições (DRC)",
+                path: "/people/job-positions",
+                permissions: ["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE"],
+            },
             { id: "pesAval", label: "Avaliação de desempenho" },
             { id: "pesPdi", label: "PDI e feedbacks" },
             { id: "pes9box", label: "Matriz 9-box e sucessão" },

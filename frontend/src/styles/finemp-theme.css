@@ -30,7 +30,7 @@
 .fin .filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding:6px 0 10px;border-bottom:1px solid var(--bd);margin-bottom:16px}
 .fin .f{display:flex;flex-direction:column;gap:3px;min-width:0}
 .fin .f label, .fin .fl label{font:700 11px Barlow,sans-serif;text-transform:uppercase;letter-spacing:.6px}
-.fin input[type=month], .fin select, .fin input[type=text], .fin input[type=date], .fin input[type=search], .fin input[type=number], .fin textarea{background:var(--fd);border:1px solid var(--bd);color:#fff;font:600 14px Barlow,sans-serif;padding:7px 10px;border-radius:6px;max-width:100%}
+.fin input[type=month], .fin select, .fin input:not([type]), .fin input[type=text], .fin input[type=date], .fin input[type=search], .fin input[type=number], .fin textarea{background:var(--fd);border:1px solid var(--bd);color:#fff;font:600 14px Barlow,sans-serif;padding:7px 10px;border-radius:6px;max-width:100%}
 .fin select{appearance:none;background:var(--fd) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='white'/%3E%3C/svg%3E") no-repeat right 9px center;padding-right:26px}
 .fin input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .fin .panel{background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px;min-width:0}
@@ -88,6 +88,10 @@
 .fin .modal{position:fixed;inset:0;background:rgba(0,5,30,.78);display:flex;align-items:flex-start;justify-content:center;z-index:200;padding:24px var(--g);overflow:auto}
 .fin .mbox{background:var(--pn);border:1px solid var(--gold);border-radius:14px;padding:18px;width:min(760px,100%)}
 .fin .mbox h2{color:var(--gold);margin-bottom:12px;font-size:22px}
+.fin .mbox .mh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.fin .mbox .mh .x{background:none;border:0;color:var(--mut);font-size:22px;line-height:1;padding:2px 6px;cursor:pointer}
+.fin .mbox .mh .x:hover{color:#fff}
+.fin .mbox .mh .x:disabled{opacity:.4;cursor:default}
 .fin .fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
 .fin .fg .full{grid-column:1/-1}
 .fin .fl input, .fin .fl select, .fin .fl textarea{width:100%}

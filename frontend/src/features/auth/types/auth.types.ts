@@ -50,6 +50,8 @@ export type CompanyPermission =
     | "CRM_MANAGE"
     | "ASSET_VIEW"
     | "ASSET_MANAGE"
+    | "EMPLOYEE_VIEW"
+    | "EMPLOYEE_MANAGE"
 
 export type CostCenterScope = "ALL" | "RESTRICTED"
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Modal } from "../../../components/finemp/modal"
+import { parseMoneyInput } from "../../../lib/formatters/money-input"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -24,7 +25,6 @@ import type {
     ServiceInvoiceStatus,
 } from "../types/service-invoice.types"
 
-const moneyPattern = /^\d+(?:[.,]\d{1,2})?$/
 const ratePattern = /^\d+(?:[.,]\d{1,4})?$/
 
 const statusLabel: Record<ServiceInvoiceStatus, string> = {
@@ -385,7 +385,7 @@ function InvoiceDraftDialog({
                 !businessPartnerId ||
                 !/^\d{4}-\d{2}$/.test(competence) ||
                 serviceText.trim().length < 2 ||
-                !moneyPattern.test(grossAmount.trim()) ||
+                parseMoneyInput(grossAmount) === null ||
                 rates.some((rate) => !ratePattern.test(rate.trim()))
             ) {
                 throw new Error("Confira parceiro, competência, serviço, valor e alíquotas.")
@@ -396,7 +396,7 @@ function InvoiceDraftDialog({
                 contractId: invoice?.contractId ?? null,
                 competence,
                 serviceText: serviceText.trim(),
-                grossAmount: grossAmount.trim().replace(",", "."),
+                grossAmount: parseMoneyInput(grossAmount) ?? "",
                 issRate: issRate.trim().replace(",", "."),
                 issWithheld,
                 irRate: irRate.trim().replace(",", "."),

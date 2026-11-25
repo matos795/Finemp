@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Modal } from "../../../components/finemp/modal"
+import { parseMoneyInput } from "../../../lib/formatters/money-input"
 import { Pager } from "../../../components/finemp/pager"
 import { QueryError } from "../../../components/finemp/query-error"
 import { useToast } from "../../../components/finemp/toast-context"
@@ -26,7 +27,6 @@ import type {
     DebtPartnerOption,
 } from "../types/debt.types"
 
-const moneyPattern = /^\d+(?:[.,]\d{1,2})?$/
 const ratePattern = /^\d+(?:[.,]\d{1,24})?$/
 
 const originConfig: Record<
@@ -372,7 +372,7 @@ function DebtDialog({
             if (
                 description.trim().length < 2 ||
                 description.length > 255 ||
-                !moneyPattern.test(principalAmount.trim()) ||
+                parseMoneyInput(principalAmount) === null ||
                 !Number.isInteger(count) ||
                 count < 1 ||
                 count > 1200 ||
@@ -391,7 +391,7 @@ function DebtDialog({
 
             if (
                 system === "FIXED" &&
-                !moneyPattern.test(fixedInstallmentAmount.trim())
+                parseMoneyInput(fixedInstallmentAmount) === null
             ) {
                 throw new Error("VALIDATION")
             }
@@ -403,7 +403,7 @@ function DebtDialog({
                 origin,
                 description: description.trim(),
                 amortizationSystem: system,
-                principalAmount: normalizeDecimal(principalAmount),
+                principalAmount: parseMoneyInput(principalAmount) ?? "",
                 installmentCount: count,
                 inputRate:
                     system === "SAC"
@@ -415,7 +415,7 @@ function DebtDialog({
                         : "IMPLIED",
                 fixedInstallmentAmount:
                     system === "FIXED"
-                        ? normalizeDecimal(fixedInstallmentAmount)
+                        ? parseMoneyInput(fixedInstallmentAmount) ?? ""
                         : null,
                 firstDueDate,
             }
