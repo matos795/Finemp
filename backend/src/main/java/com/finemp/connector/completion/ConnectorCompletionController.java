@@ -22,6 +22,15 @@ public class ConnectorCompletionController {
         var outcome = service.complete(identity, attemptId, request.getInputStream());
         return ResponseEntity.status(outcome.httpStatus()).cacheControl(CacheControl.noStore()).body(outcome.result());
     }
+    @PostMapping(value = "/complete-v2", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectorWorkResult> completeV2(
+            @AuthenticationPrincipal ConnectorIdentity identity,
+            @PathVariable UUID attemptId,
+            HttpServletRequest request) throws IOException {
+        var outcome = service.completeV2(identity, attemptId, request.getInputStream());
+        return ResponseEntity.status(outcome.httpStatus()).cacheControl(CacheControl.noStore()).body(outcome.result());
+    }
+
     @PostMapping(value = "/fail", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorWorkResult> fail(@AuthenticationPrincipal ConnectorIdentity identity, @PathVariable UUID attemptId,
             HttpServletRequest request) throws IOException {

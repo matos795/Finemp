@@ -18,6 +18,14 @@ import org.springframework.transaction.annotation.*;
 @Service
 @ConditionalOnProperty(prefix = "finemp.connector.protocol", name = "enabled", havingValue = "true")
 public class ConnectorWorkService {
+    private static final Set<Integer> ACCEPTED_CONTRACT_VERSIONS = Set.of(1, 2);
+    private static final Set<AccountingDataset> ACCEPTED_DATASETS = Set.of(
+            AccountingDataset.CHART,
+            AccountingDataset.MOVEMENTS,
+            AccountingDataset.DAILY_TOTALS,
+            AccountingDataset.MONTHLY_TOTALS,
+            AccountingDataset.ORIGIN_CATALOG);
+
     private final AccountingSourceRepository sources;
     private final SyncRunRepository runs;
     private final SyncAttemptRepository attempts;
@@ -48,8 +56,8 @@ public class ConnectorWorkService {
                 attempt.getLeaseExpiresAt(),
                 clock.instant(),
                 claim.get().request(),
-                Set.of(1),
-                Set.of(AccountingDataset.MOVEMENTS)));
+                ACCEPTED_CONTRACT_VERSIONS,
+                ACCEPTED_DATASETS));
     }
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ConnectorLeaseResponse renew(ConnectorIdentity identity, UUID attemptId) {

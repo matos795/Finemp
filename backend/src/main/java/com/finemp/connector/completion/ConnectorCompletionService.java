@@ -16,11 +16,20 @@ import org.springframework.transaction.annotation.*;
 public class ConnectorCompletionService {
     private final ConnectorCompletionContext context;
     private final ConnectorBatchDecoder decoder;
+    private final ConnectorCanonicalV2Decoder v2Decoder;
     private final AccountingPublicationTransaction publication;
     private final SyncExecutionLifecycle lifecycle;
-    public ConnectorCompletionService(ConnectorCompletionContext context, ConnectorBatchDecoder decoder,
-            AccountingPublicationTransaction publication, SyncExecutionLifecycle lifecycle) {
-        this.context = context; this.decoder = decoder; this.publication = publication; this.lifecycle = lifecycle;
+    public ConnectorCompletionService(
+            ConnectorCompletionContext context,
+            ConnectorBatchDecoder decoder,
+            ConnectorCanonicalV2Decoder v2Decoder,
+            AccountingPublicationTransaction publication,
+            SyncExecutionLifecycle lifecycle) {
+        this.context = context;
+        this.decoder = decoder;
+        this.v2Decoder = v2Decoder;
+        this.publication = publication;
+        this.lifecycle = lifecycle;
     }
     @Transactional(propagation = Propagation.NEVER)
     public ConnectorCompletionOutcome complete(ConnectorIdentity identity, UUID attemptId, InputStream input) {
@@ -32,6 +41,17 @@ public class ConnectorCompletionService {
         catch (RuntimeException unavailable) { return failed(identity, attemptId, claim, SyncFailureCode.PUBLICATION_FAILED); }
         return new ConnectorCompletionOutcome(200, context.result(identity, attemptId));
     }
+    @Transactional(propagation = Propagation.NEVER)
+    public ConnectorCompletionOutcome completeV2(ConnectorIdentity identity, UUID attemptId, InputStream input) {
+        var claim = context.currentClaim(identity, attemptId);
+        var batch = v2Decoder.decode(input);
+        try { publication.publishConnectorV2(claim, batch); }
+        catch (StaleSyncClaimException stale) { throw new ConnectorWorkNotCurrentException(); }
+        catch (SyncPublicationRejectedException rejected) { return failed(identity, attemptId, claim, rejected.getCode()); }
+        catch (RuntimeException unavailable) { return failed(identity, attemptId, claim, SyncFailureCode.PUBLICATION_FAILED); }
+        return new ConnectorCompletionOutcome(200, context.result(identity, attemptId));
+    }
+
     @Transactional(propagation = Propagation.NEVER)
     public ConnectorCompletionOutcome reportFailure(ConnectorIdentity identity, UUID attemptId, InputStream input) {
         var claim = context.currentClaim(identity, attemptId);

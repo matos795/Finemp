@@ -11,7 +11,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /** Bounded buffering only after machine authentication; never persist or log a request body. */
 public class ConnectorPayloadLimitFilter extends OncePerRequestFilter {
-    private static final Pattern COMPLETION = Pattern.compile("/api/connector/v1/work/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/complete");
+    private static final Pattern COMPLETION = Pattern.compile("/api/connector/v1/work/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/complete(?:-v2)?");
     private final int maxBatchBytes, maxMetadataBytes;
     private final Semaphore capacity;
     public ConnectorPayloadLimitFilter(int maxBatchBytes, int maxMetadataBytes, int concurrency) {
