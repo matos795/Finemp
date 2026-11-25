@@ -78,6 +78,59 @@ class AccountingSourceRepositoryIntegrationTest {
     }
 
     @Test
+    void shouldPersistFileImportSourceAsUploadWithoutExternalReference() {
+        Company company = companyRepository.save(
+                new Company("Synthetic File Import", "76767676000176"));
+
+        AccountingSource source = accountingSourceRepository.save(
+                new AccountingSource(
+                        company,
+                        AccountingSourceType.FILE_IMPORT,
+                        null,
+                        true));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        AccountingSource retrieved = accountingSourceRepository
+                .findById(source.getId())
+                .orElseThrow();
+
+        assertThat(retrieved.getType()).isEqualTo(AccountingSourceType.FILE_IMPORT);
+        assertThat(retrieved.getConnectionMode()).isEqualTo(AccountingConnectionMode.UPLOAD);
+        assertThat(retrieved.getExternalReference()).isNull();
+    }
+
+    @Test
+    void shouldRejectExternalReferenceAndConnectorRouteForFileImportSource() {
+        Company company = companyRepository.save(
+                new Company("Synthetic File Rules", "77777777000177"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new AccountingSource(
+                        company,
+                        AccountingSourceType.FILE_IMPORT,
+                        "not-applicable",
+                        true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("File import source must not have an external reference.");
+
+        AccountingSource source = new AccountingSource(
+                company,
+                AccountingSourceType.FILE_IMPORT,
+                null,
+                true);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(source::reserveConnectorRoute)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Only Questor sources can use the Connector route.");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.updateExternalReference("57"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("File import source has no external reference.");
+    }
+
+    @Test
     void shouldAllowMultipleAccountingSourcesForSameCompany() {
         Company company = companyRepository.save(
                 new Company("Empresa Exemplo Ltda", "12345678000190"));
