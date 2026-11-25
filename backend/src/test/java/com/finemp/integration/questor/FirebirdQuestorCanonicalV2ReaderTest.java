@@ -44,7 +44,7 @@ class FirebirdQuestorCanonicalV2ReaderTest {
                         """);
                 sql.executeUpdate("""
                         INSERT INTO LCTOCTB VALUES (
-                            57,'entry-1',1,0,DATE '2026-07-05','LN','DOC-1','FI',
+                            57,'entry-1',1,NULL,DATE '2026-07-05','LN','DOC-1','FI',
                             100,200,7,'Synthetic history',12.3400,
                             'origin-1','tx-1','1',NULL)
                         """);
@@ -78,7 +78,7 @@ class FirebirdQuestorCanonicalV2ReaderTest {
             var batch = reader(provider, 10, 10).read(request());
 
             assertThat(batch.contractVersion()).isEqualTo(2);
-            assertThat(batch.observedIdentity().externalCompanyReference()).isEqualTo("57");
+            assertThat(batch.observedIdentity().externalReference()).isEqualTo("57");
             assertThat(batch.capabilities().datasets())
                     .isEqualTo(Set.of(AccountingDataset.CHART, AccountingDataset.MOVEMENTS));
             assertThat(batch.capabilities().amountSignPolicy())
