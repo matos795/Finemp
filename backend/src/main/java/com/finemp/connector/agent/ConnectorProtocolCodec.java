@@ -1,12 +1,15 @@
 package com.finemp.connector.agent;
 
 import com.finemp.accounting.canonical.v2.AccountingDataset;
+import com.finemp.accounting.canonical.v2.CanonicalAccountingBatch;
+import com.finemp.accounting.canonical.v2.CanonicalV2BatchValidator;
 import com.finemp.accounting.reading.*;
 import com.finemp.accounting.source.AccountingSourceType;
 import com.finemp.accounting.sync.*;
 import com.finemp.accounting.sync.execution.SyncAttemptStatus;
 import com.finemp.accounting.sync.publication.CanonicalBatchValidator;
 import com.finemp.connector.completion.ConnectorWorkResult;
+import com.finemp.connector.protocol.ConnectorCanonicalV2Codec;
 import com.finemp.connector.transport.ConnectorSessionController.ConnectorSession;
 import com.finemp.connector.work.*;
 import java.io.*;
@@ -26,9 +29,11 @@ final class ConnectorProtocolCodec {
                     .maxNameLength(64).maxNumberLength(32).maxTokenCount(1024).maxDocumentLength(65536).build()).build())
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
     private final int maxRecords;
+    private final ConnectorCanonicalV2Codec canonicalV2Codec;
     ConnectorProtocolCodec(int maxRecords) {
         if (maxRecords < 1 || maxRecords > 100000) throw error(CONFIGURATION);
         this.maxRecords = maxRecords;
+        this.canonicalV2Codec = new ConnectorCanonicalV2Codec(maxRecords);
     }
     ConnectorSession session(byte[] body, UUID source) {
         return decode(body, root -> {
@@ -108,6 +113,34 @@ final class ConnectorProtocolCodec {
         } catch (ConnectorClientException safe) { throw safe; }
         catch (RuntimeException invalid) { throw error(PROTOCOL); }
     }
+    byte[] batchV2(ConnectorWorkResponse work, CanonicalAccountingBatch batch) {
+        try {
+            if (work == null || batch == null || !work.acceptsContractVersion(CanonicalAccountingBatch.VERSION)) {
+                throw error(PROTOCOL);
+            }
+            if (batch.observedIdentity() == null || !batch.observedIdentity().matches(work.context())) {
+                throw error(PROTOCOL);
+            }
+            if (batch.capabilities() == null
+                    || batch.capabilities().datasets() == null
+                    || !work.acceptedDatasets().containsAll(batch.capabilities().datasets())) {
+                throw error(PROTOCOL);
+            }
+            CanonicalV2BatchValidator.validate(
+                    batch,
+                    work.context().startDate(),
+                    work.context().endDate(),
+                    maxRecords);
+            return canonicalV2Codec.encode(batch);
+        } catch (ConnectorClientException safe) {
+            throw safe;
+        } catch (com.finemp.connector.completion.ConnectorBatchResourceLimitException limited) {
+            throw error(RESOURCE_LIMIT);
+        } catch (RuntimeException invalid) {
+            throw error(PROTOCOL);
+        }
+    }
+
     private <T> T decode(byte[] body, java.util.function.Function<JsonNode,T> action) {
         try {
             if (body == null || body.length == 0 || body.length > 65536) throw error(PROTOCOL);
