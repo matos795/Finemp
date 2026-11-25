@@ -12,6 +12,7 @@ import org.springframework.mock.web.*;
 class ConnectorPayloadLimitFilterTest {
     private final ConnectorPayloadLimitFilter filter = new ConnectorPayloadLimitFilter(1024, 128, 1);
     private final String completion = "/api/connector/v1/work/" + UUID.randomUUID() + "/complete";
+    private final String completionV2 = "/api/connector/v1/work/" + UUID.randomUUID() + "/complete-v2";
     @Test void shouldAcceptTheExactBudgetAndProvideOnlyTheBoundedRepeatableBytesToTheParser() throws Exception {
         byte[] body = new byte[1024]; Arrays.fill(body, (byte)'x'); var request = request(completion, body);
         var accepted = new AtomicBoolean();
@@ -23,6 +24,18 @@ class ConnectorPayloadLimitFilterTest {
         });
         assertThat(accepted).isTrue();
     }
+    @Test void shouldApplyTheBatchBudgetToV2CompletionToo() throws Exception {
+        byte[] body = new byte[1024];
+        var accepted = new AtomicBoolean();
+
+        filter.doFilter(request(completionV2, body), new MockHttpServletResponse(), (req, res) -> {
+            assertThat(((HttpServletRequest) req).getInputStream().readAllBytes()).containsExactly(body);
+            accepted.set(true);
+        });
+
+        assertThat(accepted).isTrue();
+    }
+
     @Test void shouldRejectDeclaredOversizeBeforeReadingAndAlsoMeasureActualBytesWithoutLength() throws Exception {
         var touched = new AtomicBoolean();
         var declared = new MockHttpServletRequest("POST", completion) {
