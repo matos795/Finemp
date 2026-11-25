@@ -34,7 +34,13 @@ $installerRequired = @(
     'Formato não suportado no connector.properties. Use somente chave=valor nesta distribuição Windows.',
     '-ExecutionPolicy Bypass',
     'version "21',
-    'Register-ScheduledTask'
+    'Register-ScheduledTask',
+    'Copy-Item -LiteralPath $jar -Destination $runtimeJarPath -Force',
+    'Copy-Item -LiteralPath $config -Destination $runtimePropertiesPath -Force',
+    'connectorJarPath = $runtimeJarPath',
+    'connectorPropertiesPath = $runtimePropertiesPath',
+    'Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue',
+    'BUILTIN\Administrators:(F)'
 )
 foreach ($needle in $installerRequired) {
     if (-not $installer.Contains($needle)) {
