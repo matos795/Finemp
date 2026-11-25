@@ -40,6 +40,12 @@ class ConnectorAgentCycleTest {
         }
         verify(client,never()).fail(any(),any());verify(client,never()).complete(any(),any());verify(client,times(1)).claim();
     }
+    @Test void shouldReportUnexpectedSourceDataAsInvalidPayloadWithoutPublishing() {
+        prepare(work);when(reader.readSnapshot(work.context())).thenThrow(new AccountingUnexpectedSourceDataException());
+        when(client.fail(work,SyncFailureCode.INVALID_PAYLOAD)).thenReturn(receipt(SyncAttemptStatus.FAILED));
+        try(var agent=new ConnectorAgentCycle(client,reader,Duration.ofSeconds(2))) {assertThat(agent.runOnce()).isEqualTo(ConnectorAgentCycle.Outcome.FAILED);}
+        verify(client).fail(work,SyncFailureCode.INVALID_PAYLOAD);verify(client,never()).complete(any(),any());
+    }
     @Test void shouldReportTransientReadFailureWithOnlyTheAllowedCode() {
         prepare(work);when(reader.readSnapshot(work.context())).thenThrow(new IllegalStateException("synthetic private driver detail"));
         when(client.fail(work,SyncFailureCode.READ_FAILED)).thenReturn(receipt(SyncAttemptStatus.FAILED));
