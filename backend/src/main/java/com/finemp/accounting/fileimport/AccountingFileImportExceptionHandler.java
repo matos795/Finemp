@@ -26,6 +26,7 @@ public final class AccountingFileImportExceptionHandler {
             case SOURCE_NOT_AVAILABLE -> "SOURCE_NOT_AVAILABLE";
             case IDEMPOTENCY_MISMATCH -> "IDEMPOTENCY_CONFLICT";
             case PERIOD_OVERLAP -> "PERIOD_OVERLAP";
+            case PUBLISHED_DATA_CONFLICT -> "PUBLISHED_DATA_CONFLICT";
         };
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(
                 code,
