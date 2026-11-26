@@ -153,7 +153,7 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/dre")
                                                 .access(
                                                                 permissionAuthorizationManagerFactory
-                                                                                .forPermission(
+                                                                                .forFreshPermission(
                                                                                                 CompanyPermission.DRE_VIEW))
 
                                                 // Financial services enforce fresh company permissions and ownership.
