@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -44,6 +45,7 @@ class AccountingFileImportConfirmationIntegrationTest {
     @Autowired private CompanyRepository companies;
     @Autowired private UserAccountRepository users;
     @Autowired private CompanyAccessGrantRepository grants;
+    @Autowired private JdbcTemplate jdbc;
 
     private UserAccount actor;
     private Company company;
@@ -173,8 +175,9 @@ class AccountingFileImportConfirmationIntegrationTest {
     @Test
     void freshPermissionIsRecheckedInsideConfirmation() {
         var access = grants.findByUserAccountIdAndCompanyId(actor.getId(), company.getId()).orElseThrow();
-        access.replaceAccess(CompanyAccessRole.CUSTOM, CostCenterScope.ALL, Set.of());
-        grants.saveAndFlush(access);
+        jdbc.update(
+                "DELETE FROM company_access_grant_permissions WHERE company_access_grant_id = ?",
+                access.getId());
 
         assertThatThrownBy(() -> confirm(UUID.randomUUID(), validFixture("MOV A")))
                 .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
