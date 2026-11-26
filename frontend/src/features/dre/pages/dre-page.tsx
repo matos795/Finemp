@@ -10,6 +10,7 @@ import { Panel } from "../../../components/finemp/panel"
 import { QueryError } from "../../../components/finemp/query-error"
 import { BarActions } from "../../../components/layout/bar-actions"
 import { formatIsoDate } from "../../../lib/formatters/decimal"
+import { DRE_NOT_IMPORTED_TEXT, periodCoverage } from "../../accounting-area/lib/coverage-periods"
 
 /** Data local (YYYY-MM-DD); toISOString usaria UTC e podia virar o dia. */
 function toIsoDate(
@@ -86,6 +87,12 @@ export function DrePage() {
             ),
         )
     }
+
+    // Cobertura acumulada devolvida pela DRE: separa "sem movimento" de "não importado".
+    const coverage =
+        dre.data?.coverage && period.startDate <= period.endDate
+            ? periodCoverage(dre.data.coverage, period.startDate, period.endDate)
+            : null
 
     return (
         <>
@@ -170,6 +177,21 @@ export function DrePage() {
                 </div>
             </div>
 
+            {coverage && coverage.status !== "COVERED" ? (
+                <div className="alert w" role="status">
+                    <b>{coverage.text}.</b>{" "}
+                    Não importado:{" "}
+                    {coverage.gaps
+                        .map((gap) => `${formatIsoDate(gap.from)} a ${formatIsoDate(gap.to)}`)
+                        .join(" · ")}
+                    . Nesses trechos a ausência de valor não significa zero.
+                </div>
+            ) : coverage ? (
+                <div className="alert i" role="status">
+                    {coverage.text}.
+                </div>
+            ) : null}
+
             <Panel
                 title={`DRE contábil – ${formatIsoDate(period.startDate)} a ${formatIsoDate(period.endDate)}`}
                 help="Demonstração do resultado da empresa no período selecionado, a partir da contabilidade sincronizada e da classificação DRE, DRE aberta e EBITDA."
@@ -187,7 +209,13 @@ export function DrePage() {
                 ) : dre.isPending ? (
                     <div className="empty">Carregando…</div>
                 ) : groups.length === 0 ? (
-                    <div className="empty">Sem lançamentos classificados no período.</div>
+                    <div className="empty">
+                        {coverage?.status === "NOT_IMPORTED"
+                            ? DRE_NOT_IMPORTED_TEXT
+                            : coverage?.status === "PARTIAL"
+                              ? "Sem lançamentos classificados no trecho importado do período."
+                              : "Sem lançamentos classificados no período."}
+                    </div>
                 ) : (
                     <DreTable
                         groups={groups}
