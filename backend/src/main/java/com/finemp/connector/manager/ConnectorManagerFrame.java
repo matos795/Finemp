@@ -57,8 +57,6 @@ final class ConnectorManagerFrame extends JFrame {
         status.add(row("Diretório", new JLabel(service.runtimeRoot().toString())));
         add(status, BorderLayout.CENTER);
 
-        var actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        actions.setBorder(BorderFactory.createEmptyBorder(0, 16, 16, 16));
         refresh.addActionListener(event -> refreshStatus());
         validate.addActionListener(event -> validateConfiguration());
         start.addActionListener(event -> runLifecycle(ConnectorManagerLifecycleAction.START));
@@ -72,13 +70,7 @@ final class ConnectorManagerFrame extends JFrame {
                 runLifecycle(ConnectorManagerLifecycleAction.RESTART);
             }
         });
-        actions.add(refresh);
-        actions.add(validate);
-        actions.add(start);
-        actions.add(stop);
-        actions.add(restart);
-        actions.add(message);
-        add(actions, BorderLayout.SOUTH);
+        add(new ConnectorManagerFooter(refresh, validate, start, stop, restart, message), BorderLayout.SOUTH);
 
         applyControlAvailability();
         refreshStatus();
