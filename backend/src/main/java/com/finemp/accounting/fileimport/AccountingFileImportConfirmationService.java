@@ -55,6 +55,7 @@ public class AccountingFileImportConfirmationService {
             UUID actorId,
             UUID accountingSourceId,
             UUID idempotencyKey,
+            String expectedFileSha256,
             String profileId,
             AccountingFileFormat format,
             byte[] content) {
@@ -63,6 +64,11 @@ public class AccountingFileImportConfirmationService {
         }
 
         String fileSha256 = AccountingFileHash.sha256(content);
+        if (expectedFileSha256 == null
+                || !expectedFileSha256.matches("[0-9a-f]{64}")
+                || !expectedFileSha256.equals(fileSha256)) {
+            throw conflict(AccountingFileImportConflictException.Reason.PREVIEW_FILE_MISMATCH);
+        }
 
         var source = sources.findLockedForPublicationById(accountingSourceId)
                 .orElseThrow(() -> conflict(
@@ -143,7 +149,7 @@ public class AccountingFileImportConfirmationService {
                 published.insertedCount(),
                 published.skippedCount(),
                 actorId,
-                Instant.now());
+                Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
 
         receipts.insert(receipt);
         return receipt;
