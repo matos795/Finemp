@@ -64,6 +64,42 @@ final class ConnectorManagerService {
         return new ConnectorManagerStatus(state, lastRunTime, lastTaskResult, runtimeRoot);
     }
 
+    ConnectorManagerLifecycleResult changeRuntimeState(ConnectorManagerLifecycleAction action) {
+        if (action == null) {
+            throw new IllegalArgumentException("Lifecycle action is required.");
+        }
+
+        if (!runtimeFilesPresent()) {
+            var status = new ConnectorManagerStatus(
+                    ConnectorManagerStatus.State.NOT_INSTALLED, null, null, runtimeRoot);
+            return new ConnectorManagerLifecycleResult(
+                    false,
+                    "O runtime do FINEMP Connector não está instalado neste computador.",
+                    status);
+        }
+
+        var actionResult = invoker.invoke(List.of(
+                powershellExecutable,
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy", "Bypass",
+                "-File", runtimeRoot.resolve(CONTROL).toString(),
+                "-Action", action.scriptValue()));
+
+        var observedStatus = status();
+        if (actionResult.exitCode() == 0) {
+            return new ConnectorManagerLifecycleResult(
+                    true,
+                    "Comando enviado ao Connector.",
+                    observedStatus);
+        }
+
+        return new ConnectorManagerLifecycleResult(
+                false,
+                "Não foi possível alterar o estado do Connector.",
+                observedStatus);
+    }
+
     ConnectorManagerActionResult validateInstalledConfiguration() {
         if (!runtimeFilesPresent()) {
             return new ConnectorManagerActionResult(
