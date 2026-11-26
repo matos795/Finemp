@@ -86,18 +86,27 @@ const PROTOTYPE_MENU = {
   },
 }
 
+// Telas FINEMP fora do protótipo, ligadas a contrato oficial (C2.9 / #475).
+const FINEMP_SCREENS = ["plano", "ctbmov", "ctbtot"]
+
 test("the accounting menu keeps the prototype groups, subgroups, codes and names in order", () => {
   const actual = Object.fromEntries(
     accountingModules.map((module) => [
       module.label,
       Object.fromEntries(
-        module.subgroups.map((subgroup) => [subgroup.label, subgroup.screens.map((screen) => [screen.id, screen.label])]),
+        module.subgroups
+          .map((subgroup) => [
+            subgroup.label,
+            subgroup.screens.filter((screen) => screen.prototype).map((screen) => [screen.id, screen.label]),
+          ])
+          .filter(([, screens]) => screens.length > 0),
       ),
     ]),
   )
 
   assert.deepEqual(actual, PROTOTYPE_MENU)
-  assert.equal(accountingScreens.length, 39)
+  assert.equal(accountingScreens.filter((screen) => screen.prototype).length, 39)
+  assert.deepEqual(accountingScreens.filter((screen) => !screen.prototype).map((screen) => screen.id), FINEMP_SCREENS)
 })
 
 test("every accounting screen has a unique route under the accounting area", () => {
@@ -128,7 +137,8 @@ test("screens mirror the prototype header block and competence bar", () => {
 
 test("no screen is marked available without an official contract", () => {
   for (const screen of accountingScreens) {
-    assert.notEqual(screen.status, "available", screen.id)
+    // Só as telas FINEMP do C2.9 (#475) estão inteiras ligadas a contrato oficial (#474/#509).
+    assert.equal(screen.status === "available", FINEMP_SCREENS.includes(screen.id), screen.id)
     assert.ok(screen.panels.length > 0, screen.id)
   }
 

@@ -8,7 +8,10 @@ import { baseStatusText } from "../lib/base-status"
 import { ACCOUNTING_AREA_HOME, findAccountingScreen, findAccountingScreenById } from "../lib/accounting-screens"
 import { AccountingScreenPage } from "../pages/accounting-screen-page"
 import { CfpreScreen } from "../pages/cfpre-screen"
+import { ChartScreen } from "../pages/chart-screen"
+import { DebitCreditTotalsScreen } from "../pages/debit-credit-totals-screen"
 import { DeparaScreen } from "../pages/depara-screen"
+import { MovementsScreen } from "../pages/movements-screen"
 import { AccountingToasts } from "./accounting-toasts"
 import { AccountingInfoProvider } from "./accounting-info"
 import { AccountingContextModal } from "./accounting-context-modal"
@@ -168,6 +171,30 @@ export function AccountingAreaLayout() {
                                 <main>
                                     {current.screen.id === "depara" ? (
                                         <DeparaScreen key={company?.companyId ?? "none"} />
+                                    ) : current.screen.id === "plano" ? (
+                                        <ChartScreen
+                                            key={company?.companyId ?? "none"}
+                                            screen={current.screen}
+                                            competence={effectiveCompetence}
+                                            baseText={baseText}
+                                            onCompetenceChange={setCompetence}
+                                        />
+                                    ) : current.screen.id === "ctbmov" ? (
+                                        <MovementsScreen
+                                            key={company?.companyId ?? "none"}
+                                            screen={current.screen}
+                                            competence={effectiveCompetence}
+                                            baseText={baseText}
+                                            onCompetenceChange={setCompetence}
+                                        />
+                                    ) : current.screen.id === "ctbtot" ? (
+                                        <DebitCreditTotalsScreen
+                                            key={company?.companyId ?? "none"}
+                                            screen={current.screen}
+                                            competence={effectiveCompetence}
+                                            baseText={baseText}
+                                            onCompetenceChange={setCompetence}
+                                        />
                                     ) : current.screen.id === "cfpre" ? (
                                         <CfpreScreen
                                             screen={current.screen}
