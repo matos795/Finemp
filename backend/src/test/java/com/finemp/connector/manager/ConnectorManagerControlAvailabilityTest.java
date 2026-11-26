@@ -11,6 +11,7 @@ class ConnectorManagerControlAvailabilityTest {
     void runningRuntimeAllowsStopAndRestartButNotStart() {
         var controls = ConnectorManagerControlAvailability.forStatus(status(ConnectorManagerStatus.State.RUNNING));
 
+        assertThat(controls.controlsVisible()).isTrue();
         assertThat(controls.startEnabled()).isFalse();
         assertThat(controls.stopEnabled()).isTrue();
         assertThat(controls.restartEnabled()).isTrue();
@@ -24,6 +25,7 @@ class ConnectorManagerControlAvailabilityTest {
         }) {
             var controls = ConnectorManagerControlAvailability.forStatus(status(state));
 
+            assertThat(controls.controlsVisible()).isTrue();
             assertThat(controls.startEnabled()).isTrue();
             assertThat(controls.stopEnabled()).isFalse();
             assertThat(controls.restartEnabled()).isTrue();
@@ -35,6 +37,7 @@ class ConnectorManagerControlAvailabilityTest {
         var controls = ConnectorManagerControlAvailability.forStatus(
                 status(ConnectorManagerStatus.State.UNKNOWN));
 
+        assertThat(controls.controlsVisible()).isTrue();
         assertThat(controls.startEnabled()).isFalse();
         assertThat(controls.stopEnabled()).isFalse();
         assertThat(controls.restartEnabled()).isTrue();
@@ -45,6 +48,7 @@ class ConnectorManagerControlAvailabilityTest {
         var controls = ConnectorManagerControlAvailability.forStatus(
                 status(ConnectorManagerStatus.State.NOT_INSTALLED));
 
+        assertThat(controls.controlsVisible()).isFalse();
         assertThat(controls.startEnabled()).isFalse();
         assertThat(controls.stopEnabled()).isFalse();
         assertThat(controls.restartEnabled()).isFalse();
