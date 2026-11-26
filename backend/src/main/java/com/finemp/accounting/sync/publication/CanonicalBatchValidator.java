@@ -10,8 +10,17 @@ import java.util.*;
 public final class CanonicalBatchValidator {
     private CanonicalBatchValidator() { }
     public static ValidatedAccountingBatch validate(AccountingReadRequest request, List<ImportedAccountingMovement> movements, int maxRecords) {
+        if (request == null) throw invalid();
+        return validate(request.startDate(), request.endDate(), movements, maxRecords);
+    }
+
+    public static ValidatedAccountingBatch validate(
+            java.time.LocalDate startDate,
+            java.time.LocalDate endDate,
+            List<ImportedAccountingMovement> movements,
+            int maxRecords) {
         if (maxRecords < 1) throw new IllegalArgumentException("Invalid batch resource limit.");
-        if (request == null || movements == null) throw invalid();
+        if (startDate == null || endDate == null || startDate.isAfter(endDate) || movements == null) throw invalid();
         if (movements.size() > maxRecords) throw new SyncPublicationRejectedException(SyncFailureCode.RESOURCE_LIMIT);
         var unique = new LinkedHashMap<ValidatedAccountingBatch.MovementIdentity, ImportedAccountingMovement>();
         var accounts = new LinkedHashMap<String, ValidatedAccountingBatch.AccountDescriptor>();
@@ -19,8 +28,8 @@ public final class CanonicalBatchValidator {
             if (row == null || !identity(row.sourceEntryKey()) || !identity(row.externalAccountId())
                     || !identity(row.accountKey()) || !text(row.accountDescription())
                     || (row.history() != null && !text(row.history())) || row.side() == null
-                    || row.accountingDate() == null || row.accountingDate().isBefore(request.startDate())
-                    || row.accountingDate().isAfter(request.endDate()) || row.amount() == null) throw invalid();
+                    || row.accountingDate() == null || row.accountingDate().isBefore(startDate)
+                    || row.accountingDate().isAfter(endDate) || row.amount() == null) throw invalid();
             java.math.BigDecimal amount;
             try {
                 // Check representability BEFORE scale expansion: a short exponent must not allocate an enormous BigInteger.

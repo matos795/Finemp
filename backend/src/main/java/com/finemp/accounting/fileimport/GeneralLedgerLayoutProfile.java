@@ -4,14 +4,18 @@ import java.util.Set;
 
 /**
  * Identifies one deterministic GENERAL_LEDGER export layout.
- * Parsing methods are introduced only with the first evidence-backed profile.
+ * Parsing is server-side and evidence-backed; confirmation always reparses the file.
  */
 public interface GeneralLedgerLayoutProfile {
     String id();
 
     Set<AccountingFileFormat> formats();
 
-    default GeneralLedgerPreview preview(byte[] content) {
+    default GeneralLedgerParsedFile parse(byte[] content) {
         throw new AccountingFileLayoutUnavailableException();
+    }
+
+    default GeneralLedgerPreview preview(byte[] content) {
+        return parse(content).toPreview();
     }
 }

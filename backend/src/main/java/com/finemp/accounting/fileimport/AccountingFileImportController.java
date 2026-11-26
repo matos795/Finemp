@@ -15,9 +15,13 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 public final class AccountingFileImportController {
     private final AccountingFileImportPreviewService previews;
+    private final AccountingFileImportConfirmationService confirmations;
 
-    public AccountingFileImportController(AccountingFileImportPreviewService previews) {
+    public AccountingFileImportController(
+            AccountingFileImportPreviewService previews,
+            AccountingFileImportConfirmationService confirmations) {
         this.previews = previews;
+        this.confirmations = confirmations;
     }
 
     @PostMapping(
@@ -43,4 +47,32 @@ public final class AccountingFileImportController {
             throw new AccountingFilePreviewException("Não foi possível ler o arquivo enviado.");
         }
     }
+    @PostMapping(
+            path = "/api/accounting-sources/{accountingSourceId}/file-imports/general-ledger/confirm",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public AccountingFileImportReceiptResponse confirm(
+            @PathVariable UUID accountingSourceId,
+            @RequestParam UUID idempotencyKey,
+            @RequestParam String expectedFileSha256,
+            @RequestParam String layoutProfile,
+            @RequestParam AccountingFileFormat format,
+            @RequestPart("file") MultipartFile file,
+            @AuthenticationPrincipal UserAccountPrincipal principal) {
+        if (principal == null) {
+            throw new AccountingFilePreviewException("Usuário não autenticado.");
+        }
+        try {
+            return AccountingFileImportReceiptResponse.from(confirmations.confirm(
+                    principal.getUserAccountId(),
+                    accountingSourceId,
+                    idempotencyKey,
+                    expectedFileSha256,
+                    layoutProfile,
+                    format,
+                    file.getBytes()));
+        } catch (IOException unreadable) {
+            throw new AccountingFilePreviewException("Não foi possível ler o arquivo enviado.");
+        }
+    }
+
 }

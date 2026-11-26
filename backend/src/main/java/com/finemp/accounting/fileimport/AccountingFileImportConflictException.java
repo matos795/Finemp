@@ -3,7 +3,10 @@ package com.finemp.accounting.fileimport;
 public final class AccountingFileImportConflictException extends RuntimeException {
     public enum Reason {
         IDEMPOTENCY_MISMATCH,
-        SOURCE_NOT_AVAILABLE
+        SOURCE_NOT_AVAILABLE,
+        PERIOD_OVERLAP,
+        PUBLISHED_DATA_CONFLICT,
+        PREVIEW_FILE_MISMATCH
     }
 
     private final Reason reason;

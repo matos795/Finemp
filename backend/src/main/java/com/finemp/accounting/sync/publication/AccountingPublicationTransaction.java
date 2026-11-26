@@ -45,6 +45,7 @@ public class AccountingPublicationTransaction {
     private final ObjectProvider<SyncAgentAuthorization> agents;
     private final AccountingDatasetCoverageService coverage;
     private final CanonicalV2DatasetStore canonicalV2Store;
+    private final AccountingMovementBatchPublisher movementBatchPublisher;
 
     public AccountingPublicationTransaction(SyncRunRepository runs, AccountingSourceRepository sources,
             AccountingAccountRepository accounts, AccountingMovementRepository movements, SyncRunEventRepository events,
@@ -52,12 +53,14 @@ public class AccountingPublicationTransaction {
             Clock clock, @Value("${finemp.sync.publication.max-records:25000}") int maxRecords, SyncAttemptRepository attempts,
             ObjectProvider<SyncAgentAuthorization> agents,
             AccountingDatasetCoverageService coverage,
-            CanonicalV2DatasetStore canonicalV2Store) {
+            CanonicalV2DatasetStore canonicalV2Store,
+            AccountingMovementBatchPublisher movementBatchPublisher) {
         if (maxRecords < 1) throw new IllegalArgumentException("Invalid publication resource limit.");
         this.runs = runs; this.sources = sources; this.accounts = accounts; this.movements = movements;
         this.events = events; this.permissions = permissions; this.transactions = transactions;
         this.clock = clock; this.maxRecords = maxRecords; this.attempts = attempts;
         this.agents = agents; this.coverage = coverage; this.canonicalV2Store = canonicalV2Store;
+        this.movementBatchPublisher = movementBatchPublisher;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -78,29 +81,7 @@ public class AccountingPublicationTransaction {
         var attempt = authorized.attempt();
 
         var batch = CanonicalBatchValidator.validate(claim.request(), records, maxRecords);
-        var knownAccounts = loadAccounts(sourceId, batch.accounts().keySet());
-        for (var descriptor : batch.accounts().values()) {
-            var existing = knownAccounts.get(descriptor.externalId());
-            if (existing != null && (!Objects.equals(existing.getAccountKey(), descriptor.accountKey())
-                    || !Objects.equals(existing.getDescription(), descriptor.description()))) throw rejected(SyncFailureCode.DATA_CONFLICT);
-        }
-        var knownMovements = loadMovements(sourceId, batch.uniqueMovements());
-        var toInsert = new ArrayList<ImportedAccountingMovement>();
-        for (var row : batch.uniqueMovements()) {
-            var existing = knownMovements.get(new ValidatedAccountingBatch.MovementIdentity(row.sourceEntryKey(), row.side()));
-            if (existing == null) toInsert.add(row);
-            else if (!same(existing, row)) throw rejected(SyncFailureCode.DATA_CONFLICT);
-        }
-
-        // Nothing is written before all row/account conflicts have been checked.
-        var newAccounts = new ArrayList<AccountingAccount>();
-        for (var descriptor : batch.accounts().values())
-            if (!knownAccounts.containsKey(descriptor.externalId()))
-                newAccounts.add(new AccountingAccount(source, descriptor.externalId(), descriptor.accountKey(), descriptor.description()));
-        for (var account : accounts.saveAll(newAccounts)) knownAccounts.put(account.getExternalAccountId(), account);
-        var inserts = toInsert.stream().map(row -> new AccountingMovement(knownAccounts.get(row.externalAccountId()),
-                row.sourceEntryKey(), row.side(), row.accountingDate(), row.amount(), row.history())).toList();
-        movements.saveAll(inserts);
+        var publication = movementBatchPublisher.publish(source, batch);
         coverage.record(
                 sourceId,
                 AccountingDataset.MOVEMENTS,
@@ -109,7 +90,11 @@ public class AccountingPublicationTransaction {
         var completedAt = clock.instant();
         if (!attempt.isLive(completedAt)) throw new StaleSyncClaimException();
         attempt.succeed(completedAt);
-        run.succeed(batch.readCount(), inserts.size(), batch.readCount() - inserts.size(), completedAt);
+        run.succeed(
+                batch.readCount(),
+                publication.insertedCount(),
+                publication.skippedCount(),
+                completedAt);
         events.save(new SyncRunEvent(run, SyncRunActorType.SYSTEM, null, clock.instant()));
         runs.flush(); // Includes movements, ownership FKs, measured counters and terminal audit.
     }
