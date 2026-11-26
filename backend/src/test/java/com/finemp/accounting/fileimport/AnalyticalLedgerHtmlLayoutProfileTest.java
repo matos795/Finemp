@@ -54,6 +54,27 @@ class AnalyticalLedgerHtmlLayoutProfileTest {
     }
 
     @Test
+    void shouldPreserveMovementLikeRowsWithMalformedDates() {
+        byte[] malformed = """
+                <html><title>Razão Analítico</title><body><table>
+                <tr><td>Consolidação: Empresa</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Período: 01/01/2026 a 31/01/2026</td></tr>
+                <tr><td>Data</td><td>Histórico</td><td></td><td>Lote/Lcto.</td><td></td><td>Débito</td><td>Crédito</td><td>Saldo</td></tr>
+                <tr><td>Conta: 111010001</td><td>Red.: 1-9  CAIXA SINTETICO</td><td></td><td></td><td></td><td></td><td>Saldo Anterior:</td><td>0,00</td></tr>
+                <tr><td>31/02/2026</td><td>DATA INVALIDA</td><td></td><td>0/300</td><td></td><td>1,00</td><td></td><td>1,00</td></tr>
+                <tr><td>2026-01-15</td><td>FORMATO INVALIDO</td><td></td><td>0/301</td><td></td><td></td><td>2,00</td><td>-1,00</td></tr>
+                </table></body></html>
+                """.getBytes(StandardCharsets.ISO_8859_1);
+
+        var preview = new AnalyticalLedgerHtmlLayoutProfile().preview(malformed);
+
+        assertThat(preview.movementCount()).isZero();
+        assertThat(preview.invalidRowCount()).isEqualTo(2);
+        assertThat(preview.errors())
+                .extracting(GeneralLedgerPreviewIssue::code)
+                .containsExactly("INVALID_DATE", "INVALID_DATE");
+    }
+
+    @Test
     void shouldFailClosedWhenTheFileIsNotTheSupportedHtmlLedgerLayout() {
         byte[] unrelated = "<html><body><table><tr><td>Outro relatório</td></tr></table></body></html>"
                 .getBytes(StandardCharsets.ISO_8859_1);
