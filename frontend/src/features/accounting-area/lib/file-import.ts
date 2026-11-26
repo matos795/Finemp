@@ -159,6 +159,8 @@ export function fileImportReducer(state: FileImportState, action: FileImportActi
                 ...state,
                 status: "previewing",
                 sourceId: action.sourceId ?? state.sourceId,
+                // Nova pré-visualização = nova importação: a chave anterior não vale mais.
+                idempotencyKey: null,
                 preview: null,
                 error: null,
                 receipt: null,
@@ -174,14 +176,21 @@ export function fileImportReducer(state: FileImportState, action: FileImportActi
         case "confirm-started":
             // Duplo clique e preview inválido não geram uma segunda confirmação.
             if (!previewIsConfirmable(state, action.sourceId)) return state
-            return { ...state, status: "confirming", idempotencyKey: action.idempotencyKey, error: null }
+            // Nova tentativa da mesma importação reusa a chave: se a anterior gravou e a
+            // resposta se perdeu, o backend devolve o mesmo recibo em vez de PERIOD_OVERLAP.
+            return {
+                ...state,
+                status: "confirming",
+                idempotencyKey: state.idempotencyKey ?? action.idempotencyKey,
+                error: null,
+            }
         case "confirm-succeeded":
             if (state.status !== "confirming") return state
             return { ...state, status: "done", receipt: action.receipt, error: null }
         case "confirm-failed":
             if (state.status !== "confirming") return state
-            // Volta ao preview válido: uma nova tentativa explícita usa nova chave.
-            return { ...state, status: "preview-ready", idempotencyKey: null, error: action.message }
+            // Volta ao preview válido e guarda a chave para a nova tentativa (mesmo arquivo e fonte).
+            return { ...state, status: "preview-ready", error: action.message }
         case "source-changed":
             // A fonte efetiva mudou (escolha ou atualização da lista): o preview não vale mais.
             if (state.sourceId === null || state.sourceId === action.sourceId) return state
@@ -215,7 +224,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     LAYOUT_UNAVAILABLE: "O layout de Razão escolhido não está disponível para este formato.",
     INVALID_FILE: "O arquivo enviado está vazio, inválido ou excede o limite permitido.",
     SOURCE_NOT_AVAILABLE: "A fonte por arquivo não está disponível. Atualize a página e tente de novo.",
-    IDEMPOTENCY_CONFLICT: "Esta confirmação já foi usada para outra importação. Tente confirmar de novo.",
+    IDEMPOTENCY_CONFLICT:
+        "Esta confirmação já foi usada para outra importação. Escolha o arquivo e pré-visualize de novo para importar.",
     PERIOD_OVERLAP:
         "O período deste arquivo se sobrepõe a um período já importado nesta fonte. Nada foi alterado.",
     PUBLISHED_DATA_CONFLICT: "Os lançamentos do arquivo conflitam com dados já importados nesta fonte. Nada foi alterado.",

@@ -149,7 +149,9 @@ test("a second confirm while one is running is ignored (no double submit)", () =
   assert.match(screen, /crypto\.randomUUID\(\)/)
 })
 
-test("after an error, an explicit retry gets a new idempotency key; success keeps the receipt", () => {
+test("a retry after a failed or lost confirmation reuses the same key; a new import gets a new one", () => {
+  // O backend só devolve o recibo para a chave original: se a resposta se perdeu
+  // depois de gravar, reenviar com a mesma chave recupera o recibo (nada é duplicado).
   let state = fileImportReducer(initialFileImportState, { type: "select-file", file: file("razao.xls") })
   state = fileImportReducer(state, { type: "preview-started" })
   state = fileImportReducer(state, { type: "preview-succeeded", preview: VALID_PREVIEW })
@@ -157,15 +159,32 @@ test("after an error, an explicit retry gets a new idempotency key; success keep
   state = fileImportReducer(state, { type: "confirm-failed", message: "Falhou." })
   assert.equal(state.status, "preview-ready")
   assert.equal(state.error, "Falhou.")
+  assert.equal(state.idempotencyKey, "k1")
   assert.equal(previewIsConfirmable(state), true)
 
   state = fileImportReducer(state, { type: "confirm-started", idempotencyKey: "k2" })
-  assert.equal(confirmRequest(state).idempotencyKey, "k2")
+  assert.equal(confirmRequest(state).idempotencyKey, "k1")
 
   state = fileImportReducer(state, { type: "confirm-succeeded", receipt: RECEIPT })
   assert.equal(state.status, "done")
   assert.equal(state.receipt, RECEIPT)
   assert.equal(previewIsConfirmable(state), false)
+
+  // Novo import: outro arquivo ou nova pré-visualização descartam a chave anterior.
+  let next = fileImportReducer(state, { type: "select-file", file: file("outro.xls") })
+  assert.equal(next.idempotencyKey, null)
+  next = fileImportReducer(next, { type: "preview-started" })
+  next = fileImportReducer(next, { type: "preview-succeeded", preview: VALID_PREVIEW })
+  next = fileImportReducer(next, { type: "confirm-started", idempotencyKey: "k3" })
+  assert.equal(confirmRequest(next).idempotencyKey, "k3")
+
+  let repreview = fileImportReducer(initialFileImportState, { type: "select-file", file: file("razao.xls") })
+  repreview = fileImportReducer(repreview, { type: "preview-started" })
+  repreview = fileImportReducer(repreview, { type: "preview-succeeded", preview: VALID_PREVIEW })
+  repreview = fileImportReducer(repreview, { type: "confirm-started", idempotencyKey: "k4" })
+  repreview = fileImportReducer(repreview, { type: "confirm-failed", message: "x" })
+  repreview = fileImportReducer(repreview, { type: "preview-started" })
+  assert.equal(repreview.idempotencyKey, null)
 })
 
 test("a stale preview response for a replaced file is dropped", () => {
