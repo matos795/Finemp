@@ -93,16 +93,16 @@ public class SecurityConfiguration {
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-movements",
                                                                 "/api/companies/{companyId}/accounting-movements/search")
-                                                .access(permissionAuthorizationManagerFactory.forPermission(
+                                                .access(permissionAuthorizationManagerFactory.forFreshPermission(
                                                                 CompanyPermission.ACCOUNTING_MOVEMENT_VIEW))
 
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-accounts",
                                                                 "/api/companies/{companyId}/accounting-accounts/classifications")
                                                 .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
 
                                                 // Leitura v2 (#474): plano completo segue a permissão do plano importado;
@@ -110,26 +110,26 @@ public class SecurityConfiguration {
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-chart")
                                                 .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
 
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-debit-credit-totals",
                                                                 "/api/companies/{companyId}/accounting-origin-catalog")
-                                                .access(permissionAuthorizationManagerFactory.forPermission(
+                                                .access(permissionAuthorizationManagerFactory.forFreshPermission(
                                                                 CompanyPermission.ACCOUNTING_MOVEMENT_VIEW))
 
                                                 // Cobertura só expõe datas: serve às telas de plano e de razão.
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-dataset-coverage")
                                                 .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNTING_MOVEMENT_VIEW),
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
 
                                                 .requestMatchers(HttpMethod.GET,
@@ -153,7 +153,7 @@ public class SecurityConfiguration {
                                                                 "/api/companies/{companyId}/dre")
                                                 .access(
                                                                 permissionAuthorizationManagerFactory
-                                                                                .forPermission(
+                                                                                .forFreshPermission(
                                                                                                 CompanyPermission.DRE_VIEW))
 
                                                 // Financial services enforce fresh company permissions and ownership.
