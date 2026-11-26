@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -27,6 +28,7 @@ class AccountingReadPermissionHttpIntegrationTest {
     @Autowired private UserAccountRepository users;
     @Autowired private CompanyRepository companies;
     @Autowired private CompanyAccessGrantRepository grants;
+    @Autowired private JdbcTemplate jdbc;
 
     @Test
     void shouldDenyEmptyGrantAndRoleLabelWithoutExplicitPermission() throws Exception {
@@ -74,6 +76,30 @@ class AccountingReadPermissionHttpIntegrationTest {
             expect(actor, company, "accounting-accounts/classifications", 200);
             expect(actor, company, "accounting-movements", 403);
         }
+    }
+
+    @Test
+    void shouldListReadableSourcesWithoutQuestorSyncAndRespectCompanyBoundary() throws Exception {
+        var actor = actor();
+        var company = company();
+        var other = company();
+        grants.saveAndFlush(new CompanyAccessGrant(actor, company, CompanyAccessRole.CUSTOM,
+                CostCenterScope.ALL, Set.of(CompanyPermission.ACCOUNTING_MOVEMENT_VIEW)));
+
+        expect(actor, company, "accounting-sources/readable", 200);
+        expect(actor, other, "accounting-sources/readable", 403);
+    }
+
+    @Test
+    void shouldApplyReadableSourceRevocationInTheSameSession() throws Exception {
+        var actor = actor();
+        var company = company();
+        var grant = grants.saveAndFlush(new CompanyAccessGrant(actor, company, CompanyAccessRole.CUSTOM,
+                CostCenterScope.ALL, Set.of(CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW)));
+
+        expect(actor, company, "accounting-sources/readable", 200);
+        jdbc.update("DELETE FROM company_access_grant_permissions WHERE company_access_grant_id = ?", grant.getId());
+        expect(actor, company, "accounting-sources/readable", 403);
     }
 
     @Test
