@@ -116,6 +116,7 @@ class AccountingFileImportConfirmationConcurrencyIntegrationTest {
                     actorId,
                     sourceId,
                     command,
+                    AccountingFileHash.sha256(file),
                     AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
                     AccountingFileFormat.HTML_XLS,
                     file);
