@@ -54,6 +54,25 @@ class AnalyticalLedgerHtmlLayoutProfileTest {
     }
 
     @Test
+    void shouldRejectMalformedBrazilianMoneyInsteadOfNormalizingIt() {
+        byte[] malformed = """
+                <html><title>Razão Analítico</title><body><table>
+                <tr><td>Consolidação: Empresa</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Período: 01/01/2026 a 31/01/2026</td></tr>
+                <tr><td>Data</td><td>Histórico</td><td></td><td>Lote/Lcto.</td><td></td><td>Débito</td><td>Crédito</td><td>Saldo</td></tr>
+                <tr><td>Conta: 111010001</td><td>Red.: 1-9  CAIXA SINTETICO</td><td></td><td></td><td></td><td></td><td>Saldo Anterior:</td><td>0,00</td></tr>
+                <tr><td>15/01/2026</td><td>VALOR INVALIDO</td><td></td><td>0/250</td><td></td><td>1.234,5.6</td><td></td><td>0,00</td></tr>
+                </table></body></html>
+                """.getBytes(StandardCharsets.ISO_8859_1);
+
+        var preview = new AnalyticalLedgerHtmlLayoutProfile().preview(malformed);
+
+        assertThat(preview.movementCount()).isZero();
+        assertThat(preview.invalidRowCount()).isEqualTo(1);
+        assertThat(preview.errors()).singleElement()
+                .satisfies(issue -> assertThat(issue.code()).isEqualTo("INVALID_MONEY"));
+    }
+
+    @Test
     void shouldPreserveMovementLikeRowsWithMalformedDates() {
         byte[] malformed = """
                 <html><title>Razão Analítico</title><body><table>
