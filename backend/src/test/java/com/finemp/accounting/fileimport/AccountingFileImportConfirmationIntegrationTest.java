@@ -192,7 +192,7 @@ class AccountingFileImportConfirmationIntegrationTest {
                 AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
                 AccountingFileFormat.HTML_XLS,
                 validFixture("MOV A")))
-                .isInstanceOf(com.finemp.access.CompanyAccessDeniedException.class);
+                .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
     }
 
     private byte[] validFixture(String firstHistory) {
