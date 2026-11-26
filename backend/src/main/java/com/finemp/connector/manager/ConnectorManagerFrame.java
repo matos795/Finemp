@@ -80,6 +80,7 @@ final class ConnectorManagerFrame extends JFrame {
         actions.add(message);
         add(actions, BorderLayout.SOUTH);
 
+        applyControlAvailability();
         refreshStatus();
     }
 
