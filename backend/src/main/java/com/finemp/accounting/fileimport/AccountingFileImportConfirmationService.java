@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public final class AccountingFileImportConfirmationService {
+public class AccountingFileImportConfirmationService {
     private final AccountingSourceRepository sources;
     private final CompanyPermissionAuthorizationService permissions;
     private final GeneralLedgerLayoutProfileRegistry layouts;
