@@ -53,6 +53,7 @@ public final class AccountingFileImportController {
     public AccountingFileImportReceiptResponse confirm(
             @PathVariable UUID accountingSourceId,
             @RequestParam UUID idempotencyKey,
+            @RequestParam String expectedFileSha256,
             @RequestParam String layoutProfile,
             @RequestParam AccountingFileFormat format,
             @RequestPart("file") MultipartFile file,
@@ -65,6 +66,7 @@ public final class AccountingFileImportController {
                     principal.getUserAccountId(),
                     accountingSourceId,
                     idempotencyKey,
+                    expectedFileSha256,
                     layoutProfile,
                     format,
                     file.getBytes()));
