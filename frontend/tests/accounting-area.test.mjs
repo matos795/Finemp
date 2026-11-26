@@ -142,10 +142,10 @@ test("no screen is marked available without an official contract", () => {
     assert.ok(screen.panels.length > 0, screen.id)
   }
 
-  // Pré-fechamento (#446) e De-Para (#442/#444) usam contrato em parte; o restante continua "Em breve".
+  // Pré-fechamento (#446), Diagnóstico (#530) e De-Para (#442/#444) usam contrato em parte; o restante continua "Em breve".
   assert.deepEqual(
     accountingScreens.filter((screen) => screen.status === "partial").map((screen) => screen.id),
-    ["cfpre", "depara"],
+    ["cfpre", "diag", "depara"],
   )
 })
 
