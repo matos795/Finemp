@@ -20,8 +20,7 @@ class ConnectorManagerControlAvailabilityTest {
     void stoppedOrFailedRuntimeAllowsStartAndRestartButNotStop() {
         for (var state : new ConnectorManagerStatus.State[] {
                 ConnectorManagerStatus.State.STOPPED,
-                ConnectorManagerStatus.State.FAILED,
-                ConnectorManagerStatus.State.UNKNOWN
+                ConnectorManagerStatus.State.FAILED
         }) {
             var controls = ConnectorManagerControlAvailability.forStatus(status(state));
 
@@ -29,6 +28,16 @@ class ConnectorManagerControlAvailabilityTest {
             assertThat(controls.stopEnabled()).isFalse();
             assertThat(controls.restartEnabled()).isTrue();
         }
+    }
+
+    @Test
+    void unknownRuntimeOnlyAllowsExplicitRecoveryByRestart() {
+        var controls = ConnectorManagerControlAvailability.forStatus(
+                status(ConnectorManagerStatus.State.UNKNOWN));
+
+        assertThat(controls.startEnabled()).isFalse();
+        assertThat(controls.stopEnabled()).isFalse();
+        assertThat(controls.restartEnabled()).isTrue();
     }
 
     @Test
