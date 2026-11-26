@@ -73,3 +73,10 @@
 /* F4 (#483): lista de avisos/erros da pré-visualização do Razão. */
 .ctbp .ctb-issues { margin: 6px 0 0; padding-left: 18px; }
 .ctbp .warnbar.ctb-err { border-color: var(--coral); background: rgba(255, 107, 107, .12); }
+
+/* #528: importação do Razão em 2 etapas explícitas. */
+.ctbp .ctb-steps { align-items: center; }
+.ctbp .ctb-step { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
+.ctbp .ctb-step .pill { cursor: default; padding: 5px 14px; font-size: .88rem; }
+.ctbp .ctb-next { border: 2px solid var(--gold); border-radius: 12px; padding: 14px 16px; margin: 4px 0 14px; background: rgba(240, 179, 35, .08); }
+.ctbp .ctb-next .btn.primary { font-size: 1rem; padding: 10px 22px; }
