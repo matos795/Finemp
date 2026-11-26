@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$RuntimeConfigPath
+    [string]$RuntimeConfigPath,
+
+    [switch]$ValidateOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,6 +42,13 @@ try {
             throw "Invalid secret reference."
         }
         Set-ProcessSecret $name $secrets[$name]
+    }
+
+    if ($ValidateOnly) {
+        & $runtime.javaExePath -jar $runtime.connectorJarPath --validate $runtime.connectorPropertiesPath
+        $exitCode = $LASTEXITCODE
+        Clear-ProcessSecrets $secretNames
+        exit $exitCode
     }
 
     New-Item -ItemType Directory -Force -Path $runtime.logDirectory | Out-Null

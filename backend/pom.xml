@@ -120,6 +120,12 @@
 						<configuration><classifier>connector</classifier></configuration>
 					</execution>
 					<execution>
+						<id>connector-manager-jar</id>
+						<phase>package</phase>
+						<goals><goal>jar</goal></goals>
+						<configuration><classifier>connector-manager</classifier></configuration>
+					</execution>
+					<execution>
 						<id>staging-provisioner-jar</id>
 						<phase>package</phase>
 						<goals><goal>jar</goal></goals>
@@ -152,6 +158,14 @@
 						<configuration>
 							<classifier>connector</classifier>
 							<mainClass>com.finemp.connector.agent.ConnectorMain</mainClass>
+						</configuration>
+					</execution>
+					<execution>
+						<id>connector-manager-repackage</id>
+						<goals><goal>repackage</goal></goals>
+						<configuration>
+							<classifier>connector-manager</classifier>
+							<mainClass>com.finemp.connector.manager.ConnectorManagerMain</mainClass>
 						</configuration>
 					</execution>
 					<execution>
