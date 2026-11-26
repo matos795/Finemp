@@ -313,3 +313,26 @@ test("the screen lives in Central de Fechamento → Base contábil importada", (
   const layout = read("features/accounting-area/components/accounting-area-layout.tsx")
   assert.match(layout, /"ctbimp"/)
 })
+
+test("the preview is bound to its source; any change of the effective source invalidates it", () => {
+  let state = fileImportReducer(initialFileImportState, { type: "select-file", file: file("razao.xls") })
+  state = fileImportReducer(state, { type: "preview-started", sourceId: "A" })
+  state = fileImportReducer(state, { type: "preview-succeeded", preview: VALID_PREVIEW })
+  assert.equal(previewIsConfirmable(state, "A"), true)
+  // Fonte efetiva mudou (ex.: refetch deixou só B): não confirma no lugar errado.
+  assert.equal(previewIsConfirmable(state, "B"), false)
+  assert.equal(fileImportReducer(state, { type: "confirm-started", idempotencyKey: "k", sourceId: "B" }), state)
+
+  const changed = fileImportReducer(state, { type: "source-changed", sourceId: "B" })
+  assert.equal(changed.preview, null)
+  assert.equal(changed.status, "waiting-file")
+  // Mesma fonte: nada muda.
+  assert.equal(fileImportReducer(state, { type: "source-changed", sourceId: "A" }), state)
+
+  const confirming = fileImportReducer(state, { type: "confirm-started", idempotencyKey: "k", sourceId: "A" })
+  assert.equal(confirmRequest(confirming).accountingSourceId, "A")
+
+  const screen = read("features/accounting-area/pages/file-import-screen.tsx")
+  assert.match(screen, /type: "source-changed"/)
+  assert.match(screen, /request\.accountingSourceId/)
+})

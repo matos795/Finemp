@@ -1,4 +1,4 @@
-import { useReducer, useRef, useState, type ReactNode } from "react"
+import { useEffect, useReducer, useRef, useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
@@ -98,6 +98,12 @@ export function FileImportScreen(props: FileImportScreenProps) {
     ])
     const sourceId = selectFileImportSource(candidates, chosenSource)
 
+    // Qualquer troca da fonte efetiva (escolha ou refetch da lista) invalida o preview.
+    useEffect(() => {
+        dispatch({ type: "source-changed", sourceId })
+        if (inputRef.current && sourceId === null) inputRef.current.value = ""
+    }, [sourceId])
+
     const prepare = useMutation({
         mutationFn: () => prepareFileImportSource(companyId as string),
         onSuccess: async (source) => {
@@ -123,7 +129,7 @@ export function FileImportScreen(props: FileImportScreenProps) {
 
         const token = state.fileToken
         const file = state.file
-        dispatch({ type: "preview-started" })
+        dispatch({ type: "preview-started", sourceId })
 
         try {
             const preview = await previewGeneralLedger(sourceId, file)
@@ -135,9 +141,9 @@ export function FileImportScreen(props: FileImportScreenProps) {
 
     async function runConfirm() {
         // Duplo clique: a referência barra antes mesmo do novo render.
-        if (!sourceId || confirmingRef.current || !previewIsConfirmable(state)) return
+        if (!sourceId || confirmingRef.current || !previewIsConfirmable(state, sourceId)) return
 
-        const action: FileImportAction = { type: "confirm-started", idempotencyKey: crypto.randomUUID() }
+        const action: FileImportAction = { type: "confirm-started", idempotencyKey: crypto.randomUUID(), sourceId }
         const next = fileImportReducer(state, action)
         if (next === state) return
 
@@ -145,7 +151,9 @@ export function FileImportScreen(props: FileImportScreenProps) {
         dispatch(action)
 
         try {
-            const receipt = await confirmGeneralLedger(sourceId, confirmRequest(next))
+            const request = confirmRequest(next)
+            // Sempre a fonte do preview, nunca a fonte "atual" da tela.
+            const receipt = await confirmGeneralLedger(request.accountingSourceId as string, request)
             dispatch({ type: "confirm-succeeded", receipt })
             for (const kind of ["file-import", "movements", "accounts", "coverage", "chart", "dre", "totals"]) {
                 void queryClient.invalidateQueries({ queryKey: accountingQueryKey(userId, kind, companyId) })
@@ -408,7 +416,7 @@ export function FileImportScreen(props: FileImportScreenProps) {
                         <button
                             type="button"
                             className="btn primary sq"
-                            disabled={!previewIsConfirmable(state) || state.status === "confirming"}
+                            disabled={!previewIsConfirmable(state, sourceId) || state.status === "confirming"}
                             onClick={() => void runConfirm()}
                         >
                             {state.status === "confirming" ? "Confirmando a importação…" : "Confirmar importação"}

@@ -96,6 +96,8 @@ export interface FileImportState {
     file: File | null
     /** Muda a cada arquivo escolhido: respostas de um arquivo anterior são descartadas. */
     fileToken: number
+    /** Fonte em que o preview foi feito: a confirmação só vai para ela. */
+    sourceId: string | null
     preview: GeneralLedgerPreview | null
     idempotencyKey: string | null
     receipt: FileImportReceipt | null
@@ -106,6 +108,7 @@ export const initialFileImportState: FileImportState = {
     status: "waiting-file",
     file: null,
     fileToken: 0,
+    sourceId: null,
     preview: null,
     idempotencyKey: null,
     receipt: null,
@@ -114,10 +117,11 @@ export const initialFileImportState: FileImportState = {
 
 export type FileImportAction =
     | { type: "select-file"; file: File | null }
-    | { type: "preview-started" }
+    | { type: "preview-started"; sourceId?: string }
     | { type: "preview-succeeded"; preview: GeneralLedgerPreview; fileToken?: number }
     | { type: "preview-failed"; message: string; fileToken?: number }
-    | { type: "confirm-started"; idempotencyKey: string }
+    | { type: "confirm-started"; idempotencyKey: string; sourceId?: string }
+    | { type: "source-changed"; sourceId: string | null }
     | { type: "confirm-succeeded"; receipt: FileImportReceipt }
     | { type: "confirm-failed"; message: string }
     | { type: "reset" }
@@ -126,9 +130,17 @@ function previewHasNoErrors(preview: GeneralLedgerPreview | null) {
     return preview !== null && preview.errors.length === 0 && preview.periodStart !== null && preview.periodEnd !== null
 }
 
-/** Confirmar só com preview válido, do arquivo atual, e sem confirmação em andamento. */
-export function previewIsConfirmable(state: FileImportState) {
-    return state.status === "preview-ready" && state.file !== null && previewHasNoErrors(state.preview)
+/**
+ * Confirmar só com preview válido, do arquivo atual, sem confirmação em andamento
+ * e (quando informada) na mesma fonte em que o preview foi feito.
+ */
+export function previewIsConfirmable(state: FileImportState, currentSourceId?: string | null) {
+    return (
+        state.status === "preview-ready" &&
+        state.file !== null &&
+        previewHasNoErrors(state.preview) &&
+        (currentSourceId === undefined || state.sourceId === null || state.sourceId === currentSourceId)
+    )
 }
 
 export function fileImportReducer(state: FileImportState, action: FileImportAction): FileImportState {
@@ -143,7 +155,14 @@ export function fileImportReducer(state: FileImportState, action: FileImportActi
             }
         case "preview-started":
             if (!state.file || state.status === "confirming" || state.status === "previewing") return state
-            return { ...state, status: "previewing", preview: null, error: null, receipt: null }
+            return {
+                ...state,
+                status: "previewing",
+                sourceId: action.sourceId ?? state.sourceId,
+                preview: null,
+                error: null,
+                receipt: null,
+            }
         case "preview-succeeded":
             if (state.status !== "previewing") return state
             if (action.fileToken !== undefined && action.fileToken !== state.fileToken) return state
@@ -154,7 +173,7 @@ export function fileImportReducer(state: FileImportState, action: FileImportActi
             return { ...state, status: "file-selected", preview: null, error: action.message }
         case "confirm-started":
             // Duplo clique e preview inválido não geram uma segunda confirmação.
-            if (!previewIsConfirmable(state)) return state
+            if (!previewIsConfirmable(state, action.sourceId)) return state
             return { ...state, status: "confirming", idempotencyKey: action.idempotencyKey, error: null }
         case "confirm-succeeded":
             if (state.status !== "confirming") return state
@@ -163,6 +182,11 @@ export function fileImportReducer(state: FileImportState, action: FileImportActi
             if (state.status !== "confirming") return state
             // Volta ao preview válido: uma nova tentativa explícita usa nova chave.
             return { ...state, status: "preview-ready", idempotencyKey: null, error: action.message }
+        case "source-changed":
+            // A fonte efetiva mudou (escolha ou atualização da lista): o preview não vale mais.
+            if (state.sourceId === null || state.sourceId === action.sourceId) return state
+            if (state.status === "confirming") return state
+            return { ...initialFileImportState, fileToken: state.fileToken + 1 }
         case "reset":
             return { ...initialFileImportState, fileToken: state.fileToken + 1 }
     }
@@ -175,6 +199,7 @@ export function confirmRequest(state: FileImportState) {
     }
 
     return {
+        accountingSourceId: state.sourceId,
         file: state.file,
         expectedFileSha256: state.preview.fileSha256,
         idempotencyKey: state.idempotencyKey,
