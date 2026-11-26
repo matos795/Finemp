@@ -69,3 +69,7 @@
 /* C2.9 (#475): ações por lançamento lado a lado. */
 .ctbp .ctb-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .ctbp .ctb-membership { display: block; margin-top: 4px; }
+
+/* F4 (#483): lista de avisos/erros da pré-visualização do Razão. */
+.ctbp .ctb-issues { margin: 6px 0 0; padding-left: 18px; }
+.ctbp .warnbar.ctb-err { border-color: var(--coral); background: rgba(255, 107, 107, .12); }
