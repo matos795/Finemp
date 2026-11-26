@@ -44,6 +44,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Set;
 import java.util.UUID;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,6 +78,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
     @Autowired private UserAccountRepository users;
     @Autowired private CompanyRepository companies;
     @Autowired private CompanyAccessGrantRepository grants;
+    @Autowired private EntityManager entities;
     @Autowired private AccountingSourceRepository sources;
     @Autowired private AccountingAccountRepository accounts;
     @Autowired private AccountingMovementRepository movements;
@@ -519,6 +521,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
 
         access.replaceAccess(CompanyAccessRole.CUSTOM, CostCenterScope.ALL, Set.of());
         grants.saveAndFlush(access);
+        entities.clear(); // Próximo request não pode reutilizar o grant gerenciado da revogação.
 
         mvc.perform(chart(source).with(session)).andExpect(status().isForbidden());
         mvc.perform(totals("DAILY", "2026-03-01", "2026-03-31").with(session)).andExpect(status().isForbidden());
