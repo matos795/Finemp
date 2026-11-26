@@ -77,7 +77,8 @@ export async function apiFetch(
 
   const headers = new Headers(options.headers)
 
-  if (options.body && !headers.has("Content-Type")) {
+  // FormData (upload multipart): o navegador define Content-Type com o boundary.
+  if (options.body && !headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json")
   }
 
