@@ -10,10 +10,11 @@ record ConnectorManagerControlAvailability(
             return new ConnectorManagerControlAvailability(false, false, false);
         }
 
-        if (status.state() == ConnectorManagerStatus.State.RUNNING) {
-            return new ConnectorManagerControlAvailability(false, true, true);
-        }
-
-        return new ConnectorManagerControlAvailability(true, false, true);
+        return switch (status.state()) {
+            case RUNNING -> new ConnectorManagerControlAvailability(false, true, true);
+            case STOPPED, FAILED -> new ConnectorManagerControlAvailability(true, false, true);
+            case UNKNOWN -> new ConnectorManagerControlAvailability(false, false, true);
+            case NOT_INSTALLED -> new ConnectorManagerControlAvailability(false, false, false);
+        };
     }
 }
