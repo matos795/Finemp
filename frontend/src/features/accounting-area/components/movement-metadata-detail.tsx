@@ -1,4 +1,5 @@
 import { formatInstant, movementMetadataView, type MovementMetadataCarrier } from "../lib/accounting-v2"
+import { originLabel } from "../lib/entry-composition"
 
 interface MovementMetadataDetailProps {
     item: MovementMetadataCarrier
@@ -20,26 +21,23 @@ export function MovementMetadataDetail({ item, originDescriptions }: MovementMet
 
     return (
         <dl className="ctb-meta">
-            {view.fields.map((field) => {
-                const technical =
-                    field.key === "originCode" && field.value ? originDescriptions?.get(field.value) : undefined
-
-                return (
-                    <div key={field.key}>
-                        <dt>{field.label}</dt>
-                        <dd className="mono">
-                            {field.empty ? (
-                                <span className="muted">vazio na origem</span>
-                            ) : field.key === "sourceRecordedAt" ? (
-                                formatInstant(field.value as string)
-                            ) : (
-                                field.value
-                            )}
-                            {technical && <span className="muted"> · {technical}</span>}
-                        </dd>
-                    </div>
-                )
-            })}
+            {view.fields.map((field) => (
+                <div key={field.key}>
+                    <dt>{field.label}</dt>
+                    <dd className="mono">
+                        {field.empty ? (
+                            <span className="muted">vazio na origem</span>
+                        ) : field.key === "sourceRecordedAt" ? (
+                            formatInstant(field.value as string)
+                        ) : field.key === "originCode" ? (
+                            // Código cru primeiro; a descrição técnica do catálogo só complementa.
+                            originLabel(field.value, originDescriptions)
+                        ) : (
+                            field.value
+                        )}
+                    </dd>
+                </div>
+            ))}
         </dl>
     )
 }
