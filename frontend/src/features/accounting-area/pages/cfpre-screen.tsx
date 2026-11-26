@@ -7,6 +7,7 @@ import { lastDayOf, monthLabel } from "../lib/accounting-period"
 import { accountingV2Access, formatDay, formatInstant } from "../lib/accounting-v2"
 import {
     DRE_NOT_IMPORTED_TEXT,
+    dreCellValue,
     monthCoverage,
     periodCoverage,
     type CoverageStatus,
@@ -37,16 +38,9 @@ function Cell({ value, state, coverage }: { value: string | null; state: CellSta
         )
     }
 
-    if (value === null) {
-        // Sem linha só é "sem movimento" quando o mês inteiro foi importado.
-        if (coverage === "COVERED") {
-            return (
-                <td className="n muted" title="Sem movimento no período">
-                    0,00
-                </td>
-            )
-        }
+    const shown = dreCellValue(value, coverage)
 
+    if (shown === null) {
         return (
             <td
                 className="n muted"
@@ -61,7 +55,16 @@ function Cell({ value, state, coverage }: { value: string | null; state: CellSta
         )
     }
 
-    return <td className={isNegativeDecimal(value) ? "n neg" : "n"}>{formatExactDecimal(value)}</td>
+    if (value === null) {
+        // Sem linha num mês inteiramente importado: sem movimento.
+        return (
+            <td className="n muted" title="Sem movimento no período">
+                {formatExactDecimal(shown)}
+            </td>
+        )
+    }
+
+    return <td className={isNegativeDecimal(shown) ? "n neg" : "n"}>{formatExactDecimal(shown)}</td>
 }
 
 function monthError(error: unknown) {

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 import {
   COVERAGE_STATUS_TEXT,
   DRE_NOT_IMPORTED_TEXT,
+  dreCellValue,
   monthCoverage,
   periodCoverage,
 } from "../src/features/accounting-area/lib/coverage-periods.ts"
@@ -216,4 +217,17 @@ test("permissions keep gating each read", () => {
   assert.match(cfpre, /accountingV2Access\(/)
   const modal = read("features/accounting-area/components/entry-composition-modal.tsx")
   assert.match(modal, /Sem acesso/)
+})
+
+test("a zero total is 'no movement' only in a fully imported month", () => {
+  assert.equal(dreCellValue("0.0000", "COVERED"), "0.0000")
+  assert.equal(dreCellValue(null, "COVERED"), "0.00")
+  assert.equal(dreCellValue("0.0000", "NOT_IMPORTED"), null)
+  assert.equal(dreCellValue("0.0000", "PARTIAL"), null)
+  assert.equal(dreCellValue(null, "NOT_IMPORTED"), null)
+  // Valor real nunca é escondido, mesmo fora da cobertura.
+  assert.equal(dreCellValue("12.3400", "NOT_IMPORTED"), "12.3400")
+  assert.equal(dreCellValue("-0.0100", "PARTIAL"), "-0.0100")
+
+  assert.match(read("features/accounting-area/pages/cfpre-screen.tsx"), /dreCellValue\(/)
 })

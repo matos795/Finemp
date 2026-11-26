@@ -114,3 +114,18 @@ export function periodCoverage(
 
     return { status, gaps, text: COVERAGE_STATUS_TEXT[status] }
 }
+
+/**
+ * Valor a exibir numa célula da DRE mensal. Sem linha ou com total zero, o mês
+ * só vira "0,00 / sem movimento" quando está inteiramente importado; fora disso
+ * fica null ("—"), porque ausência de dado não é zero. Valor diferente de zero é
+ * dado real do backend e sempre aparece.
+ */
+export function dreCellValue(value: string | null, status: CoverageStatus): string | null {
+    const zero = value === null || /^-?0+(\.0+)?$/.test(value.trim())
+
+    if (!zero) return value
+    if (status === "COVERED") return value ?? "0.00"
+
+    return null
+}
