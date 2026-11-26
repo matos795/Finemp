@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Shared persistence core for validated accounting movement batches.
@@ -34,6 +36,7 @@ public final class AccountingMovementBatchPublisher {
         this.movements = movements;
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
     public Result publish(AccountingSource source, ValidatedAccountingBatch batch) {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(batch, "batch");
