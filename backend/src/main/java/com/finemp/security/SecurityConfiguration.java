@@ -133,6 +133,18 @@ public class SecurityConfiguration {
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE)))
 
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/api/companies/{companyId}/accounting-sources/readable")
+                                                .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
+                                                                                CompanyPermission.ACCOUNTING_MOVEMENT_VIEW),
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
+                                                                                CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE),
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
+                                                                                CompanyPermission.DRE_VIEW)))
+
+                                                .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-sources")
                                                 .access(permissionAuthorizationManagerFactory.forPermission(
                                                                 CompanyPermission.QUESTOR_SYNC))

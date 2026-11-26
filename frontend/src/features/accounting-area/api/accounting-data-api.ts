@@ -7,6 +7,18 @@ import type {
 } from "../lib/accounting-v2.ts"
 
 /** Item de GET /api/companies/{companyId}/accounting-accounts (#442). */
+export interface ReadableAccountingSource {
+    id: string
+    type: string
+    externalReference: string | null
+    active: boolean
+    connectionMode: string
+}
+
+export function getReadableAccountingSources(companyId: string) {
+    return apiRequest<ReadableAccountingSource[]>(`${companyPath(companyId)}/accounting-sources/readable`)
+}
+
 export interface ImportedAccount {
     accountId: string
     accountingSourceId: string

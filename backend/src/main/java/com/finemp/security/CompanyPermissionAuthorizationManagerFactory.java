@@ -23,6 +23,17 @@ public class CompanyPermissionAuthorizationManagerFactory {
 
     public AuthorizationManager<RequestAuthorizationContext> forPermission(
             CompanyPermission permission) {
+        return forPermission(permission, false);
+    }
+
+    public AuthorizationManager<RequestAuthorizationContext> forFreshPermission(
+            CompanyPermission permission) {
+        return forPermission(permission, true);
+    }
+
+    private AuthorizationManager<RequestAuthorizationContext> forPermission(
+            CompanyPermission permission,
+            boolean fresh) {
 
         return (authenticationSupplier, context) -> {
 
@@ -43,10 +54,15 @@ public class CompanyPermissionAuthorizationManagerFactory {
             try {
                 UUID companyId = UUID.fromString(companyIdValue);
 
-                boolean granted = authorizationService.hasPermission(
-                        principal.getUserAccountId(),
-                        companyId,
-                        permission);
+                boolean granted = fresh
+                        ? authorizationService.hasFreshPermission(
+                                principal.getUserAccountId(),
+                                companyId,
+                                permission)
+                        : authorizationService.hasPermission(
+                                principal.getUserAccountId(),
+                                companyId,
+                                permission);
 
                 return new AuthorizationDecision(granted);
 

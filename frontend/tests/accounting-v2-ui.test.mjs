@@ -6,7 +6,6 @@ import {
   chartUniverse,
   defaultMonthRange,
   describeCoverage,
-  knownSourceIds,
   movementMetadataView,
   NOT_SYNCHRONIZED_METADATA_MESSAGE,
   totalsPeriod,
@@ -16,6 +15,7 @@ import {
   getDatasetCoverage,
   getDebitCreditTotals,
   getOriginCatalog,
+  getReadableAccountingSources,
   searchMovements,
 } from "../src/features/accounting-area/api/accounting-data-api.ts"
 import { formatExactDecimal } from "../src/features/accounting-area/lib/exact-decimal.ts"
@@ -237,15 +237,19 @@ test("permissions decide which v2 entries are offered", () => {
   }
 })
 
-test("sources come only from data the session can already read", () => {
-  assert.deepEqual(
-    knownSourceIds(
-      { items: [{ accountingSourceId: "s1" }, { accountingSourceId: "s2" }] },
-      { items: [{ accountingSourceId: "s2" }, { accountingSourceId: "s3" }] },
-    ),
-    ["s1", "s2", "s3"],
-  )
-  assert.deepEqual(knownSourceIds(undefined, undefined), [])
+test("source picker uses the dedicated read-only accounting source endpoint", async () => {
+  const calls = []
+  globalThis.fetch = async (path) => {
+    calls.push(path)
+    return Response.json([])
+  }
+
+  await getReadableAccountingSources("c1")
+
+  assert.deepEqual(calls, ["/api/companies/c1/accounting-sources/readable"])
+  const hook = read("features/accounting-area/hooks/use-accounting-sources.ts")
+  assert.match(hook, /getReadableAccountingSources/)
+  assert.doesNotMatch(hook, /useCompanySyncStatus|searchImportedAccounts|knownSourceIds/)
 })
 
 test("new screens are reachable inside Contabilidade without knowing old routes", () => {
