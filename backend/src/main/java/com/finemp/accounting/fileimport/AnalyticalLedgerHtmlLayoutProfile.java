@@ -18,7 +18,6 @@ import org.springframework.web.util.HtmlUtils;
 @Component
 public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLayoutProfile {
     static final String PROFILE_ID = "analytical-ledger-html-v1";
-    private static final int SAMPLE_LIMIT = 20;
     private static final Pattern ROW = Pattern.compile("(?is)<tr\\b[^>]*>(.*?)</tr>");
     private static final Pattern CELL = Pattern.compile("(?is)<td\\b[^>]*>(.*?)</td>");
     private static final Pattern TAG = Pattern.compile("(?is)<[^>]+>");
@@ -41,7 +40,7 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
     }
 
     @Override
-    public GeneralLedgerPreview preview(byte[] content) {
+    public GeneralLedgerParsedFile parse(byte[] content) {
         if (content == null || content.length == 0 || content.length > AccountingFileImportLimits.MAX_FILE_BYTES) {
             throw new AccountingFilePreviewException("Arquivo de Razão inválido.");
         }
@@ -62,11 +61,10 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
         boolean expectedHeader = false;
         String currentAccount = null;
         String currentDescription = null;
-        Set<String> observedAccounts = new LinkedHashSet<>();
+        java.util.Map<String, GeneralLedgerObservedAccount> observedAccounts = new java.util.LinkedHashMap<>();
         List<GeneralLedgerPreviewIssue> warnings = new ArrayList<>();
         List<GeneralLedgerPreviewIssue> errors = new ArrayList<>();
-        List<GeneralLedgerPreviewRow> samples = new ArrayList<>();
-        int movements = 0;
+        List<GeneralLedgerParsedMovement> parsedMovements = new ArrayList<>();
         int invalidRows = 0;
 
         for (int index = 0; index < rows.size(); index++) {
@@ -90,7 +88,13 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
             if (accountMatcher.matches()) {
                 currentAccount = accountMatcher.group(1);
                 currentDescription = accountDescription(cell(row, 1));
-                observedAccounts.add(currentAccount);
+                var observed = new GeneralLedgerObservedAccount(currentAccount, currentDescription);
+                var previousAccount = observedAccounts.putIfAbsent(currentAccount, observed);
+                if (previousAccount != null && !previousAccount.equals(observed)) {
+                    invalidRows++;
+                    errors.add(issue("ACCOUNT_CONFLICT", sourceRow,
+                            "A conta aparece com descrições divergentes no arquivo."));
+                }
                 continue;
             }
 
@@ -160,19 +164,16 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
                 continue;
             }
 
-            movements++;
-            if (samples.size() < SAMPLE_LIMIT) {
-                samples.add(new GeneralLedgerPreviewRow(
-                        sourceRow,
-                        currentAccount,
-                        currentDescription,
-                        accountingDate,
-                        sourceEntryKey,
-                        hasDebit ? AccountingMovementSide.DEBIT : AccountingMovementSide.CREDIT,
-                        amount,
-                        cell(row, 1),
-                        balance));
-            }
+            parsedMovements.add(new GeneralLedgerParsedMovement(
+                    sourceRow,
+                    currentAccount,
+                    currentDescription,
+                    accountingDate,
+                    sourceEntryKey,
+                    hasDebit ? AccountingMovementSide.DEBIT : AccountingMovementSide.CREDIT,
+                    amount,
+                    cell(row, 1),
+                    balance));
         }
 
         if (!expectedHeader || periodStart == null || periodEnd == null || observedAccounts.isEmpty()) {
@@ -182,18 +183,17 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
             throw new AccountingFilePreviewException("Período do Razão inválido.");
         }
 
-        return new GeneralLedgerPreview(
+        return new GeneralLedgerParsedFile(
                 id(),
                 AccountingFileFormat.HTML_XLS,
                 periodStart,
                 periodEnd,
                 rows.size(),
-                movements,
                 invalidRows,
-                observedAccounts.size(),
+                new ArrayList<>(observedAccounts.values()),
                 warnings,
                 errors,
-                samples);
+                parsedMovements);
     }
 
     private static List<List<String>> readRows(String html) {
