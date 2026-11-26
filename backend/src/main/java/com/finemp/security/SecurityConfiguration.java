@@ -85,6 +85,11 @@ public class SecurityConfiguration {
                                                                 "/api/accounting-sources/{accountingSourceId}/file-imports/**")
                                                 .access(accountingFileImportAuthorizationManager)
 
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/companies/{companyId}/accounting-file-import/source")
+                                                .access(permissionAuthorizationManagerFactory.forFreshPermission(
+                                                                CompanyPermission.ACCOUNTING_IMPORT_MANAGE))
+
                                                 .requestMatchers(HttpMethod.PUT,
                                                                 "/api/companies/{companyId}/accounting-accounts/{accountId}/classification")
                                                 .access(permissionAuthorizationManagerFactory.forPermission(
