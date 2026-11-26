@@ -37,6 +37,6 @@ class ConnectorManagerFooterTest {
         assertThat(restart.getX() + restart.getWidth()).isLessThanOrEqualTo(restart.getParent().getWidth());
         assertThat(message.getY() + message.getHeight()).isLessThanOrEqualTo(message.getParent().getHeight());
         assertThat(footer.getPreferredSize().height)
-                .isGreaterThan(refresh.getParent().getPreferredSize().height() * 2);
+                .isGreaterThan(refresh.getParent().getPreferredSize().height * 2);
     }
 }
