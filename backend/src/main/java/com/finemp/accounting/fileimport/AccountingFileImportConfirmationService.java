@@ -6,6 +6,8 @@ import com.finemp.accounting.canonical.v2.AccountingDataset;
 import com.finemp.accounting.coverage.AccountingDatasetCoverageService;
 import com.finemp.accounting.source.AccountingSourceRepository;
 import com.finemp.accounting.source.AccountingSourceType;
+import com.finemp.accounting.sync.SyncFailureCode;
+import com.finemp.accounting.sync.execution.SyncPublicationRejectedException;
 import com.finemp.accounting.sync.publication.AccountingMovementBatchPublisher;
 import com.finemp.administration.OrganizationAccessDeniedException;
 import java.time.Instant;
@@ -103,8 +105,21 @@ public final class AccountingFileImportConfirmationService {
             throw conflict(AccountingFileImportConflictException.Reason.PERIOD_OVERLAP);
         }
 
-        var batch = AccountingFileImportNormalizer.normalize(parsed, maxRecords);
-        var published = publisher.publish(source, batch);
+        AccountingMovementBatchPublisher.Result published;
+        try {
+            var batch = AccountingFileImportNormalizer.normalize(parsed, maxRecords);
+            published = publisher.publish(source, batch);
+        } catch (SyncPublicationRejectedException rejected) {
+            if (rejected.getCode() == SyncFailureCode.DATA_CONFLICT) {
+                throw conflict(AccountingFileImportConflictException.Reason.PUBLISHED_DATA_CONFLICT);
+            }
+            if (rejected.getCode() == SyncFailureCode.INVALID_PAYLOAD
+                    || rejected.getCode() == SyncFailureCode.RESOURCE_LIMIT) {
+                throw new AccountingFilePreviewException(
+                        "O arquivo possui dados contábeis inválidos para importação.");
+            }
+            throw rejected;
+        }
 
         coverage.record(
                 accountingSourceId,
