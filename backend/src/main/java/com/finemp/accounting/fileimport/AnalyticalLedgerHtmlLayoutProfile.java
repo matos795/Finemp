@@ -72,12 +72,12 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
         for (int index = 0; index < rows.size(); index++) {
             int sourceRow = index + 1;
             List<String> row = rows.get(index);
-            String joined = String.join(" ", row);
-
-            var periodMatcher = PERIOD.matcher(joined);
-            if (periodMatcher.find()) {
-                periodStart = parseDate(periodMatcher.group(1), sourceRow, "INVALID_PERIOD", errors);
-                periodEnd = parseDate(periodMatcher.group(2), sourceRow, "INVALID_PERIOD", errors);
+            if (isPeriodHeaderRow(row)) {
+                var periodMatcher = PERIOD.matcher(String.join(" ", row));
+                if (periodMatcher.find()) {
+                    periodStart = parseDate(periodMatcher.group(1), sourceRow, "INVALID_PERIOD", errors);
+                    periodEnd = parseDate(periodMatcher.group(2), sourceRow, "INVALID_PERIOD", errors);
+                }
                 continue;
             }
 
@@ -208,6 +208,11 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
             rows.add(List.copyOf(cells));
         }
         return rows;
+    }
+
+    private static boolean isPeriodHeaderRow(List<String> row) {
+        return cell(row, 0).startsWith("Consolidação:")
+                && row.stream().anyMatch(cell -> cell.contains("Período:"));
     }
 
     private static boolean isReportMetadataRow(List<String> row) {
