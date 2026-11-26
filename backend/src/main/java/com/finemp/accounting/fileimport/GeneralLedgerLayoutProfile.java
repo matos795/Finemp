@@ -10,4 +10,8 @@ public interface GeneralLedgerLayoutProfile {
     String id();
 
     Set<AccountingFileFormat> formats();
+
+    default GeneralLedgerPreview preview(byte[] content) {
+        throw new AccountingFileLayoutUnavailableException();
+    }
 }
