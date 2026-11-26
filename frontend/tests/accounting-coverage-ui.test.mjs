@@ -84,8 +84,11 @@ test("synthetic/analytic is only the documented inference and always labelled as
   assert.equal(inferredAccountKind(" 2 ")?.label, "Analítica")
 
   const chart = read("features/accounting-area/pages/chart-screen.tsx")
-  assert.match(chart, /inferredAccountKind\(/)
-  assert.match(chart, /Inferido/)
+  assert.match(chart, /<InferredKind /)
+  assert.match(chart, /Tipo \(inferido\)/)
+  const badge = read("features/accounting-area/components/inferred-kind.tsx")
+  assert.match(badge, /inferredAccountKind\(/)
+  assert.match(badge, /kind\.tag/)
 })
 
 test("origin catalog only complements the raw origin code", () => {
