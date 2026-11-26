@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,12 +17,35 @@ import org.springframework.web.multipart.MultipartFile;
 public final class AccountingFileImportController {
     private final AccountingFileImportPreviewService previews;
     private final AccountingFileImportConfirmationService confirmations;
+    private final AccountingFileImportUiSupportService uiSupport;
 
     public AccountingFileImportController(
             AccountingFileImportPreviewService previews,
-            AccountingFileImportConfirmationService confirmations) {
+            AccountingFileImportConfirmationService confirmations,
+            AccountingFileImportUiSupportService uiSupport) {
         this.previews = previews;
         this.confirmations = confirmations;
+        this.uiSupport = uiSupport;
+    }
+
+    @PostMapping("/api/companies/{companyId}/accounting-file-import/source")
+    public AccountingFileImportSourceResponse prepareSource(
+            @PathVariable UUID companyId,
+            @AuthenticationPrincipal UserAccountPrincipal principal) {
+        if (principal == null) {
+            throw new AccountingFilePreviewException("Usuário não autenticado.");
+        }
+        return uiSupport.prepareSource(principal.getUserAccountId(), companyId);
+    }
+
+    @GetMapping("/api/accounting-sources/{accountingSourceId}/file-imports/history")
+    public java.util.List<AccountingFileImportHistoryItemResponse> history(
+            @PathVariable UUID accountingSourceId,
+            @AuthenticationPrincipal UserAccountPrincipal principal) {
+        if (principal == null) {
+            throw new AccountingFilePreviewException("Usuário não autenticado.");
+        }
+        return uiSupport.history(principal.getUserAccountId(), accountingSourceId);
     }
 
     @PostMapping(

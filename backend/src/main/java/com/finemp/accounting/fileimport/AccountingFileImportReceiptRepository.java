@@ -87,6 +87,34 @@ public class AccountingFileImportReceiptRepository {
                 .findFirst();
     }
 
+    public java.util.List<AccountingFileImportReceipt> findAllBySource(UUID accountingSourceId) {
+        return jdbc.query(
+                """
+                SELECT accounting_source_id, idempotency_key, dataset,
+                       file_sha256, fingerprint, layout_profile,
+                       covered_from, covered_to, row_count,
+                       published_count, skipped_count, created_by, committed_at
+                FROM accounting_file_import_receipts
+                WHERE accounting_source_id = ?
+                ORDER BY committed_at DESC
+                """,
+                (row, index) -> new AccountingFileImportReceipt(
+                        row.getObject("accounting_source_id", UUID.class),
+                        row.getObject("idempotency_key", UUID.class),
+                        AccountingFileDataset.valueOf(row.getString("dataset")),
+                        row.getString("file_sha256"),
+                        row.getString("fingerprint"),
+                        row.getString("layout_profile"),
+                        row.getObject("covered_from", java.time.LocalDate.class),
+                        row.getObject("covered_to", java.time.LocalDate.class),
+                        row.getLong("row_count"),
+                        row.getLong("published_count"),
+                        row.getLong("skipped_count"),
+                        row.getObject("created_by", UUID.class),
+                        row.getTimestamp("committed_at").toInstant()),
+                accountingSourceId);
+    }
+
     public void insert(AccountingFileImportReceipt receipt) {
         jdbc.update(
                 """
