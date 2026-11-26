@@ -94,6 +94,10 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
                 continue;
             }
 
+            if (isReportMetadataRow(row)) {
+                continue;
+            }
+
             String rawDate = cell(row, 0);
             String sourceEntryKey = cell(row, 3);
             String debit = cell(row, 5);
@@ -204,6 +208,15 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
             rows.add(List.copyOf(cells));
         }
         return rows;
+    }
+
+    private static boolean isReportMetadataRow(List<String> row) {
+        String first = cell(row, 0);
+        return "Contabilidade".equals(first)
+                || first.startsWith("Consolidação:")
+                || row.stream().anyMatch(cell -> "Página:".equals(cell)
+                        || "Data:".equals(cell)
+                        || "Hora:".equals(cell));
     }
 
     private static boolean isExpectedHeader(List<String> row) {
