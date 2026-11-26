@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import {
   BALANCE_DEPENDENT_CHECKS,
+  diagnosticsPeriod,
   accountsCheck,
   chartCheck,
   dreChecks,
@@ -132,4 +133,11 @@ test("the screen is partial, uses only official contracts and never says 'synchr
 
   const layout = read("features/accounting-area/components/accounting-area-layout.tsx")
   assert.match(layout, /"diag"/)
+})
+
+test("the default period follows the area competence until the user picks another one", () => {
+  assert.deepEqual(diagnosticsPeriod(null, "2026-02"), { from: "2025-03", to: "2026-02" })
+  assert.deepEqual(diagnosticsPeriod(null, "2026-11"), { from: "2025-12", to: "2026-11" })
+  assert.deepEqual(diagnosticsPeriod({ from: "2026-01", to: "2026-03" }, "2026-11"), { from: "2026-01", to: "2026-03" })
+  assert.match(read("features/accounting-area/pages/diag-screen.tsx"), /diagnosticsPeriod\(/)
 })

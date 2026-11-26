@@ -239,3 +239,16 @@ export const BALANCE_DEPENDENT_CHECKS = [
         reason: "Lançamentos preparados e contrapartida ainda não existem no FINEMP.",
     },
 ] as const
+
+/**
+ * Período verificado: a escolha do usuário ou, sem ela, os 12 meses que terminam
+ * na competência da área (acompanha a competência quando ela muda).
+ */
+export function diagnosticsPeriod(chosen: { from: string; to: string } | null, competence: string) {
+    if (chosen) return chosen
+
+    const [year, month] = competence.split("-").map((part) => Number.parseInt(part, 10))
+    const start = new Date(Date.UTC(year, month - 12, 1))
+
+    return { from: `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}`, to: competence }
+}

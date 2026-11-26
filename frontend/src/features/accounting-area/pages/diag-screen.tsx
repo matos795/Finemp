@@ -18,12 +18,12 @@ import {
     BALANCE_DEPENDENT_CHECKS,
     accountsCheck,
     chartCheck,
+    diagnosticsPeriod,
     dreChecks,
     groupChecks,
     syncCheck,
     type DiagnosticCheck,
 } from "../lib/base-diagnostics"
-import { trailingMonths } from "../lib/dre-matrix"
 import { accountingQueryKey } from "../lib/query-keys"
 import { ScreenHeader } from "./accounting-screen-page"
 
@@ -102,8 +102,8 @@ export function DiagScreen(props: DiagScreenProps) {
     const access = accountingV2Access(permissions)
     const canDre = permissions.includes("DRE_VIEW")
 
-    const defaultMonths = trailingMonths(props.competence, 12)
-    const [range, setRange] = useState({ from: defaultMonths[0], to: defaultMonths[11] })
+    const [chosenRange, setRange] = useState<{ from: string; to: string } | null>(null)
+    const range = diagnosticsPeriod(chosenRange, props.competence)
     const startDate = `${range.from}-01`
     const endDate = lastDayOf(range.to)
     const validRange = range.from <= range.to
