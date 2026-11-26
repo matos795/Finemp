@@ -47,6 +47,9 @@ jobs:
       - name: Verify standalone Connector entry point without database or server startup
         run: java -jar target/finemp-api-0.0.1-SNAPSHOT-connector.jar --help
 
+      - name: Verify standalone Connector Manager entry point without Spring startup
+        run: java -jar target/finemp-api-0.0.1-SNAPSHOT-connector-manager.jar --help
+
       - name: Verify Windows Connector runtime scripts
         working-directory: .
         shell: pwsh
@@ -63,6 +66,7 @@ jobs:
         run: |
           mkdir -p target/connector-distribution
           cp target/finemp-api-0.0.1-SNAPSHOT-connector.jar target/connector-distribution/
+          cp target/finemp-api-0.0.1-SNAPSHOT-connector-manager.jar target/connector-distribution/
           cp target/finemp-api-0.0.1-SNAPSHOT-connector.jar.sha256 target/connector-distribution/
           cp ../docs/operations/connector.properties.example target/connector-distribution/
           cp ../docs/operations/connector-runtime.md target/connector-distribution/
