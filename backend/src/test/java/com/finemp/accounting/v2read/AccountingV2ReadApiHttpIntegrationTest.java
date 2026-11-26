@@ -44,13 +44,13 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Set;
 import java.util.UUID;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -78,7 +78,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
     @Autowired private UserAccountRepository users;
     @Autowired private CompanyRepository companies;
     @Autowired private CompanyAccessGrantRepository grants;
-    @Autowired private EntityManager entities;
+    @Autowired private JdbcTemplate jdbc;
     @Autowired private AccountingSourceRepository sources;
     @Autowired private AccountingAccountRepository accounts;
     @Autowired private AccountingMovementRepository movements;
@@ -519,9 +519,9 @@ class AccountingV2ReadApiHttpIntegrationTest {
         mvc.perform(coverage(source, "CHART").with(session)).andExpect(status().isOk());
         mvc.perform(catalog(source).with(session)).andExpect(status().isOk());
 
-        access.replaceAccess(CompanyAccessRole.CUSTOM, CostCenterScope.ALL, Set.of());
-        grants.saveAndFlush(access);
-        entities.clear(); // Próximo request não pode reutilizar o grant gerenciado da revogação.
+        jdbc.update(
+                "DELETE FROM company_access_grant_permissions WHERE company_access_grant_id = ?",
+                access.getId());
 
         mvc.perform(chart(source).with(session)).andExpect(status().isForbidden());
         mvc.perform(totals("DAILY", "2026-03-01", "2026-03-31").with(session)).andExpect(status().isForbidden());
