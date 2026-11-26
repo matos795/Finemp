@@ -90,7 +90,41 @@ test("a refused Questor sync is reported with its code, without inventing a caus
   const failed = syncCheck({ state: "ok", items: [{ type: "QUESTOR", latestRun: { status: "FAILED", failureCode: "INVALID_PAYLOAD", endDate: "2026-03-31" } }] })
   assert.equal(failed.status, "attention")
   assert.match(failed.detail, /INVALID_PAYLOAD/)
-  assert.equal(syncCheck({ state: "ok", items: [] }).status, "ok")
+  // Sem fonte Questor a verificação não se aplica: não vira aprovada.
+  assert.equal(syncCheck({ state: "ok", items: [] }).status, "unavailable")
+  assert.equal(syncCheck({ state: "ok", items: [{ type: "FILE_IMPORT", latestRun: null }] }).status, "unavailable")
+})
+
+test("only a completed sync approves validation; running, cancelled or missing runs are not verified", () => {
+  // latestRun é a última execução pedida, em qualquer status.
+  for (const status of ["REQUESTED", "RUNNING", "CANCELLED"]) {
+    const check = syncCheck({ state: "ok", items: [{ type: "QUESTOR", latestRun: { status, failureCode: null } }] })
+    assert.equal(check.status, "unavailable", status)
+  }
+  assert.equal(syncCheck({ state: "ok", items: [{ type: "QUESTOR", latestRun: null }] }).status, "unavailable")
+
+  // Uma fonte recusada prevalece; outra ainda rodando não aprova o conjunto.
+  assert.equal(
+    syncCheck({ state: "ok", items: [
+      { type: "QUESTOR", latestRun: { status: "RUNNING", failureCode: null } },
+      { type: "QUESTOR", latestRun: { status: "FAILED", failureCode: "DATA_CONFLICT" } },
+    ] }).status,
+    "attention",
+  )
+  assert.equal(
+    syncCheck({ state: "ok", items: [
+      { type: "QUESTOR", latestRun: { status: "SUCCEEDED", failureCode: null } },
+      { type: "QUESTOR", latestRun: { status: "RUNNING", failureCode: null } },
+    ] }).status,
+    "unavailable",
+  )
+  assert.equal(
+    syncCheck({ state: "ok", items: [
+      { type: "QUESTOR", latestRun: { status: "SUCCEEDED", failureCode: null } },
+      { type: "FILE_IMPORT", latestRun: null },
+    ] }).status,
+    "ok",
+  )
 })
 
 test("checks are grouped as the prototype panels: inconsistencies and approved verifications", () => {

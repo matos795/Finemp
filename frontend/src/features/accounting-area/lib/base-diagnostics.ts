@@ -183,35 +183,74 @@ const FAILURE_LABELS: Record<string, string> = {
     RESOURCE_LIMIT: "volume acima do limite",
 }
 
-/** Última SyncRun por fonte Questor (GET /accounting-sources, exige QUESTOR_SYNC). */
+/**
+ * Última SyncRun por fonte Questor (GET /accounting-sources, exige QUESTOR_SYNC).
+ * `latestRun` é a última execução pedida, em qualquer status: só SUCCEEDED aprova;
+ * FAILED requer atenção; em andamento, cancelada ou ausente não é verificada.
+ * Fontes por arquivo não têm SyncRun e ficam fora desta verificação.
+ */
 export function syncCheck(
     input: Loaded<{ items: { type: string; latestRun: { status: string; failureCode: string | null; endDate?: string } | null }[] }>,
 ): DiagnosticCheck {
     if (input.state !== "ok") return { id: "sync", label: LABELS.sync, ...NOT_VERIFIED[input.state] }
 
-    const failed = input.items.filter((item) => item.latestRun?.status === "FAILED")
+    const questor = input.items.filter((item) => item.type !== "FILE_IMPORT")
 
-    if (failed.length === 0) {
+    if (questor.length === 0) {
         return {
             id: "sync",
             label: LABELS.sync,
-            status: "ok",
-            detail: "Nenhuma sincronização Questor recusada na última execução de cada fonte.",
+            status: "unavailable",
+            detail: "Não se aplica: nenhuma fonte Questor nesta empresa.",
         }
     }
 
-    const codes = failed
-        .map((item) => {
-            const code = item.latestRun?.failureCode ?? "sem código"
-            return `${FAILURE_LABELS[code] ?? "falha"} (código ${code})`
-        })
-        .join("; ")
+    const failed = questor.filter((item) => item.latestRun?.status === "FAILED")
+
+    if (failed.length > 0) {
+        const codes = failed
+            .map((item) => {
+                const code = item.latestRun?.failureCode ?? "sem código"
+                return `${FAILURE_LABELS[code] ?? "falha"} (código ${code})`
+            })
+            .join("; ")
+
+        return {
+            id: "sync",
+            label: LABELS.sync,
+            status: "attention",
+            detail: `A última sincronização foi recusada: ${codes}. Os dados anteriores continuam publicados.`,
+        }
+    }
+
+    const unfinished = questor.filter((item) => item.latestRun?.status !== "SUCCEEDED")
+
+    if (unfinished.length > 0) {
+        const reasons = [
+            ...new Set(
+                unfinished.map((item) =>
+                    !item.latestRun
+                        ? "nenhuma sincronização executada"
+                        : item.latestRun.status === "CANCELLED"
+                          ? "última execução cancelada"
+                          : "sincronização em andamento",
+                ),
+            ),
+        ].join("; ")
+
+        return {
+            id: "sync",
+            label: LABELS.sync,
+            status: "unavailable",
+            detail: `Ainda sem validação concluída: ${reasons}.`,
+        }
+    }
 
     return {
         id: "sync",
         label: LABELS.sync,
-        status: "attention",
-        detail: `A última sincronização foi recusada: ${codes}. Os dados anteriores continuam publicados.`,
+        status: "ok",
+        detail: "A última sincronização de cada fonte Questor foi concluída e aceita pela validação da base.",
     }
 }
 
