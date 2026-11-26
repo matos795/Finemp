@@ -5,7 +5,7 @@ import java.nio.file.Path;
 record ConnectorManagerStatus(
         State state,
         String lastRunTime,
-        Integer lastTaskResult,
+        Long lastTaskResult,
         Path runtimeRoot) {
 
     enum State {
