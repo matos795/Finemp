@@ -198,6 +198,9 @@ final class ConnectorManagerFrame extends JFrame {
 
     private void applyControlAvailability() {
         var controls = ConnectorManagerControlAvailability.forStatus(lastStatus);
+        start.setVisible(controls.controlsVisible());
+        stop.setVisible(controls.controlsVisible());
+        restart.setVisible(controls.controlsVisible());
         start.setEnabled(controls.startEnabled());
         stop.setEnabled(controls.stopEnabled());
         restart.setEnabled(controls.restartEnabled());
