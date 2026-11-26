@@ -72,6 +72,7 @@ class AccountingV2ReadApiHttpIntegrationTest {
     private static final String CATALOG = "/api/companies/{companyId}/accounting-origin-catalog";
     private static final String MOVEMENTS = "/api/companies/{companyId}/accounting-movements/search";
     private static final String IMPORTED_ACCOUNTS = "/api/companies/{companyId}/accounting-accounts";
+    private static final String READABLE_SOURCES = "/api/companies/{companyId}/accounting-sources/readable";
     private static final Instant CHART_PUBLISHED_AT = Instant.parse("2026-03-31T12:00:00Z");
 
     @Autowired private MockMvc mvc;
@@ -504,6 +505,18 @@ class AccountingV2ReadApiHttpIntegrationTest {
                 Set.of(CompanyPermission.ACCOUNTING_MOVEMENT_VIEW, CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW)));
         mvc.perform(chart(source).with(as(restricted))).andExpect(status().isForbidden());
         mvc.perform(totals("DAILY", "2026-03-01", "2026-03-31").with(as(restricted))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void fileImportManagerCanReadSourcesWithoutQuestorSyncOrOtherAccountingReadPermissions() throws Exception {
+        UserAccount importer = users.saveAndFlush(new UserAccount(
+                "Synthetic File Import Reader",
+                UUID.randomUUID() + "@example.invalid",
+                "hash"));
+        grant(importer, company, CompanyPermission.ACCOUNTING_IMPORT_MANAGE);
+
+        mvc.perform(get(READABLE_SOURCES, company.getId()).with(as(importer)))
+                .andExpect(status().isOk());
     }
 
     @Test
