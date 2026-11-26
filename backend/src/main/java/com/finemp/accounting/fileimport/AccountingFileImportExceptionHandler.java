@@ -25,6 +25,7 @@ public final class AccountingFileImportExceptionHandler {
         String code = switch (exception.getReason()) {
             case SOURCE_NOT_AVAILABLE -> "SOURCE_NOT_AVAILABLE";
             case IDEMPOTENCY_MISMATCH -> "IDEMPOTENCY_CONFLICT";
+            case PERIOD_OVERLAP -> "PERIOD_OVERLAP";
         };
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(
                 code,
