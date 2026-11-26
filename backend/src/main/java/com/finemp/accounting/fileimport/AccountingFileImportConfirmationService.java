@@ -23,6 +23,7 @@ public final class AccountingFileImportConfirmationService {
     private final CompanyPermissionAuthorizationService permissions;
     private final GeneralLedgerLayoutProfileRegistry layouts;
     private final AccountingFileImportReceiptRepository receipts;
+    private final AccountingFileImportIdempotencyGuard idempotency;
     private final AccountingMovementBatchPublisher publisher;
     private final AccountingDatasetCoverageService coverage;
     private final int maxRecords;
@@ -32,6 +33,7 @@ public final class AccountingFileImportConfirmationService {
             CompanyPermissionAuthorizationService permissions,
             GeneralLedgerLayoutProfileRegistry layouts,
             AccountingFileImportReceiptRepository receipts,
+            AccountingFileImportIdempotencyGuard idempotency,
             AccountingMovementBatchPublisher publisher,
             AccountingDatasetCoverageService coverage,
             @Value("${finemp.sync.publication.max-records:25000}") int maxRecords) {
@@ -42,6 +44,7 @@ public final class AccountingFileImportConfirmationService {
         this.permissions = permissions;
         this.layouts = layouts;
         this.receipts = receipts;
+        this.idempotency = idempotency;
         this.publisher = publisher;
         this.coverage = coverage;
         this.maxRecords = maxRecords;
@@ -89,11 +92,11 @@ public final class AccountingFileImportConfirmationService {
                 parsed.periodStart(),
                 parsed.periodEnd());
 
-        var replay = receipts.find(accountingSourceId, idempotencyKey);
+        var replay = idempotency.findMatching(
+                accountingSourceId,
+                idempotencyKey,
+                fingerprint);
         if (replay.isPresent()) {
-            if (!replay.get().fingerprint().equals(fingerprint)) {
-                throw conflict(AccountingFileImportConflictException.Reason.IDEMPOTENCY_MISMATCH);
-            }
             return replay.get();
         }
 
