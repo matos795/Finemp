@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
-import { searchImportedAccounts } from "../api/accounting-data-api"
-import { accountingV2Access, knownSourceIds } from "../lib/accounting-v2"
+import { getReadableAccountingSources } from "../api/accounting-data-api"
+import { accountingV2Access } from "../lib/accounting-v2"
 import { accountingQueryKey } from "../lib/query-keys"
-import { useCompanySyncStatus, useSessionUserId } from "./use-accounting-area-queries"
+import { useSessionUserId } from "./use-accounting-area-queries"
 
 export interface AccountingSourceOption {
     id: string
@@ -10,31 +10,38 @@ export interface AccountingSourceOption {
 }
 
 /**
- * Fontes contábeis da empresa visíveis à sessão. As leituras v2 exigem
- * `accountingSourceId`; sem contrato novo, a lista vem de /accounting-sources
- * (exige QUESTOR_SYNC) e das contas importadas que a sessão já pode ler.
+ * Fontes contábeis da empresa visíveis para leitura.
+ * A autoridade de acesso é sempre o backend; a UI só evita consulta quando
+ * nenhuma permissão contábil de leitura faz sentido para a tela.
  */
 export function useAccountingSources(companyId: string | null, permissions: readonly string[]) {
     const userId = useSessionUserId()
     const access = accountingV2Access(permissions)
-    const sync = useCompanySyncStatus(companyId)
-    const accounts = useQuery({
-        queryKey: accountingQueryKey(userId, "accounts", companyId, "sources"),
-        queryFn: () => searchImportedAccounts(companyId as string, { status: null, search: "", page: 0, size: 100 }),
-        enabled: companyId !== null && access.chart,
+    const canReadSources =
+        access.coverage ||
+        permissions.includes("DRE_VIEW")
+
+    const sources = useQuery({
+        queryKey: accountingQueryKey(userId, "readable-sources", companyId),
+        queryFn: () => getReadableAccountingSources(companyId as string),
+        enabled: companyId !== null && canReadSources,
+        staleTime: 0,
         retry: false,
     })
 
-    const ids = knownSourceIds(sync.isSuccess ? sync.data : null, accounts.isSuccess ? accounts.data : null)
-    const options: AccountingSourceOption[] = ids.map((id, index) => {
-        const synced = sync.data?.items.find((item) => item.accountingSourceId === id)
+    const options: AccountingSourceOption[] = (sources.data ?? []).map((source, index) => {
+        const reference = source.externalReference?.trim()
+        const suffix = reference ? ` · ${reference}` : ""
 
-        return { id, label: synced ? `Fonte ${index + 1} · ${synced.type}` : `Fonte ${index + 1}` }
+        return {
+            id: source.id,
+            label: `Fonte ${index + 1} · ${source.type}${suffix}`,
+        }
     })
 
     return {
         options,
-        loading: companyId !== null && (sync.isLoading || (access.chart && accounts.isLoading)),
+        loading: companyId !== null && canReadSources && sources.isLoading,
     }
 }
 
