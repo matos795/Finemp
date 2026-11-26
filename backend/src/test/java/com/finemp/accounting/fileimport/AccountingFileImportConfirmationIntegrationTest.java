@@ -75,13 +75,7 @@ class AccountingFileImportConfirmationIntegrationTest {
     void shouldPublishObservedAccountsMovementsCoverageAndReceiptAtomically() {
         UUID command = UUID.randomUUID();
 
-        var receipt = confirmations.confirm(
-                actor.getId(),
-                source.getId(),
-                command,
-                AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
-                AccountingFileFormat.HTML_XLS,
-                validFixture("MOV A"));
+        var receipt = confirm(command, validFixture("MOV A"));
 
         assertThat(receipt.accountingSourceId()).isEqualTo(source.getId());
         assertThat(receipt.idempotencyKey()).isEqualTo(command);
@@ -112,14 +106,8 @@ class AccountingFileImportConfirmationIntegrationTest {
         UUID command = UUID.randomUUID();
         byte[] file = validFixture("MOV A");
 
-        var first = confirmations.confirm(
-                actor.getId(), source.getId(), command,
-                AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
-                AccountingFileFormat.HTML_XLS, file);
-        var replay = confirmations.confirm(
-                actor.getId(), source.getId(), command,
-                AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
-                AccountingFileFormat.HTML_XLS, file);
+        var first = confirm(command, file);
+        var replay = confirm(command, file);
 
         assertThat(replay).isEqualTo(first);
         assertThat(movements.findAllForPublication(source.getId(), Set.of("0/10", "0/11")))
@@ -127,19 +115,32 @@ class AccountingFileImportConfirmationIntegrationTest {
     }
 
     @Test
-    void sameIdempotencyKeyWithDifferentFileIsAConflict() {
-        UUID command = UUID.randomUUID();
-        confirmations.confirm(
-                actor.getId(), source.getId(), command,
-                AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
-                AccountingFileFormat.HTML_XLS,
-                validFixture("MOV A"));
+    void confirmationRejectsAFileDifferentFromTheReviewedPreview() {
+        byte[] reviewed = validFixture("MOV A");
+        byte[] changed = validFixture("MOV ALTERADO");
 
         assertThatThrownBy(() -> confirmations.confirm(
-                actor.getId(), source.getId(), command,
+                actor.getId(),
+                source.getId(),
+                UUID.randomUUID(),
+                AccountingFileHash.sha256(reviewed),
                 AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
                 AccountingFileFormat.HTML_XLS,
-                validFixture("MOV ALTERADO")))
+                changed))
+                .isInstanceOf(AccountingFileImportConflictException.class)
+                .extracting("reason")
+                .isEqualTo(AccountingFileImportConflictException.Reason.PREVIEW_FILE_MISMATCH);
+
+        assertThat(movements.findAllForPublication(source.getId(), Set.of("0/10", "0/11")))
+                .isEmpty();
+    }
+
+    @Test
+    void sameIdempotencyKeyWithDifferentFileIsAConflict() {
+        UUID command = UUID.randomUUID();
+        confirm(command, validFixture("MOV A"));
+
+        assertThatThrownBy(() -> confirm(command, validFixture("MOV ALTERADO")))
                 .isInstanceOf(AccountingFileImportConflictException.class)
                 .extracting("reason")
                 .isEqualTo(AccountingFileImportConflictException.Reason.IDEMPOTENCY_MISMATCH);
@@ -147,17 +148,9 @@ class AccountingFileImportConfirmationIntegrationTest {
 
     @Test
     void differentCommandOverlappingAnAlreadyImportedPeriodIsAConflict() {
-        confirmations.confirm(
-                actor.getId(), source.getId(), UUID.randomUUID(),
-                AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
-                AccountingFileFormat.HTML_XLS,
-                validFixture("MOV A"));
+        confirm(UUID.randomUUID(), validFixture("MOV A"));
 
-        assertThatThrownBy(() -> confirmations.confirm(
-                actor.getId(), source.getId(), UUID.randomUUID(),
-                AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
-                AccountingFileFormat.HTML_XLS,
-                validFixture("MOV B")))
+        assertThatThrownBy(() -> confirm(UUID.randomUUID(), validFixture("MOV B")))
                 .isInstanceOf(AccountingFileImportConflictException.class)
                 .extracting("reason")
                 .isEqualTo(AccountingFileImportConflictException.Reason.PERIOD_OVERLAP);
@@ -167,11 +160,7 @@ class AccountingFileImportConfirmationIntegrationTest {
     void parseErrorsBlockTheWholePublication() {
         UUID command = UUID.randomUUID();
 
-        assertThatThrownBy(() -> confirmations.confirm(
-                actor.getId(), source.getId(), command,
-                AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
-                AccountingFileFormat.HTML_XLS,
-                invalidFixture()))
+        assertThatThrownBy(() -> confirm(command, invalidFixture()))
                 .isInstanceOf(AccountingFilePreviewException.class);
 
         assertThat(receipts.find(source.getId(), command)).isEmpty();
@@ -187,12 +176,19 @@ class AccountingFileImportConfirmationIntegrationTest {
         access.replaceAccess(CompanyAccessRole.CUSTOM, CostCenterScope.ALL, Set.of());
         grants.saveAndFlush(access);
 
-        assertThatThrownBy(() -> confirmations.confirm(
-                actor.getId(), source.getId(), UUID.randomUUID(),
+        assertThatThrownBy(() -> confirm(UUID.randomUUID(), validFixture("MOV A")))
+                .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
+    }
+
+    private AccountingFileImportReceipt confirm(UUID command, byte[] file) {
+        return confirmations.confirm(
+                actor.getId(),
+                source.getId(),
+                command,
+                AccountingFileHash.sha256(file),
                 AnalyticalLedgerHtmlLayoutProfile.PROFILE_ID,
                 AccountingFileFormat.HTML_XLS,
-                validFixture("MOV A")))
-                .isInstanceOf(com.finemp.administration.OrganizationAccessDeniedException.class);
+                file);
     }
 
     private byte[] validFixture(String firstHistory) {
