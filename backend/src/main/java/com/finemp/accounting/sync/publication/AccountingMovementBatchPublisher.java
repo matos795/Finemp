@@ -93,7 +93,7 @@ public final class AccountingMovementBatchPublisher {
                 .toList();
         movements.saveAll(inserts);
 
-        return new Result(inserts.size(), batch.uniqueMovements().size() - inserts.size());
+        return new Result(inserts.size(), Math.toIntExact(batch.readCount() - inserts.size()));
     }
 
     private Map<String, AccountingAccount> loadAccounts(UUID sourceId, java.util.Set<String> keys) {
