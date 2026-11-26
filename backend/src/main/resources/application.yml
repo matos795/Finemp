@@ -6,6 +6,11 @@ spring:
   application:
     name: finemp-api
 
+  servlet:
+    multipart:
+      max-file-size: ${FINEMP_MULTIPART_MAX_FILE_SIZE:8MB}
+      max-request-size: ${FINEMP_MULTIPART_MAX_REQUEST_SIZE:9MB}
+
   jpa:
     open-in-view: false
     hibernate:
