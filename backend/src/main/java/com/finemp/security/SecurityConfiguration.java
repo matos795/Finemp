@@ -147,7 +147,9 @@ public class SecurityConfiguration {
                                                                 permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE),
                                                                 permissionAuthorizationManagerFactory.forFreshPermission(
-                                                                                CompanyPermission.DRE_VIEW)))
+                                                                                CompanyPermission.DRE_VIEW),
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
+                                                                                CompanyPermission.ACCOUNTING_IMPORT_MANAGE)))
 
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-sources")
