@@ -135,13 +135,13 @@ public class SecurityConfiguration {
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/companies/{companyId}/accounting-sources/readable")
                                                 .access(org.springframework.security.authorization.AuthorizationManagers.anyOf(
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNTING_MOVEMENT_VIEW),
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW),
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.ACCOUNT_CLASSIFICATION_MANAGE),
-                                                                permissionAuthorizationManagerFactory.forPermission(
+                                                                permissionAuthorizationManagerFactory.forFreshPermission(
                                                                                 CompanyPermission.DRE_VIEW)))
 
                                                 .requestMatchers(HttpMethod.GET,
