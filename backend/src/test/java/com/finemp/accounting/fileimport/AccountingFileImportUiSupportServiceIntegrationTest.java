@@ -93,6 +93,7 @@ class AccountingFileImportUiSupportServiceIntegrationTest {
     @Test
     void historyIsNewestFirstAndOmitsTechnicalFingerprintFromItsContract() {
         var source = support.prepareSource(actor.getId(), company.getId());
+        sources.flush();
         Instant older = Instant.parse("2026-01-31T10:00:00Z");
         Instant newer = Instant.parse("2026-02-28T10:00:00Z");
 
