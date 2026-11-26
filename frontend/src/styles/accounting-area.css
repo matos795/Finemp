@@ -65,3 +65,7 @@
 .ctbp .mact { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 12px; }
 .ctbp .mact .mut { color: var(--muted); }
 .ctbp .btn.sec.sm { border-radius: 6px; padding: 6px 12px; font-weight: 600; font-size: .86rem; }
+
+/* C2.9 (#475): ações por lançamento lado a lado. */
+.ctbp .ctb-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ctbp .ctb-membership { display: block; margin-top: 4px; }
