@@ -3,6 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
 import { searchMovements, type ImportedAccount } from "../api/accounting-data-api"
 import { useCompanySyncStatus, useSessionUserId } from "../hooks/use-accounting-area-queries"
+import { useOriginCatalogs } from "../hooks/use-origin-catalogs"
 import { accountingQueryKey } from "../lib/query-keys"
 import { lastDayOf, monthWindow, syncedUntil } from "../lib/accounting-period"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
@@ -77,6 +78,7 @@ export function MovementDrilldownModal({ companyId, account, onClose }: Movement
 
     const firstPage = movements.data?.pages[0]
     const rows = movements.data?.pages.flatMap((page) => page.items) ?? []
+    const catalogs = useOriginCatalogs(companyId, [account.accountingSourceId], true)
     const remaining = firstPage ? firstPage.totalItems - rows.length : 0
     const missing = (firstPage?.notSynchronized ?? [])
         .map((code) => NOT_SYNCHRONIZED_LABELS[code] ?? code)
@@ -170,7 +172,10 @@ export function MovementDrilldownModal({ companyId, account, onClose }: Movement
                                         {open === item.id && (
                                             <tr className="dp-ed">
                                                 <td colSpan={5}>
-                                                    <MovementMetadataDetail item={item} />
+                                                    <MovementMetadataDetail
+                                                        item={item}
+                                                        originDescriptions={catalogs.get(item.accountingSourceId)}
+                                                    />
                                                 </td>
                                             </tr>
                                         )}

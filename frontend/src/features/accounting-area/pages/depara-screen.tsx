@@ -16,6 +16,8 @@ import { ChartUniverseNotice } from "../components/chart-universe-notice"
 import { MovementDrilldownModal } from "../components/movement-drilldown-modal"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { useAccountingSources } from "../hooks/use-accounting-sources"
+import { useChartMembership } from "../hooks/use-chart-membership"
+import { INFERRED_ACCOUNT_KIND_NOTE, inferredAccountKind } from "../lib/inferred-account-kind"
 import { findAccountingScreenById } from "../lib/accounting-screens"
 import { accountingQueryKey } from "../lib/query-keys"
 import { SoonPanel } from "./accounting-screen-page"
@@ -169,6 +171,8 @@ export function DeparaScreen() {
     const navigate = useNavigate()
     const sources = useAccountingSources(companyId, permissions)
     const chartScreen = findAccountingScreenById("plano")
+    const sourceIds = useMemo(() => sources.options.map((option) => option.id), [sources.options])
+    const membership = useChartMembership(companyId, sourceIds, canRead)
 
     const accounts = useInfiniteQuery({
         queryKey: accountingQueryKey(userId, "accounts", companyId, filter, search),
@@ -269,6 +273,15 @@ export function DeparaScreen() {
                                     classify.mutate({ accountId: account.accountId, classificationId })
                                 }
                                 onDrilldown={() => setDrilldown(account)}
+                                membership={
+                                    membership.fullChartSources.has(account.accountingSourceId)
+                                        ? membership.accounts.has(account.accountId)
+                                            ? { inChart: true, accountType: membership.accounts.get(account.accountId)?.sourceCodes.accountType ?? null }
+                                            : membership.complete
+                                              ? { inChart: false, accountType: null }
+                                              : null
+                                        : null
+                                }
                             />
                         ))}
                         {rows.length === 0 && (
@@ -414,6 +427,8 @@ interface AccountRowsProps {
     onToggle: () => void
     onSave: (classificationId: string) => void
     onDrilldown: () => void
+    /** Só quando a fonte tem plano completo publicado (FULL_CHART); null = sem informação. */
+    membership: { inChart: boolean; accountType: string | null } | null
 }
 
 function AccountRows({
@@ -426,7 +441,10 @@ function AccountRows({
     onToggle,
     onSave,
     onDrilldown,
+    membership,
 }: AccountRowsProps) {
+    const kind = membership?.inChart ? inferredAccountKind(membership.accountType) : null
+
     return (
         <>
             <tr className={open ? "dp-on" : undefined}>
@@ -447,6 +465,23 @@ function AccountRows({
                     )}
                     {account.description}
                     <small className="dp-cod">{account.accountKey}</small>
+                    {membership && (
+                        <small className="ctb-membership">
+                            {membership.inChart ? (
+                                <span className="tag ok">No plano completo</span>
+                            ) : (
+                                <span className="tag pend" title="Conta vista nos movimentos importados, fora do plano publicado">
+                                    Só observada
+                                </span>
+                            )}
+                            {kind && (
+                                <span title={INFERRED_ACCOUNT_KIND_NOTE}>
+                                    {" "}
+                                    {kind.label} <span className="tag est">{kind.tag}</span>
+                                </span>
+                            )}
+                        </small>
+                    )}
                 </td>
                 <td className="n muted" title="Saldo ainda não sincronizado (Em breve)">
                     —

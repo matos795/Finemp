@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query"
 import { Pager } from "../../../components/finemp/pager"
 import { apiErrorStatus } from "../../../lib/api/api-errors"
 import { useAccountingContext } from "../accounting-context"
-import { getDatasetCoverage, getOriginCatalog, searchMovements } from "../api/accounting-data-api"
+import { getDatasetCoverage, getOriginCatalog, searchMovements, type MovementItem } from "../api/accounting-data-api"
 import { CoverageStatus } from "../components/coverage-status"
+import { EntryCompositionModal } from "../components/entry-composition-modal"
 import { MovementMetadataDetail } from "../components/movement-metadata-detail"
 import { SourcePicker } from "../components/source-picker"
 import { useSessionUserId } from "../hooks/use-accounting-area-queries"
 import { effectiveSource, useAccountingSources } from "../hooks/use-accounting-sources"
+import { useOriginCatalogs } from "../hooks/use-origin-catalogs"
 import type { AccountingScreen } from "../lib/accounting-screens"
 import { accountingV2Access, defaultMonthRange, formatDay, formatInstant, totalsPeriod } from "../lib/accounting-v2"
 import { formatExactDecimal, isNegativeDecimal } from "../lib/exact-decimal"
@@ -49,6 +51,7 @@ export function MovementsScreen(props: MovementsScreenProps) {
     const [chosenRange, setRange] = useState<{ from: string; to: string } | null>(null)
     const [page, setPage] = useState(0)
     const [open, setOpen] = useState<string | null>(null)
+    const [composition, setComposition] = useState<MovementItem | null>(null)
     // Mesma chave do CoverageStatus: uma só consulta para a faixa e o período inicial.
     const coverage = useQuery({
         queryKey: accountingQueryKey(userId, "coverage", companyId, sourceId, "MOVEMENTS", ""),
@@ -81,13 +84,12 @@ export function MovementsScreen(props: MovementsScreenProps) {
         retry: false,
     })
 
-    const originDescriptions = useMemo(
-        () =>
-            catalog.data?.availability === "AVAILABLE"
-                ? new Map(catalog.data.items.map((entry) => [entry.originCode, entry.description]))
-                : undefined,
-        [catalog.data],
+    // Catálogo por fonte de cada lançamento exibido: o código cru vem sempre primeiro.
+    const pageSources = useMemo(
+        () => (movements.data?.items ?? []).map((item) => item.accountingSourceId),
+        [movements.data],
     )
+    const catalogs = useOriginCatalogs(companyId, pageSources, access.ledger)
 
     function changeRange(next: { from: string; to: string }) {
         setRange(next)
@@ -151,7 +153,7 @@ export function MovementsScreen(props: MovementsScreenProps) {
                                         <td className="wrapcell">{item.history ?? ""}</td>
                                         {item.side === "DEBIT" ? <Amount value={item.amount} /> : <td className="n" />}
                                         {item.side === "CREDIT" ? <Amount value={item.amount} /> : <td className="n" />}
-                                        <td>
+                                        <td className="ctb-acts">
                                             <button
                                                 type="button"
                                                 className="btn sq"
@@ -160,12 +162,23 @@ export function MovementsScreen(props: MovementsScreenProps) {
                                             >
                                                 {open === item.id ? "Ocultar" : "Detalhes"}
                                             </button>
+                                            <button
+                                                type="button"
+                                                className="btn sq"
+                                                title="Todas as linhas e a origem técnica deste lançamento"
+                                                onClick={() => setComposition(item)}
+                                            >
+                                                Composição
+                                            </button>
                                         </td>
                                     </tr>
                                     {open === item.id && (
                                         <tr className="dp-ed">
                                             <td colSpan={7}>
-                                                <MovementMetadataDetail item={item} originDescriptions={originDescriptions} />
+                                                <MovementMetadataDetail
+                                                    item={item}
+                                                    originDescriptions={catalogs.get(item.accountingSourceId)}
+                                                />
                                             </td>
                                         </tr>
                                     )}
@@ -291,6 +304,14 @@ export function MovementsScreen(props: MovementsScreenProps) {
                         </>
                     )}
                 </details>
+            )}
+
+            {composition && company && (
+                <EntryCompositionModal
+                    companyId={company.companyId}
+                    movement={composition}
+                    onClose={() => setComposition(null)}
+                />
             )}
         </section>
     )

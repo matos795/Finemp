@@ -13,6 +13,8 @@ import { useDebounced } from "../hooks/use-debounced"
 import type { AccountingScreen } from "../lib/accounting-screens"
 import { findAccountingScreenById } from "../lib/accounting-screens"
 import { accountingV2Access, chartUniverse } from "../lib/accounting-v2"
+import { INFERRED_ACCOUNT_KIND_NOTE } from "../lib/inferred-account-kind"
+import { InferredKind } from "../components/inferred-kind"
 import { accountingQueryKey } from "../lib/query-keys"
 import { ScreenHeader } from "./accounting-screen-page"
 
@@ -139,6 +141,7 @@ export function ChartScreen(props: ChartScreenProps) {
                                 <th>Código</th>
                                 <th>Conta na origem</th>
                                 <th>Descrição</th>
+                                <th title={INFERRED_ACCOUNT_KIND_NOTE}>Tipo (inferido)</th>
                                 <th />
                             </tr>
                         </thead>
@@ -149,6 +152,9 @@ export function ChartScreen(props: ChartScreenProps) {
                                         <td className="mono">{item.classificationCode}</td>
                                         <td className="mono">{item.sourceAccountId}</td>
                                         <td className="wrapcell">{item.description}</td>
+                                        <td>
+                                            <InferredKind accountType={item.sourceCodes.accountType} />
+                                        </td>
                                         <td>
                                             <button
                                                 type="button"
@@ -164,7 +170,7 @@ export function ChartScreen(props: ChartScreenProps) {
                                     </tr>
                                     {openCodes === item.accountId && (
                                         <tr className="dp-ed">
-                                            <td colSpan={4}>
+                                            <td colSpan={5}>
                                                 <dl className="ctb-meta">
                                                     {SOURCE_CODE_LABELS.map(({ key, label }) => (
                                                         <div key={key}>
@@ -178,7 +184,8 @@ export function ChartScreen(props: ChartScreenProps) {
                                                     ))}
                                                 </dl>
                                                 <p className="sub">
-                                                    Códigos crus da origem contábil, exibidos sem interpretação.
+                                                    Códigos crus da origem contábil, exibidos sem interpretação. O tipo
+                                                    sintética/analítica da lista é inferido, não é campo da origem.
                                                 </p>
                                             </td>
                                         </tr>
@@ -187,7 +194,7 @@ export function ChartScreen(props: ChartScreenProps) {
                             ))}
                             {data.items.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="empty">
+                                    <td colSpan={5} className="empty">
                                         {search ? "Nenhuma conta para a busca." : "O plano publicado não tem contas."}
                                     </td>
                                 </tr>
