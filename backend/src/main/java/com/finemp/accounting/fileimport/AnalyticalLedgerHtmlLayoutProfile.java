@@ -234,10 +234,11 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
     }
 
     private static BigDecimal parseBrazilianMoney(String raw) {
-        String normalized = raw.trim().replace(".", "").replace(",", ".");
-        if (!normalized.matches("-?\\d+(?:\\.\\d{1,4})?")) {
+        String source = raw.trim();
+        if (!source.matches("-?(?:\\d{1,3}(?:\\.\\d{3})+|\\d+)(?:,\\d{1,4})?")) {
             throw new NumberFormatException();
         }
+        String normalized = source.replace(".", "").replace(",", ".");
         return new BigDecimal(normalized);
     }
 
