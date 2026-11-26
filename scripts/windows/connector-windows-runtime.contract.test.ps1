@@ -80,6 +80,8 @@ $runnerRequired = @(
     'Import-Clixml',
     'Get-Content -LiteralPath $RuntimeConfigPath -Raw -Encoding UTF8',
     'SetEnvironmentVariable($Name, $value, "Process")',
+    '[switch]$ValidateOnly',
+    '-jar $runtime.connectorJarPath --validate $runtime.connectorPropertiesPath',
     '-jar $runtime.connectorJarPath --run $runtime.connectorPropertiesPath',
     'Clear-ProcessSecrets'
 )
@@ -91,6 +93,14 @@ foreach ($needle in $runnerRequired) {
 
 if ($runner -match '(?i)FINEMP_CONNECTOR_[A-Z0-9_]+\s*=') {
     throw "Runner must not embed connector secret values."
+}
+
+$validateOnly = '-jar $runtime.connectorJarPath --validate $runtime.connectorPropertiesPath'
+$importSecrets = 'Import-Clixml'
+if ($runner.IndexOf($validateOnly, [System.StringComparison]::Ordinal) -lt 0 -or
+    $runner.IndexOf($importSecrets, [System.StringComparison]::Ordinal) -gt
+    $runner.IndexOf($validateOnly, [System.StringComparison]::Ordinal)) {
+    throw "ValidateOnly must reuse the installed DPAPI secret environment before Connector --validate."
 }
 
 foreach ($action in @('"Start"', '"Stop"', '"Restart"', '"Status"', '"Uninstall"')) {
