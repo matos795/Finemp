@@ -273,7 +273,7 @@ test("new screens are reachable inside Contabilidade without knowing old routes"
   assert.match(layout, /"plano"/)
   assert.match(layout, /"ctbmov"/)
   assert.match(layout, /"ctbtot"/)
-  assert.equal(accountingScreens.filter((screen) => !screen.prototype).length, 3)
+  assert.equal(accountingScreens.filter((screen) => !screen.prototype).length, 4)
 })
 
 test("legacy routes stay published", () => {
