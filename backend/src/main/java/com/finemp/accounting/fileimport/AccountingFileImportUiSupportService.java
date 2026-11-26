@@ -35,6 +35,9 @@ public class AccountingFileImportUiSupportService {
     public AccountingFileImportSourceResponse prepareSource(UUID actorId, UUID companyId) {
         requirePermission(actorId, companyId);
 
+        var company = companies.findLockedById(companyId)
+                .orElseThrow(OrganizationAccessDeniedException::new);
+
         var existing = sources.findAllByCompanyId(companyId, org.springframework.data.domain.Sort.by("id")).stream()
                 .filter(source -> source.getType() == AccountingSourceType.FILE_IMPORT && source.isActive())
                 .findFirst();
@@ -42,8 +45,6 @@ public class AccountingFileImportUiSupportService {
             return AccountingFileImportSourceResponse.from(existing.get());
         }
 
-        var company = companies.findById(companyId)
-                .orElseThrow(OrganizationAccessDeniedException::new);
         return AccountingFileImportSourceResponse.from(
                 sources.save(new AccountingSource(company, AccountingSourceType.FILE_IMPORT, null, true)));
     }
