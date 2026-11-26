@@ -95,14 +95,21 @@ public final class AnalyticalLedgerHtmlLayoutProfile implements GeneralLedgerLay
             }
 
             String rawDate = cell(row, 0);
+            String sourceEntryKey = cell(row, 3);
+            String debit = cell(row, 5);
+            String credit = cell(row, 6);
             if (!DATE_SHAPE.matcher(rawDate).matches()) {
+                if (currentAccount != null
+                        && !rawDate.isBlank()
+                        && (!sourceEntryKey.isBlank() || !debit.isBlank() || !credit.isBlank())) {
+                    invalidRows++;
+                    errors.add(issue("INVALID_DATE", sourceRow,
+                            "A linha possui data inválida."));
+                }
                 continue;
             }
 
             LocalDate accountingDate = parseDate(rawDate, sourceRow, "INVALID_DATE", errors);
-            String sourceEntryKey = cell(row, 3);
-            String debit = cell(row, 5);
-            String credit = cell(row, 6);
 
             if (currentAccount == null || currentAccount.isBlank()) {
                 invalidRows++;
