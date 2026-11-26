@@ -4,7 +4,8 @@ public final class AccountingFileImportConflictException extends RuntimeExceptio
     public enum Reason {
         IDEMPOTENCY_MISMATCH,
         SOURCE_NOT_AVAILABLE,
-        PERIOD_OVERLAP
+        PERIOD_OVERLAP,
+        PUBLISHED_DATA_CONFLICT
     }
 
     private final Reason reason;
