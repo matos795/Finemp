@@ -23,8 +23,14 @@ final class ConnectorManagerService {
         this.invoker = invoker;
     }
 
-    static ConnectorManagerService system(Path runtimeRoot) {
-        return new ConnectorManagerService(runtimeRoot, "powershell.exe", ConnectorManagerProcessInvoker.system());
+    static ConnectorManagerService system(Path runtimeRoot, Path powershellExecutable) {
+        if (powershellExecutable == null) {
+            throw new IllegalArgumentException("Invalid PowerShell path.");
+        }
+        return new ConnectorManagerService(
+                runtimeRoot,
+                powershellExecutable.toAbsolutePath().normalize().toString(),
+                ConnectorManagerProcessInvoker.system());
     }
 
     Path runtimeRoot() {
