@@ -453,7 +453,7 @@ export function FileImportScreen(props: FileImportScreenProps) {
                             <span className="note">linhas sem movimento importável</span>
                         </div>
                     </div>
-                    <p className="sub">Importado em {formatInstant(state.receipt.committedAt)}.</p>
+                    <p className="sub" style={{ marginTop: 14 }}>Importado em {formatInstant(state.receipt.committedAt)}.</p>
                     <div className="ctb-acts" style={{ justifyContent: "flex-start" }}>
                         {movements && (
                             <button type="button" className="btn primary sq" onClick={() => navigate(movements.path)}>
