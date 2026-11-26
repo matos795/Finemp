@@ -15,6 +15,10 @@ public interface AccountingSourceRepository
     @Query("select source from AccountingSource source where source.id = :id")
     java.util.Optional<AccountingSource> findLockedForSyncById(@Param("id") UUID id);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select source from AccountingSource source join fetch source.company where source.id = :id")
+    java.util.Optional<AccountingSource> findLockedForPublicationById(@Param("id") UUID id);
+
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "company")
     @Query("select source from AccountingSource source where source.id = :id")
     java.util.Optional<AccountingSource> findForReadingById(@Param("id") UUID id);
