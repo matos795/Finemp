@@ -231,3 +231,13 @@ test("a zero total is 'no movement' only in a fully imported month", () => {
 
   assert.match(read("features/accounting-area/pages/cfpre-screen.tsx"), /dreCellValue\(/)
 })
+
+test("unreadable coverage is shown as unavailable, never as 'not imported'", () => {
+  // Nenhuma resposta da DRE com sucesso: a cobertura não foi lida.
+  assert.equal(dreCellValue(null, null), null)
+  assert.equal(dreCellValue("0.0000", null), "0.0000")
+
+  const cfpre = read("features/accounting-area/pages/cfpre-screen.tsx")
+  assert.match(cfpre, /coverageKnown/)
+  assert.match(cfpre, /Não foi possível consultar a cobertura importada/)
+})

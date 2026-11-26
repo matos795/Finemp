@@ -29,7 +29,7 @@ const MONTH_TAG: Record<CoverageStatus, { className: string; label: string } | n
     NOT_IMPORTED: { className: "tag est", label: "não importado" },
 }
 
-function Cell({ value, state, coverage }: { value: string | null; state: CellState; coverage: CoverageStatus }) {
+function Cell({ value, state, coverage }: { value: string | null; state: CellState; coverage: CoverageStatus | null }) {
     if (state === "failed") {
         return (
             <td className="n muted" title="A DRE deste mês não foi calculada">
@@ -45,9 +45,11 @@ function Cell({ value, state, coverage }: { value: string | null; state: CellSta
             <td
                 className="n muted"
                 title={
-                    coverage === "NOT_IMPORTED"
-                        ? DRE_NOT_IMPORTED_TEXT
-                        : "Cobertura parcial: o mês tem lacunas no histórico importado"
+                    coverage === null
+                        ? "Cobertura importada indisponível"
+                        : coverage === "NOT_IMPORTED"
+                          ? DRE_NOT_IMPORTED_TEXT
+                          : "Cobertura parcial: o mês tem lacunas no histórico importado"
                 }
             >
                 —
@@ -55,7 +57,7 @@ function Cell({ value, state, coverage }: { value: string | null; state: CellSta
         )
     }
 
-    if (value === null) {
+    if (value === null && coverage === "COVERED") {
         // Sem linha num mês inteiramente importado: sem movimento.
         return (
             <td className="n muted" title="Sem movimento no período">
@@ -106,6 +108,8 @@ function useCfpreDre(competence: string) {
         results,
         data,
         coverage: coverageOf(data),
+        // Só há cobertura lida quando ao menos uma DRE do período respondeu.
+        coverageKnown: data.some((month) => month !== null),
         startDate: `${months[0]}-01`,
         endDate: lastDayOf(months[MONTHS - 1]),
         loading: results.some((result) => result.isLoading),
@@ -137,6 +141,18 @@ function CoveragePanel({ dre, competence }: { dre: CfpreDre; competence: string 
 
     if (!ready(dre)) {
         return null
+    }
+
+    if (!dre.coverageKnown) {
+        return (
+            <div className="panel">
+                <h3>Cobertura da base no período</h3>
+                <div className="empty">
+                    Não foi possível consultar a cobertura importada: a DRE do período não pôde ser calculada (veja o
+                    motivo abaixo). Nada é concluído sobre o histórico importado.
+                </div>
+            </div>
+        )
     }
 
     const period = periodCoverage(dre.coverage, dre.startDate, dre.endDate)
@@ -243,14 +259,14 @@ function DrePanel({ dre }: { dre: CfpreDre }) {
     } else {
         // Falha de cálculo nunca vira zero: a coluna fica "—" e o motivo aparece no aviso.
         const states: CellState[] = months.map((_, index) => (results[index].isError ? "failed" : "ok"))
-        const coverage = months.map((month) => monthCoverage(dre.coverage, month))
+        const coverage = months.map((month) => (dre.coverageKnown ? monthCoverage(dre.coverage, month) : null))
         const rows = buildDreMatrix(data)
         const errors = results
             .map((result, index) => (result.isError ? `${monthLabel(months[index])}: ${monthError(result.error)}` : null))
             .filter((message): message is string => message !== null)
         const partial = months.filter((_, index) => coverage[index] === "PARTIAL").map(monthLabel)
         const notImported = months.filter((_, index) => coverage[index] === "NOT_IMPORTED").map(monthLabel)
-        const nothingImported = notImported.length === months.length
+        const nothingImported = dre.coverageKnown && notImported.length === months.length
 
         body = (
             <>
@@ -279,7 +295,8 @@ function DrePanel({ dre }: { dre: CfpreDre }) {
                             <tr>
                                 <th>Linha da DRE</th>
                                 {months.map((month, index) => {
-                                    const tag = MONTH_TAG[coverage[index]]
+                                    const status = coverage[index]
+                                    const tag = status === null ? null : MONTH_TAG[status]
 
                                     return (
                                         <th key={month} className="r">
@@ -315,9 +332,11 @@ function DrePanel({ dre }: { dre: CfpreDre }) {
                             {rows.length === 0 && (
                                 <tr>
                                     <td colSpan={MONTHS + 1} className="empty">
-                                        {nothingImported
-                                            ? DRE_NOT_IMPORTED_TEXT
-                                            : "Nenhuma conta classificada com movimento no período importado."}
+                                        {!dre.coverageKnown
+                                            ? "A DRE do período não pôde ser calculada."
+                                            : nothingImported
+                                              ? DRE_NOT_IMPORTED_TEXT
+                                              : "Nenhuma conta classificada com movimento no período importado."}
                                     </td>
                                 </tr>
                             )}
@@ -374,7 +393,7 @@ export function CfpreScreen(props: AccountingScreenPageProps) {
     const { screen, competence } = props
     const dre = useCfpreDre(competence)
     // A barra mostra a cobertura acumulada do período, não a última sincronização.
-    const baseText = ready(dre)
+    const baseText = ready(dre) && dre.coverageKnown
         ? `Cobertura importada: ${periodCoverage(dre.coverage, dre.startDate, dre.endDate).text.toLowerCase()}`
         : props.baseText
 

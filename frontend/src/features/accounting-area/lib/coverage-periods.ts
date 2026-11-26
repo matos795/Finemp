@@ -121,7 +121,10 @@ export function periodCoverage(
  * fica null ("—"), porque ausência de dado não é zero. Valor diferente de zero é
  * dado real do backend e sempre aparece.
  */
-export function dreCellValue(value: string | null, status: CoverageStatus): string | null {
+export function dreCellValue(value: string | null, status: CoverageStatus | null): string | null {
+    // Cobertura não lida (nenhuma resposta da DRE): mostra o que veio, sem concluir nada.
+    if (status === null) return value
+
     const zero = value === null || /^-?0+(\.0+)?$/.test(value.trim())
 
     if (!zero) return value
