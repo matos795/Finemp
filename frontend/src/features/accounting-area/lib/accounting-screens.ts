@@ -196,15 +196,15 @@ export const accountingModules: AccountingModule[] = [
             {
                 label: "Qualidade da base",
                 screens: [
-                    finempScreen("plano", "Plano de Contas", `${CF}/qualidade/plano-de-contas`, "Qualidade da base", "Plano de Contas",
-                        ["Plano de Contas"],
-                        "Mostrar o plano de contas completo publicado pela origem contábil; sem ele, as contas importadas/observadas, sem chamá-las de plano completo."),
                     screen("cfcong", "Períodos Congelados", `${CF}/qualidade/periodos-congelados`, "Fechamento", "Períodos Congelados",
                         ["Alterações em meses congelados", "Registro (quem, quando e por quê)"],
                         "Proteger meses fechados e listar mudanças da base nesses meses, que só valem depois de aceitas com motivo.", "6.1"),
                     screen("diag", "Diagnóstico das Bases", `${CF}/qualidade/diagnostico`, "Qualidade da base", "Diagnóstico das Bases",
                         ["Inconsistências", "Verificações aprovadas"],
                         "Verificar a integridade da base sincronizada no período.", "6.2"),
+                    finempScreen("plano", "Plano de Contas", `${CF}/qualidade/plano-de-contas`, "Qualidade da base", "Plano de Contas",
+                        ["Plano de Contas"],
+                        "Mostrar o plano de contas completo publicado pela origem contábil; sem ele, as contas importadas/observadas, sem chamá-las de plano completo."),
                     screen("depara", "De-Para do Plano de Contas", `${CF}/qualidade/de-para`, "Qualidade da base", "De-Para do Plano de Contas",
                         ["Classificação das contas", "Regras de-para ativas"],
                         "Garantir que toda conta do Questor tenha classificação gerencial.", "6.3"),

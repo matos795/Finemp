@@ -5,6 +5,10 @@ import type { AccountingSourceOption } from "../hooks/use-accounting-sources"
 import { formatInstant } from "../lib/accounting-v2"
 import { accountingQueryKey } from "../lib/query-keys"
 
+/** Texto combinado para o De-Para sem plano completo publicado (#475). */
+const OBSERVED_ONLY_TEXT =
+    "O plano completo ainda não foi publicado. Esta classificação considera somente contas observadas nos dados importados."
+
 interface ChartUniverseNoticeProps {
     companyId: string
     sources: AccountingSourceOption[]
@@ -50,9 +54,9 @@ export function ChartUniverseNotice({ companyId, sources, onOpenChart }: ChartUn
                         return (
                             <span key={source.id}>
                                 {prefix}
-                                <span className="tag ok">Plano completo</span> publicado em{" "}
-                                <b className="mono">{formatInstant(chart.data.coverage.publishedAt ?? "")}</b>: a lista
-                                inclui as contas do plano e as observadas nos movimentos.{" "}
+                                <span className="tag ok">Plano completo</span> Universo: o Plano de Contas completo, publicado
+                                em <b className="mono">{formatInstant(chart.data.coverage.publishedAt ?? "")}</b>. A
+                                lista inclui todas as contas do plano e as observadas nos movimentos.{" "}
                             </span>
                         )
                     }
@@ -60,8 +64,7 @@ export function ChartUniverseNotice({ companyId, sources, onOpenChart }: ChartUn
                     return (
                         <span key={source.id}>
                             {prefix}
-                            <span className="tag pend">Só contas importadas</span> plano completo ainda não publicado:
-                            a lista mostra só as contas importadas/observadas nos movimentos (não é o plano completo).{" "}
+                            <span className="tag pend">Só contas observadas</span> {OBSERVED_ONLY_TEXT}{" "}
                         </span>
                     )
                 })}

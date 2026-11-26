@@ -8,6 +8,13 @@ export interface DreLine {
 export interface DreResult {
     lines: DreLine[]
     unclassifiedAccountCount: number
+    /** Cobertura acumulada de MOVEMENTS por fonte (#500/#509); ausente em respostas antigas. */
+    coverage?: {
+        accountingSourceId: string
+        importedFrom: string | null
+        importedTo: string | null
+        intervals: { importedFrom: string; importedTo: string }[]
+    }[]
 }
 
 export interface DrePeriod {
