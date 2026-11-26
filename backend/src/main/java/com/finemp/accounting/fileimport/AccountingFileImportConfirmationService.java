@@ -64,12 +64,6 @@ public class AccountingFileImportConfirmationService {
         }
 
         String fileSha256 = AccountingFileHash.sha256(content);
-        if (expectedFileSha256 == null
-                || !expectedFileSha256.matches("[0-9a-f]{64}")
-                || !expectedFileSha256.equals(fileSha256)) {
-            throw conflict(AccountingFileImportConflictException.Reason.PREVIEW_FILE_MISMATCH);
-        }
-
         var source = sources.findLockedForPublicationById(accountingSourceId)
                 .orElseThrow(() -> conflict(
                         AccountingFileImportConflictException.Reason.SOURCE_NOT_AVAILABLE));
@@ -82,6 +76,12 @@ public class AccountingFileImportConfirmationService {
                 source.getCompany().getId(),
                 CompanyPermission.ACCOUNTING_IMPORT_MANAGE)) {
             throw new OrganizationAccessDeniedException();
+        }
+
+        if (expectedFileSha256 == null
+                || !expectedFileSha256.matches("[0-9a-f]{64}")
+                || !expectedFileSha256.equals(fileSha256)) {
+            throw conflict(AccountingFileImportConflictException.Reason.PREVIEW_FILE_MISMATCH);
         }
 
         var profile = layouts.require(profileId, format);
