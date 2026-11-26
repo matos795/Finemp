@@ -58,7 +58,7 @@ final class ConnectorManagerService {
 
         String taskState = knownField(result.stdout(), "State");
         String lastRunTime = knownField(result.stdout(), "LastRunTime");
-        Integer lastTaskResult = integerField(result.stdout(), "LastTaskResult");
+        Long lastTaskResult = unsignedTaskResultField(result.stdout(), "LastTaskResult");
 
         var state = classify(taskState, lastTaskResult);
         return new ConnectorManagerStatus(state, lastRunTime, lastTaskResult, runtimeRoot);
@@ -95,7 +95,7 @@ final class ConnectorManagerService {
                 && Files.isRegularFile(runtimeRoot.resolve(RUNTIME));
     }
 
-    private static ConnectorManagerStatus.State classify(String rawState, Integer lastTaskResult) {
+    private static ConnectorManagerStatus.State classify(String rawState, Long lastTaskResult) {
         if (rawState == null) {
             return ConnectorManagerStatus.State.UNKNOWN;
         }
@@ -135,18 +135,15 @@ final class ConnectorManagerService {
         return null;
     }
 
-    private static Integer integerField(String output, String field) {
+    private static Long unsignedTaskResultField(String output, String field) {
         String value = knownField(output, field);
-        if (value == null || !value.matches("[+-]?\\d{1,11}")) {
+        if (value == null || !value.matches("\\d{1,10}")) {
             return null;
         }
 
         try {
             long parsed = Long.parseLong(value);
-            if (parsed < Integer.MIN_VALUE || parsed > Integer.MAX_VALUE) {
-                return null;
-            }
-            return (int) parsed;
+            return parsed <= 0xFFFF_FFFFL ? parsed : null;
         } catch (NumberFormatException invalid) {
             return null;
         }
