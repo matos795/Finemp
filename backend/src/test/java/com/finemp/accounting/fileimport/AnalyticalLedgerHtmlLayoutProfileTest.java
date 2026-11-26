@@ -54,6 +54,28 @@ class AnalyticalLedgerHtmlLayoutProfileTest {
     }
 
     @Test
+    void shouldIgnoreRepeatedPageMetadataAfterAnAccountBlockStarts() {
+        byte[] repeatedHeader = """
+                <html><title>Razão Analítico</title><body><table>
+                <tr><td>Consolidação: Empresa</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Período: 01/01/2026 a 31/01/2026</td></tr>
+                <tr><td>Data</td><td>Histórico</td><td></td><td>Lote/Lcto.</td><td></td><td>Débito</td><td>Crédito</td><td>Saldo</td></tr>
+                <tr><td>Conta: 111010001</td><td>Red.: 1-9  CAIXA SINTETICO</td><td></td><td></td><td></td><td></td><td>Saldo Anterior:</td><td>0,00</td></tr>
+                <tr><td>15/01/2026</td><td>MOVIMENTO A</td><td></td><td>0/10</td><td></td><td>1,00</td><td></td><td>1,00</td></tr>
+                <tr><td>EMPRESA SINTETICA</td><td></td><td></td><td></td><td></td><td></td><td>Página:</td><td>2</td></tr>
+                <tr><td>Contabilidade</td><td></td><td>Razão Analítico</td><td></td><td></td><td></td><td>Data:</td><td>01/02/2026</td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td>Hora:</td><td>10:00:00</td></tr>
+                <tr><td>16/01/2026</td><td>MOVIMENTO B</td><td></td><td>0/11</td><td></td><td></td><td>1,00</td><td>0,00</td></tr>
+                </table></body></html>
+                """.getBytes(StandardCharsets.ISO_8859_1);
+
+        var preview = new AnalyticalLedgerHtmlLayoutProfile().preview(repeatedHeader);
+
+        assertThat(preview.movementCount()).isEqualTo(2);
+        assertThat(preview.invalidRowCount()).isZero();
+        assertThat(preview.errors()).isEmpty();
+    }
+
+    @Test
     void shouldRejectMalformedBrazilianMoneyInsteadOfNormalizingIt() {
         byte[] malformed = """
                 <html><title>Razão Analítico</title><body><table>
