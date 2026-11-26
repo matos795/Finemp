@@ -355,3 +355,12 @@ test("the preview is bound to its source; any change of the effective source inv
   assert.match(screen, /type: "source-changed"/)
   assert.match(screen, /request\.accountingSourceId/)
 })
+
+
+test("file import makes the active company explicit and never offers upload without company context", () => {
+  const screen = read("features/accounting-area/pages/file-import-screen.tsx")
+  assert.match(screen, /Importando Razão para:/)
+  assert.match(screen, /company\.legalName/)
+  assert.match(screen, /Selecione uma empresa para importar o Razão/)
+  assert.match(screen, /company && canImport && sourceId !== null/)
+})

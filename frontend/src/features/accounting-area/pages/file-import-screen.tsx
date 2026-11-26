@@ -177,7 +177,15 @@ export function FileImportScreen(props: FileImportScreenProps) {
     let sourceBody: ReactNode
 
     if (!company) {
-        sourceBody = <div className="empty">Escolha uma empresa no filtro do cabeçalho.</div>
+        sourceBody = (
+            <div className="empty">
+                <b>Selecione uma empresa para importar o Razão.</b>
+                <p className="sub" style={{ marginBottom: 0 }}>
+                    Use o contexto da Contabilidade no cabeçalho. O arquivo só pode ser preparado, pré-visualizado e
+                    confirmado dentro de uma empresa ativa.
+                </p>
+            </div>
+        )
     } else if (!canImport) {
         sourceBody = (
             <div className="empty">
@@ -271,6 +279,14 @@ export function FileImportScreen(props: FileImportScreenProps) {
 
             <div className="panel">
                 <h3>Fonte por arquivo</h3>
+                {company && (
+                    <div className="ctb-cov" role="status" style={{ marginBottom: 12 }}>
+                        <span className="ctb-cov-l">Importando Razão para:</span>
+                        <span className="ctb-cov-v">
+                            <b>{company.legalName}</b> · esta empresa é o contexto ativo da Área da Contabilidade.
+                        </span>
+                    </div>
+                )}
                 {sourceBody}
             </div>
 
