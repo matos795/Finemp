@@ -3,5 +3,6 @@ package com.finemp.accounting.fileimport;
 public enum AccountingFileFormat {
     XLSX,
     CSV,
-    TXT
+    TXT,
+    HTML_XLS
 }
