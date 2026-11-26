@@ -67,6 +67,22 @@ class ConnectorManagerServiceTest {
     }
 
     @Test
+    void unsignedWindowsTaskResultIsPreservedAndClassifiedAsFailed() throws Exception {
+        installedRuntime();
+        var invoker = new FakeInvoker();
+        invoker.next = new ConnectorManagerProcessInvoker.Result(
+                0,
+                "State : Ready\nLastRunTime : 26/11/2026 14:20:00\nLastTaskResult : 2147942402\n",
+                "");
+        var service = new ConnectorManagerService(directory, "powershell.exe", invoker);
+
+        var status = service.status();
+
+        assertThat(status.state()).isEqualTo(ConnectorManagerStatus.State.FAILED);
+        assertThat(status.lastTaskResult()).isEqualTo(2147942402L);
+    }
+
+    @Test
     void validationDelegatesToInstalledRunnerWithoutSecretValuesInArguments() throws Exception {
         installedRuntime();
         var invoker = new FakeInvoker();
