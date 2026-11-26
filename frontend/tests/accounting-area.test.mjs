@@ -87,7 +87,7 @@ const PROTOTYPE_MENU = {
 }
 
 // Telas FINEMP fora do protótipo, ligadas a contrato oficial (C2.9 / #475).
-const FINEMP_SCREENS = ["plano", "ctbmov", "ctbtot"]
+const FINEMP_SCREENS = ["plano", "ctbmov", "ctbtot", "ctbimp"]
 
 test("the accounting menu keeps the prototype groups, subgroups, codes and names in order", () => {
   const actual = Object.fromEntries(

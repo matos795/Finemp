@@ -202,7 +202,7 @@ test("navigation keeps the accounting flow together and legacy routes alive", ()
   assert.equal(ids.indexOf("depara"), ids.indexOf("plano") + 1)
 
   const base = accountingModules[0].subgroups.find((subgroup) => subgroup.label === "Base contábil importada")
-  assert.deepEqual(base.screens.map((screen) => screen.id), ["ctbmov", "ctbtot"])
+  assert.deepEqual(base.screens.map((screen) => screen.id), ["ctbmov", "ctbtot", "ctbimp"])
   assert.ok(findAccountingScreenById("cfpre"))
 
   const router = read("app/router/app-router.tsx")
