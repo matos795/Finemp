@@ -103,6 +103,29 @@ class AccountingReadPermissionHttpIntegrationTest {
     }
 
     @Test
+    void shouldRecheckLedgerClassificationAndDrePermissionsAfterRevocation() throws Exception {
+        for (var scenario : java.util.List.of(
+                new ReadScenario(CompanyPermission.ACCOUNTING_MOVEMENT_VIEW, "accounting-movements"),
+                new ReadScenario(CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW, "accounting-accounts/classifications"),
+                new ReadScenario(CompanyPermission.DRE_VIEW, "dre"))) {
+            var actor = actor();
+            var company = company();
+            var grant = grants.saveAndFlush(new CompanyAccessGrant(
+                    actor,
+                    company,
+                    CompanyAccessRole.CUSTOM,
+                    CostCenterScope.ALL,
+                    Set.of(scenario.permission())));
+
+            expect(actor, company, scenario.suffix(), 200);
+            jdbc.update(
+                    "DELETE FROM company_access_grant_permissions WHERE company_access_grant_id = ?",
+                    grant.getId());
+            expect(actor, company, scenario.suffix(), 403);
+        }
+    }
+
+    @Test
     void shouldKeepRestrictedScopeClosedEvenWithBothReadPermissions() throws Exception {
         var actor = actor();
         var company = company();
@@ -111,6 +134,9 @@ class AccountingReadPermissionHttpIntegrationTest {
                         CompanyPermission.ACCOUNT_CLASSIFICATION_VIEW)));
         expect(actor, company, "accounting-movements", 403);
         expect(actor, company, "accounting-accounts/classifications", 403);
+    }
+
+    private record ReadScenario(CompanyPermission permission, String suffix) {
     }
 
     private void expect(UserAccount actor, Company company, String suffix, int expected) throws Exception {
