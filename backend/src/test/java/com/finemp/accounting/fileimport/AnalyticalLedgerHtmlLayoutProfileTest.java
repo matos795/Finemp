@@ -54,6 +54,25 @@ class AnalyticalLedgerHtmlLayoutProfileTest {
     }
 
     @Test
+    void shouldNotTreatPeriodTextInsideHistoryAsTheReportPeriod() {
+        byte[] historyWithPeriod = """
+                <html><title>Razão Analítico</title><body><table>
+                <tr><td>Consolidação: Empresa</td><td></td><td></td><td></td><td></td><td></td><td></td><td>Período: 01/01/2026 a 31/01/2026</td></tr>
+                <tr><td>Data</td><td>Histórico</td><td></td><td>Lote/Lcto.</td><td></td><td>Débito</td><td>Crédito</td><td>Saldo</td></tr>
+                <tr><td>Conta: 111010001</td><td>Red.: 1-9  CAIXA SINTETICO</td><td></td><td></td><td></td><td></td><td>Saldo Anterior:</td><td>0,00</td></tr>
+                <tr><td>15/01/2026</td><td>Transferência - Período: 01/02/2026 a 28/02/2026</td><td></td><td>0/20</td><td></td><td>5,00</td><td></td><td>5,00</td></tr>
+                </table></body></html>
+                """.getBytes(StandardCharsets.ISO_8859_1);
+
+        var preview = new AnalyticalLedgerHtmlLayoutProfile().preview(historyWithPeriod);
+
+        assertThat(preview.periodStart()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(preview.periodEnd()).isEqualTo(LocalDate.of(2026, 1, 31));
+        assertThat(preview.movementCount()).isEqualTo(1);
+        assertThat(preview.errors()).isEmpty();
+    }
+
+    @Test
     void shouldIgnoreRepeatedPageMetadataAfterAnAccountBlockStarts() {
         byte[] repeatedHeader = """
                 <html><title>Razão Analítico</title><body><table>
