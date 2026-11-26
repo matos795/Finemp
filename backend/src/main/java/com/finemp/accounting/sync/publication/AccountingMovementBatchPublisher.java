@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Callers own authorization, source locking, coverage and lifecycle/receipt state.
  */
 @Service
-public final class AccountingMovementBatchPublisher {
+public class AccountingMovementBatchPublisher {
     private static final int LOOKUP_CHUNK = 500;
 
     private final AccountingAccountRepository accounts;
