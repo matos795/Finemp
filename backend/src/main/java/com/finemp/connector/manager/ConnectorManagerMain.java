@@ -37,14 +37,17 @@ public final class ConnectorManagerMain {
         }
 
         String programData = System.getenv("ProgramData");
-        if (programData == null || programData.isBlank()) {
-            error.println("FINEMP Connector Manager: diretório ProgramData indisponível.");
+        String systemRoot = System.getenv("SystemRoot");
+        if (programData == null || programData.isBlank() || systemRoot == null || systemRoot.isBlank()) {
+            error.println("FINEMP Connector Manager: diretórios do Windows indisponíveis.");
             return 2;
         }
 
         Path runtimeRoot = Path.of(programData, "FINEMP", "Connector");
+        Path powershell = Path.of(
+                systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
         SwingUtilities.invokeLater(() -> {
-            var frame = new ConnectorManagerFrame(ConnectorManagerService.system(runtimeRoot));
+            var frame = new ConnectorManagerFrame(ConnectorManagerService.system(runtimeRoot, powershell));
             frame.setVisible(true);
         });
         return 0;
