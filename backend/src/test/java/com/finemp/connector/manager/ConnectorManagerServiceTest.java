@@ -55,6 +55,25 @@ class ConnectorManagerServiceTest {
     }
 
     @Test
+    void installedRuntimeWithUnavailableStatusCommandIsNotReportedAsNotInstalled() throws Exception {
+        installedRuntime();
+        var invoker = new FakeInvoker();
+        invoker.next = new ConnectorManagerProcessInvoker.Result(
+                1,
+                "",
+                "Access is denied");
+        var service = new ConnectorManagerService(directory, "powershell.exe", invoker);
+
+        var status = service.status();
+
+        assertThat(status.state()).isEqualTo(ConnectorManagerStatus.State.STATUS_UNAVAILABLE);
+        assertThat(status.lastRunTime()).isNull();
+        assertThat(status.lastTaskResult()).isNull();
+        assertThat(status.toString()).doesNotContain("Access is denied");
+        assertThat(invoker.commands).hasSize(1);
+    }
+
+    @Test
     void nonZeroLastTaskResultIsReportedAsFailedWhenTaskIsNotRunning() throws Exception {
         installedRuntime();
         var invoker = new FakeInvoker();
