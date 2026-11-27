@@ -13,6 +13,7 @@ record ConnectorManagerStatus(
         RUNNING,
         STOPPED,
         FAILED,
+        STATUS_UNAVAILABLE,
         UNKNOWN
     }
 
