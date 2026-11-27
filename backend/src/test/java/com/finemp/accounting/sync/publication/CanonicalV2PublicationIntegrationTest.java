@@ -176,7 +176,7 @@ class CanonicalV2PublicationIntegrationTest {
                                 "legacy-entry",
                                 start,
                                 "100",
-                                "1.1.100",
+                                "1.1   .100   ",
                                 "Synthetic Asset   ",
                                 com.finemp.accounting.movement.AccountingMovementSide.DEBIT,
                                 new BigDecimal("10.0000"),
@@ -185,7 +185,7 @@ class CanonicalV2PublicationIntegrationTest {
                                 "legacy-entry",
                                 start,
                                 "200",
-                                "3.2.200",
+                                "3.2   .200   ",
                                 "Synthetic Revenue   ",
                                 com.finemp.accounting.movement.AccountingMovementSide.CREDIT,
                                 new BigDecimal("10.0000"),
@@ -196,6 +196,43 @@ class CanonicalV2PublicationIntegrationTest {
 
         assertThat(run(v2).getStatus()).isEqualTo(SyncRunStatus.SUCCEEDED);
         assertThat(count("accounting_accounts")).isEqualTo(2);
+    }
+
+    @Test
+    void shouldKeepRejectingRealAccountDescriptionChangeAfterLegacyPublication(){
+        var legacy=claim();
+        var observed=new ExternalCompanyIdentity(
+                legacy.request().externalCompanyReference(),
+                legacy.request().expectedCompanyCnpj());
+        publication.publishConnector(
+                legacy,
+                observed,
+                List.of(
+                        new com.finemp.accounting.ingestion.ImportedAccountingMovement(
+                                "legacy-entry",
+                                start,
+                                "100",
+                                "1.1.100",
+                                "Different Asset",
+                                com.finemp.accounting.movement.AccountingMovementSide.DEBIT,
+                                new BigDecimal("10.0000"),
+                                "Synthetic history"),
+                        new com.finemp.accounting.ingestion.ImportedAccountingMovement(
+                                "legacy-entry",
+                                start,
+                                "200",
+                                "3.2.200",
+                                "Synthetic Revenue",
+                                com.finemp.accounting.movement.AccountingMovementSide.CREDIT,
+                                new BigDecimal("10.0000"),
+                                "Synthetic history")));
+
+        var v2=claim();
+
+        assertThatThrownBy(() -> publication.publishConnectorV2(v2,batch(v2,"Origin A",false)))
+                .isInstanceOfSatisfying(
+                        SyncPublicationRejectedException.class,
+                        error -> assertThat(error.getCode()).isEqualTo(SyncFailureCode.DATA_CONFLICT));
     }
 
     @Test
