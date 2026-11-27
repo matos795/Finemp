@@ -97,7 +97,9 @@ final class ConnectorManagerFrame extends JFrame {
             protected void done() {
                 try {
                     applyStatus(get());
-                    message.setText("Status atualizado.");
+                    message.setText(lastStatus.state() == ConnectorManagerStatus.State.STATUS_UNAVAILABLE
+                            ? "Abra o Manager como administrador para consultar o runtime."
+                            : "Status atualizado.");
                 } catch (Exception unavailable) {
                     lastStatus = null;
                     stateValue.setText("Indisponível");
@@ -182,6 +184,7 @@ final class ConnectorManagerFrame extends JFrame {
             case RUNNING -> "Executando";
             case STOPPED -> "Parado";
             case FAILED -> "Falhou";
+            case STATUS_UNAVAILABLE -> "Permissão necessária / status indisponível";
             case UNKNOWN -> "Indeterminado";
         });
         lastRunValue.setText(status.lastRunTime() == null ? "—" : status.lastRunTime());
