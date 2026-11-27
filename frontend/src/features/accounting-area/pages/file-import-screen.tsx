@@ -16,11 +16,13 @@ import { findAccountingScreenById, type AccountingScreen } from "../lib/accounti
 import { formatDay, formatInstant } from "../lib/accounting-v2"
 import { formatExactDecimal } from "../lib/exact-decimal"
 import {
+    confirmBlockedReason,
     confirmRequest,
     fileImportErrorMessage,
     fileImportReducer,
     fileImportSources,
     historyRows,
+    importSteps,
     initialFileImportState,
     previewIsConfirmable,
     selectFileImportSource,
@@ -290,14 +292,33 @@ export function FileImportScreen(props: FileImportScreenProps) {
                 {sourceBody}
             </div>
 
+            {company && canImport && sourceId !== null && (
+                <div className="ctb-cov ctb-steps" role="list" aria-label="Etapas da importação">
+                    <span className="ctb-cov-l">Importação em 2 etapas</span>
+                    {importSteps(state, sourceId).map((step, index) => (
+                        <span key={step.key} role="listitem" className="ctb-step">
+                            <span className={step.status === "current" ? "pill on" : "pill"} aria-current={step.status === "current" ? "step" : undefined}>
+                                {index + 1} · {step.label}
+                            </span>
+                            {step.status === "done" && <span className="tag ok">concluída</span>}
+                            {step.status === "blocked" && <span className="tag pend">bloqueada</span>}
+                        </span>
+                    ))}
+                </div>
+            )}
+
             {company && canImport && sourceId !== null && state.status !== "done" && (
                 <div className="panel">
                     <div className="toolbar">
                         <div className="l">
-                            <h3 style={{ margin: 0 }}>Arquivo do Razão</h3>
+                            <h3 style={{ margin: 0 }}>Etapa 1 de 2 · Arquivo do Razão</h3>
                             <span className="tag est">Razão Analítico · .xls (layout homologado)</span>
                         </div>
                     </div>
+                    <p className="sub">
+                        Escolha o arquivo e clique em <b>Pré-visualizar</b>. Nada será gravado nesta etapa: a prévia só
+                        lê o arquivo para você conferir antes da etapa 2.
+                    </p>
                     <div className="cf-bar">
                         <label>
                             Arquivo{" "}
@@ -324,7 +345,9 @@ export function FileImportScreen(props: FileImportScreenProps) {
                         <div className="empty">Escolha o arquivo do Razão Analítico exportado em .xls.</div>
                     )}
                     {state.status === "file-selected" && !state.error && (
-                        <div className="empty">Arquivo escolhido. Pré-visualize antes de importar.</div>
+                        <div className="empty">
+                            Arquivo escolhido. Clique em Pré-visualizar: nada será gravado nesta etapa.
+                        </div>
                     )}
                     {state.status === "previewing" && <div className="empty">Gerando a pré-visualização…</div>}
                     {state.error && state.status !== "preview-ready" && (
@@ -338,6 +361,54 @@ export function FileImportScreen(props: FileImportScreenProps) {
             {preview && state.status !== "done" && (
                 <div className="panel">
                     <h3>Pré-visualização</h3>
+                    {confirmBlockedReason(state) === null && company ? (
+                        <div className="ctb-next" role="region" aria-label="Etapa 2 de 2">
+                            <h3 style={{ margin: 0 }}>Etapa 2 de 2 · Confirmar e importar</h3>
+                            <p style={{ margin: "6px 0 12px" }}>
+                                A prévia está válida. Ao confirmar, os <b>{preview.movementCount}</b> movimentos de{" "}
+                                <b>
+                                    {preview.periodStart ? formatDay(preview.periodStart) : "—"} a{" "}
+                                    {preview.periodEnd ? formatDay(preview.periodEnd) : "—"}
+                                </b>{" "}
+                                serão gravados como importados em <b>{company.legalName}</b>. Até lá, nada foi gravado.
+                            </p>
+                            <div className="ctb-acts" style={{ justifyContent: "flex-start" }}>
+                                <button
+                                    type="button"
+                                    className="btn primary"
+                                    disabled={!previewIsConfirmable(state, sourceId) || state.status === "confirming"}
+                                    onClick={() => void runConfirm()}
+                                >
+                                    {state.status === "confirming" ? "Confirmando a importação…" : "Confirmar e importar"}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn sq"
+                                    disabled={state.status === "confirming"}
+                                    onClick={startOver}
+                                >
+                                    Escolher outro arquivo
+                                </button>
+                            </div>
+                            {state.status === "preview-ready" && state.error && (
+                                <div className="warnbar" role="alert" style={{ marginTop: 12, marginBottom: 0 }}>
+                                    {state.error} Você pode confirmar de novo.
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="warnbar ctb-err" role="alert">
+                            <div>{confirmBlockedReason(state)}</div>
+                            <button
+                                type="button"
+                                className="btn sq"
+                                style={{ marginTop: 10 }}
+                                onClick={startOver}
+                            >
+                                Escolher outro arquivo
+                            </button>
+                        </div>
+                    )}
                     {preview.errors.length === 0 ? (
                         <div className="ctb-cov" role="status">
                             <span className="ctb-cov-l">Pré-visualização válida</span>
@@ -425,24 +496,6 @@ export function FileImportScreen(props: FileImportScreenProps) {
                         </>
                     )}
 
-                    <div className="ctb-acts" style={{ marginTop: 14 }}>
-                        <button type="button" className="btn sq" disabled={state.status === "confirming"} onClick={startOver}>
-                            Escolher outro arquivo
-                        </button>
-                        <button
-                            type="button"
-                            className="btn primary sq"
-                            disabled={!previewIsConfirmable(state, sourceId) || state.status === "confirming"}
-                            onClick={() => void runConfirm()}
-                        >
-                            {state.status === "confirming" ? "Confirmando a importação…" : "Confirmar importação"}
-                        </button>
-                    </div>
-                    {state.status === "preview-ready" && state.error && (
-                        <div className="warnbar" role="alert" style={{ marginTop: 12 }}>
-                            {state.error} Você pode confirmar de novo.
-                        </div>
-                    )}
                     <p className="sub" style={{ marginTop: 10 }}>
                         A confirmação reenvia este mesmo arquivo. Os lançamentos passam a constar como importados por
                         arquivo; contas e movimentos não são reclassificados.
@@ -477,7 +530,9 @@ export function FileImportScreen(props: FileImportScreenProps) {
                             <span className="note">linhas sem movimento importável</span>
                         </div>
                     </div>
-                    <p className="sub" style={{ marginTop: 14 }}>Importado em {formatInstant(state.receipt.committedAt)}.</p>
+                    <p className="sub" style={{ marginTop: 14 }}>
+                        Importado em <b>{company?.legalName ?? "—"}</b> em {formatInstant(state.receipt.committedAt)}.
+                    </p>
                     <div className="ctb-acts" style={{ justifyContent: "flex-start" }}>
                         {movements && (
                             <button type="button" className="btn primary sq" onClick={() => navigate(movements.path)}>

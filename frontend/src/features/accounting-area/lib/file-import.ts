@@ -255,3 +255,58 @@ export function historyRows(items: readonly FileImportHistoryItem[] | null | und
         committedAt: item.committedAt,
     }))
 }
+
+// --------------------------------------------------------------- the steps
+
+export type ImportStepStatus = "pending" | "current" | "done" | "blocked"
+
+export interface ImportStep {
+    key: "preview" | "confirm"
+    label: "Pré-visualizar" | "Confirmar e importar"
+    status: ImportStepStatus
+}
+
+/**
+ * Importação em 2 etapas (#528): 1 · Pré-visualizar (nada é gravado) e
+ * 2 · Confirmar e importar (grava). A etapa 2 só fica disponível com prévia
+ * válida, do arquivo atual e da mesma fonte.
+ */
+export function importSteps(state: FileImportState, currentSourceId: string | null): ImportStep[] {
+    const previewDone = state.status === "preview-ready" || state.status === "confirming" || state.status === "done"
+    let confirm: ImportStepStatus = "pending"
+
+    if (state.status === "done") confirm = "done"
+    else if (state.status === "confirming") confirm = "current"
+    else if (state.status === "preview-ready") {
+        confirm = previewIsConfirmable(state, currentSourceId) ? "current" : "blocked"
+    }
+
+    return [
+        { key: "preview", label: "Pré-visualizar", status: previewDone ? "done" : "current" },
+        { key: "confirm", label: "Confirmar e importar", status: confirm },
+    ]
+}
+
+/** Por que a etapa 2 não pode ser confirmada; null quando pode. */
+export function confirmBlockedReason(state: FileImportState): string | null {
+    const preview = state.preview
+
+    if (state.status !== "preview-ready" || !preview) return null
+
+    if (preview.errors.length > 0) {
+        const count = preview.errors.length
+        return (
+            `Não é possível confirmar: a prévia encontrou ${count} ${count === 1 ? "erro" : "erros"} no arquivo ` +
+            "(listados abaixo). Nada foi gravado. Corrija o Razão na origem, exporte-o de novo e escolha o novo arquivo."
+        )
+    }
+
+    if (!preview.periodStart || !preview.periodEnd) {
+        return (
+            "Não é possível confirmar: a prévia não identificou o período dos lançamentos. Nada foi gravado. " +
+            "Confira se o arquivo é o Razão Analítico com lançamentos."
+        )
+    }
+
+    return null
+}

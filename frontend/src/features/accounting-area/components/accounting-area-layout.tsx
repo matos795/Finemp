@@ -11,6 +11,7 @@ import { CfpreScreen } from "../pages/cfpre-screen"
 import { ChartScreen } from "../pages/chart-screen"
 import { DebitCreditTotalsScreen } from "../pages/debit-credit-totals-screen"
 import { DeparaScreen } from "../pages/depara-screen"
+import { DiagScreen } from "../pages/diag-screen"
 import { FileImportScreen } from "../pages/file-import-screen"
 import { MovementsScreen } from "../pages/movements-screen"
 import { AccountingToasts } from "./accounting-toasts"
@@ -198,6 +199,14 @@ export function AccountingAreaLayout() {
                                         />
                                     ) : current.screen.id === "ctbimp" ? (
                                         <FileImportScreen
+                                            key={company?.companyId ?? "none"}
+                                            screen={current.screen}
+                                            competence={effectiveCompetence}
+                                            baseText={baseText}
+                                            onCompetenceChange={setCompetence}
+                                        />
+                                    ) : current.screen.id === "diag" ? (
+                                        <DiagScreen
                                             key={company?.companyId ?? "none"}
                                             screen={current.screen}
                                             competence={effectiveCompetence}
