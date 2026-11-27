@@ -229,8 +229,8 @@ public class AccountingPublicationTransaction {
             String accountKey = legacyAccountKey(descriptor);
             var existing = knownAccounts.get(descriptor.sourceAccountId());
             if (existing != null) {
-                if (!Objects.equals(existing.getAccountKey(), accountKey)
-                        || !Objects.equals(existing.getDescription(), descriptor.description())) {
+                if (!sameLegacyAccountKey(existing.getAccountKey(), accountKey)
+                        || !sameLegacyDescription(existing.getDescription(), descriptor.description())) {
                     throw rejected(SyncFailureCode.DATA_CONFLICT);
                 }
             } else {
@@ -365,6 +365,23 @@ public class AccountingPublicationTransaction {
                 : endMonth.minusMonths(1);
         if (firstMonth.isAfter(lastMonth)) return null;
         return new CoverageInterval(firstMonth.atDay(1), lastMonth.atEndOfMonth());
+    }
+
+    private boolean sameLegacyAccountKey(String existing, String canonical) {
+        return Objects.equals(normalizeLegacyAccountKey(existing), normalizeLegacyAccountKey(canonical));
+    }
+
+    private String normalizeLegacyAccountKey(String value) {
+        if (value == null) return null;
+        return value.strip().replaceAll("\\s*\\.\\s*", ".");
+    }
+
+    private boolean sameLegacyDescription(String existing, String canonical) {
+        return Objects.equals(stripLegacyRightPadding(existing), stripLegacyRightPadding(canonical));
+    }
+
+    private String stripLegacyRightPadding(String value) {
+        return value == null ? null : value.stripTrailing();
     }
 
     private String legacyAccountKey(CanonicalAccountDescriptor descriptor) {
