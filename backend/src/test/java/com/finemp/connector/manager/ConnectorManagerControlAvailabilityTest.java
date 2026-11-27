@@ -44,6 +44,17 @@ class ConnectorManagerControlAvailabilityTest {
     }
 
     @Test
+    void unavailableRuntimeStatusKeepsControlsVisibleButDisabled() {
+        var controls = ConnectorManagerControlAvailability.forStatus(
+                status(ConnectorManagerStatus.State.STATUS_UNAVAILABLE));
+
+        assertThat(controls.controlsVisible()).isTrue();
+        assertThat(controls.startEnabled()).isFalse();
+        assertThat(controls.stopEnabled()).isFalse();
+        assertThat(controls.restartEnabled()).isFalse();
+    }
+
+    @Test
     void notInstalledRuntimeOffersNoLifecycleControl() {
         var controls = ConnectorManagerControlAvailability.forStatus(
                 status(ConnectorManagerStatus.State.NOT_INSTALLED));

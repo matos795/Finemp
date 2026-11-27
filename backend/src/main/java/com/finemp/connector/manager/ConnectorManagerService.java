@@ -53,7 +53,7 @@ final class ConnectorManagerService {
 
         if (result.exitCode() != 0) {
             return new ConnectorManagerStatus(
-                    ConnectorManagerStatus.State.NOT_INSTALLED, null, null, runtimeRoot);
+                    ConnectorManagerStatus.State.STATUS_UNAVAILABLE, null, null, runtimeRoot);
         }
 
         String taskState = knownField(result.stdout(), "State");
