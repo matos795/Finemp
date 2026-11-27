@@ -14,6 +14,7 @@ record ConnectorManagerControlAvailability(
         return switch (status.state()) {
             case RUNNING -> new ConnectorManagerControlAvailability(true, false, true, true);
             case STOPPED, FAILED -> new ConnectorManagerControlAvailability(true, true, false, true);
+            case STATUS_UNAVAILABLE -> new ConnectorManagerControlAvailability(true, false, false, false);
             case UNKNOWN -> new ConnectorManagerControlAvailability(true, false, false, true);
             case NOT_INSTALLED -> new ConnectorManagerControlAvailability(false, false, false, false);
         };
